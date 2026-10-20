@@ -256,3 +256,10 @@ def test_a_finding_inside_a_longer_item_is_not_held_by_it():
     review["findings"] = {"strengths": [{"text": "Novel."}]}
     sections = round_trip(review)["narrative"]["sections"]
     assert sections[-1] == {"title": "Strengths", "content": "- Novel."}
+
+
+def test_a_summary_that_starts_a_finding_is_still_written():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"], review["opinion"] = {}, {"summary": "No"}
+    review["findings"] = {"weaknesses": [{"text": "No ablation."}]}
+    assert round_trip(review)["narrative"]["detailed_review"].startswith("No\n\nWeaknesses:")

@@ -747,7 +747,13 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         parts_.append(_findings_text(canonical.get("findings") or {}, held))
         rest = "\n\n".join(part for part in parts_ if part)
         summary = opinion.get("summary") or narrative.get("summary")
-        repeated = isinstance(summary, str) and _squash(summary) in _squash(rest)
+        # The summary is repeated when it is one of the items that follow, or the start of one
+        # cut where a reader cuts a summary it takes from a finding (200 characters)
+        said = _squash(summary) if isinstance(summary, str) else ""
+        items = _items(rest)
+        repeated = bool(said) and (
+            said in items or (len(summary) >= 200 and any(item.startswith(said) for item in items))
+        )
         parts = [summary] if isinstance(summary, str) and summary.strip() and not repeated else []
         text = "\n\n".join([*parts, rest] if rest else parts)
     if isinstance(text, str) and text.strip():
