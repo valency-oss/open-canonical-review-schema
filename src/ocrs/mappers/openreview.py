@@ -572,6 +572,8 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
     rec_label = rec.replace("_", " ").title() if rec else None
     overall_written = False
+    # An overall score that is not a number, which the reader takes no recommendation from
+    unread_overall: tuple[str, Any] | None = None
     for m in canonical.get("metrics", []) or []:
         if not isinstance(m, dict):
             continue
@@ -581,9 +583,11 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             continue
         name = field_name(m["label"]) if same_source and isinstance(m.get("label"), str) else ""
         if key == "overall":
-            # The reader takes the recommendation from this score, so it must be one it can
-            # read; a list leaves the recommendation to its own field
-            if overall_written or not is_number(val):
+            if overall_written or unread_overall:
+                continue
+            field = name if name in RECOMMENDATION_KEYS else "rating"
+            if not is_number(val):
+                unread_overall = (field, val)
                 continue
             overall_written = True
             # The score's label says the recommendation, read first; a label that would
@@ -592,7 +596,6 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             scale = m.get("scale") if same_source else None
             if rec and _recommendation_read_back(val, label, scale) != rec:
                 label = rec_label
-            field = name if name in RECOMMENDATION_KEYS else "rating"
             labelled = {**m, "justification": label}
             content[field] = score_with_label(labelled, form_gives_labels=same_source)
         elif key == "confidence":
@@ -603,9 +606,13 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             written = score_with_label(m, form_gives_labels=True) if same_source else val
             content.setdefault(name or key, written)
 
-    # Without a score to carry it, the recommendation has its own field
+    # Without a score to carry it, the recommendation has its own field: beside a score the
+    # reader cannot read, the one it takes before any score
     if rec and not overall_written:
-        content[_RECOMMENDATION_FIELD.get(kind, "recommendation")] = rec_label
+        field = "recommendation" if unread_overall else _RECOMMENDATION_FIELD.get(kind)
+        content[field or "recommendation"] = rec_label
+    if unread_overall and unread_overall[0] not in content:
+        content[unread_overall[0]] = unread_overall[1]
 
     note: dict[str, Any] = {
         "id": canonical.get("review_id"),
