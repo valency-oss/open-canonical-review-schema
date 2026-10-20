@@ -193,7 +193,7 @@
       }
     },
     "review_context": {
-      "description": "The circumstances of the review: its kind, stage, round, who asked for it and the reviewer's expertise",
+      "description": "The circumstances of the review: its kind, stage, round, who asked for it and the time it took. The reviewer's expertise is each referee's own (referees[].expertise)",
       "type": "object",
       "additionalProperties": false,
       "properties": {
