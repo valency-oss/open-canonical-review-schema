@@ -624,11 +624,19 @@ def score_with_label(metric: dict[str, Any], separator: str = ": ") -> Any:
     ("6: Weak Accept"). A label that is the scale's own anchor for the value is the form's
     description of it, which the value alone says."""
     value, label = metric.get("value"), metric.get("justification")
+    # A list of values ("a", "b") has no one place for a label
+    if isinstance(value, (list, dict)):
+        return value
     anchors = (metric.get("scale") or {}).get("anchors") or []
     form_labels = {a.get("value"): a.get("label") for a in anchors if isinstance(a, dict)}
     if not isinstance(label, str) or not label.strip() or form_labels.get(value) == label:
         return value
     return f"{value}{separator}{label}"
+
+
+def is_number(value: Any) -> bool:
+    """Whether a value is a number, not a boolean."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def field_name(label: str) -> str:

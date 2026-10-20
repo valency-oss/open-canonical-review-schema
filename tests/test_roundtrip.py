@@ -353,3 +353,56 @@ def test_a_source_review_read_and_written_back_is_given_back_as_listed(source, p
 
 def test_the_loss_table_names_only_fixtures_that_are_tested():
     assert set(LOSSES) <= {fixture_key(param.values[1]) for param in SOURCE_REVIEWS}
+
+
+WRITERS = ["cmt", "editorialmanager", "hotcrp", "openreview", "scholarone"]
+
+
+def written_review(source_system: str, **fields) -> dict:
+    """A small review, as if read from `source_system`."""
+    return {
+        "review_id": "review-1",
+        "version": "1.0.0",
+        "created_at": "2025-01-01T00:00:00Z",
+        "provenance": {"source_system": source_system},
+        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "target": {"work_id": "internal_id:paperId:7", "work_type": "article"},
+        "opinion": {"summary": "A sound paper."},
+        **fields,
+    }
+
+
+@pytest.mark.parametrize("writer", WRITERS)
+@pytest.mark.parametrize("read_from", ["same", "elsewhere"])
+@pytest.mark.parametrize(
+    "decision", [{"revision_requirement": "major"}, {"recommendation": "weak_accept"}]
+)
+def test_a_score_label_that_does_not_say_the_decision_does_not_replace_it(
+    writer, read_from, decision
+):
+    """A score's label is written back only when it reads back as the review's decision."""
+    scale = {"type": "ordinal", "min": 1, "max": 5}
+    overall = {"key": "overall", "label": "Overall", "scale": scale, "value": 4}
+    review = written_review(
+        writer if read_from == "same" else "elsewhere",
+        decision=decision,
+        metrics=[{**overall, "justification": "Excellent"}],
+    )
+    again = map_from(writer, map_to(writer, review))
+    assert {k: again["decision"].get(k) for k in decision} == decision
+
+
+@pytest.mark.parametrize("writer", WRITERS)
+def test_a_list_valued_score_with_a_label_is_written(writer):
+    """A score may be a list of values; it is written as it is, without its label."""
+    tags = {
+        "key": "other",
+        "label": "topics",
+        "scale": {"type": "categorical"},
+        "value": ["theory", "systems"],
+        "justification": "Two topics",
+    }
+    review = written_review(writer, decision={"recommendation": "accept"}, metrics=[tags])
+    again = map_from(writer, map_to(writer, review))
+    validate_canonical(again)
+    assert again["decision"]["recommendation"] == "accept"

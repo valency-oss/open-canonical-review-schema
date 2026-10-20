@@ -16,6 +16,7 @@ from ..util import (
     first_present,
     from_source,
     id_as_number,
+    is_number,
     is_score_field,
     iso_to_epoch,
     map_recommendation_from_text,
@@ -473,6 +474,15 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
     return out
 
 
+def _recommendation_read_back(value: int | float, label: str | None) -> str:
+    """The recommendation from_hotcrp takes from overall_merit with this label."""
+    return (
+        (map_recommendation_from_text(label) if label else None)
+        or score_to_recommendation(value, scale_min=1, scale_max=5)
+        or "borderline"
+    )
+
+
 def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
     """Convert a canonical review to a HotCRP review.
 
@@ -549,8 +559,14 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
             continue
         key, label = m.get("key"), m.get("label")
         if key == "overall":
-            labelled = {**m, "justification": m.get("justification") or rec_label}
-            out.setdefault("overall_merit", score_with_label(labelled, ". "))
+            if not is_number(m["value"]):
+                continue
+            # The reader takes the recommendation from the score's label, then its value: a
+            # label that would read back as another recommendation gives way to the decision's
+            label = m.get("justification")
+            if rec and _recommendation_read_back(m["value"], label) != rec:
+                label = rec_label
+            out.setdefault("overall_merit", score_with_label({**m, "justification": label}, ". "))
         elif key == "confidence":
             # HotCRP asks for expertise; a review read from it may also give a confidence
             confidence = same_source and label == "Reviewer Confidence"

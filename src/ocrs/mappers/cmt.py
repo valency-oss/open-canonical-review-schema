@@ -17,6 +17,7 @@ from ..util import (
     from_source,
     guess_scale_from_value,
     id_as_number,
+    is_number,
     is_score_field,
     map_recommendation_from_numeric,
     map_recommendation_from_text,
@@ -278,6 +279,15 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
     return out
 
 
+def _recommendation_read_back(value: int | float, label: str | None) -> str:
+    """The recommendation from_cmt takes from an overall score with this label."""
+    return (
+        map_recommendation_from_text(label or "")
+        or map_recommendation_from_numeric(value, guess_scale_from_value(value))
+        or "borderline"
+    )
+
+
 def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
     """A CMT export row with what OCRS holds. A review read from CMT is given back its scores
     under their own field names, with their labels, so that reading the row gives the same
@@ -325,8 +335,13 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
             continue
         key = m.get("key")
         if key == "overall":
-            # The score carries the recommendation in its label, which the reader takes first
-            label = m.get("justification") or (rec.replace("_", " ").title() if rec else None)
+            if not is_number(m["value"]):
+                continue
+            # The reader takes the recommendation from the score's label, then its value: a
+            # label that would read back as another recommendation gives way to the decision's
+            label = m.get("justification")
+            if rec and _recommendation_read_back(m["value"], label) != rec:
+                label = rec.replace("_", " ").title()
             out.setdefault("overallEvaluation", score_with_label({**m, "justification": label}))
         elif key == "confidence":
             out.setdefault("confidence", score_with_label(m))

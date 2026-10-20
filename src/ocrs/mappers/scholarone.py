@@ -464,7 +464,8 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
         reverse_map = {v: k for k, v in S1_RECOMMENDATION_MAP.items()}
         if rec in reverse_map:
             out["overallRecommendation"] = reverse_map[rec]
-        # The label the source gave, or one that says the recommendation when no code does
+        # The label the source gave, when the code says the recommendation or the label does;
+        # else, without a code, one that says it
         overall = next(
             (
                 m
@@ -473,8 +474,9 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             ),
             {},
         )
-        if overall.get("justification"):
-            out["overallRecommendationLabel"] = overall["justification"]
+        label = overall.get("justification")
+        if label and ("overallRecommendation" in out or map_recommendation_from_text(label) == rec):
+            out["overallRecommendationLabel"] = label
         elif "overallRecommendation" not in out:
             out["overallRecommendationLabel"] = rec.replace("_", " ").title()
 
