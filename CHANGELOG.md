@@ -89,6 +89,8 @@ reviews one edit away from them) migrates to a valid 0.8 review.
 ### Python package
 
 - `ocrs.migrate.migrate` turns a 0.7 review into a 0.8 one.
+- The review-flow diagram, on the documentation site and in the README, shows JATS and
+  OCRS 0.8.0, with a column for each source.
 - A writer puts in a field the authors see only the narrative parts the authors may read:
   those with no `audience`, or `public` or `authors`. The review's text for the editors goes
   in the system's confidential field, when it has one. A part for the other reviewers goes

@@ -55,6 +55,15 @@ SOURCES = [
         f'<span class="crop">{logo("logos/scholarone.png")}</span>',
     ),
     (
+        "jats",
+        "JATS",
+        "journal",
+        stroke_icon(
+            '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>'
+            '<path d="M10.5 11.5 8.5 14l2 2.5M13.5 11.5l2 2.5-2 2.5"/>'
+        ),
+    ),
+    (
         "journal_narrative",
         "Journal narrative",
         "journal",
@@ -311,18 +320,18 @@ def create_landing_page(docs_dir: Path, versions: list[str]):
             stroke-width: 1.5;
             transition: fill 0.2s, stroke 0.2s;
         }
+        /* A column for each source; each type spans the columns of its sources. */
         .flow-row {
             position: relative;
             list-style: none;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
         }
         .flow-leaves {
-            grid-template-columns: repeat(9, minmax(0, 1fr));
             gap: 0.25rem;
         }
         .flow-groups {
-            /* The source row's gap, so each type spans exactly its three sources. */
+            /* The source row's gap, so each type spans exactly its sources. */
             gap: 0.25rem;
             margin-bottom: 1.75rem;
         }
@@ -494,7 +503,8 @@ def create_landing_page(docs_dir: Path, versions: list[str]):
             <p class="subtitle">Open Canonical Review Schema - Documentation</p>
         </header>
 
-        <figure class="flow" aria-label="Review sources mapped into OCRS, and back where supported">
+        <figure class="flow" style="--columns: FLOW_COLUMNS"
+            aria-label="Review sources mapped into OCRS, and back where supported">
             <svg class="flow-lines" aria-hidden="true"></svg>
             <ul class="flow-row flow-groups">
 FLOW_GROUPS
@@ -692,7 +702,8 @@ VERSION_LINKS
         for key, name, group, icon in SOURCES
     )
     flow_groups = "\n".join(
-        f'{" " * 16}<li class="node" id="group-{key}" style="--group: {color}">'
+        f'{" " * 16}<li class="node" id="group-{key}" '
+        f'style="--group: {color}; grid-column: span {sum(g == key for _, _, g, _ in SOURCES)}">'
         f'<span class="node-icon" aria-hidden="true">{icon}</span><span class="node-text">'
         f'<span class="node-name">{name}</span><span class="node-sub">{referee}</span></span></li>'
         for key, name, referee, color, icon in GROUPS
@@ -701,6 +712,7 @@ VERSION_LINKS
         landing_html.replace("VERSION_LINKS", version_links)
         .replace("FLOW_LEAVES", flow_leaves)
         .replace("FLOW_GROUPS", flow_groups)
+        .replace("FLOW_COLUMNS", str(len(SOURCES)))
         .replace("OCRS_ICON", OCRS_ICON)
         .replace("LATEST_VERSION", versions[-1])
     )

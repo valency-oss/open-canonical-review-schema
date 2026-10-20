@@ -14,7 +14,7 @@
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
 <p align="center">
-  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, journal narratives) all map to and from OCRS v0.6.3, shown as two-way arrows">
+  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.8.0, shown as two-way arrows">
 </p>
 
 ## Why OCRS?
@@ -22,7 +22,7 @@ A standardized JSON schema and Python mapping utilities for peer review data. OC
 Science is entering an agentic era. AI agents now draft papers, run analyses and produce other scientific output, and reviewers, human and AI working together, are writing high-quality reviews of that work faster and at larger scale than peer review ever has. A review is only useful if it can travel: to the agent that revises the paper, to the reader deciding what to trust, to the archive that keeps the record. Today review data is fragmented across conference systems, journal systems and AI reviewers, each with its own format. OCRS is a common language for reviews, so agents and people can store, exchange and show them. It does this by:
 
 - **Giving agents one format**: An agent that writes, revises or curates science reads and writes reviews from every system the same way
-- **Unifying formats**: Convert between OpenReview, CMT, journal narratives, AI reviewers (OpenAIReview, DeepReview, Reviewer3), and more
+- **Unifying formats**: Convert between OpenReview, CMT, HotCRP, Editorial Manager, ScholarOne, published JATS review reports, journal narratives, AI reviewers (OpenAIReview, DeepReview, Reviewer3), and more
 - **Treating human, AI and hybrid reviews alike**: First-class AI/hybrid referee metadata with execution traces, model specifications, and cost tracking, so a reader can see how an AI reviewer reached its conclusions
 - **Preserving provenance**: Track who reviewed, where the data came from, and how it was transformed
 - **Keeping findings structured**: Findings, decisions and metrics stay machine-readable, so an agent can act on them, a site can show them, and analysts can compare reviews across platforms
