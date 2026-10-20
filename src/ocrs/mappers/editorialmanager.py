@@ -12,6 +12,8 @@ from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
 from ..util import (
     first_paragraph,
+    id_as_number,
+    iso_date_or_time,
     map_recommendation_from_text,
     match_alias,
     now_iso,
@@ -280,7 +282,10 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
     if keep_raw:
         out["provenance"]["raw_payload"] = payload
 
-    # Map venue
+    # Map title and venue
+    title = payload.get("manuscriptTitle")
+    if isinstance(title, str) and title.strip():
+        out["target"]["title"] = title.strip()
     venue = payload.get("journalName") or payload.get("journal_name")
     if venue:
         out["target"]["venue"] = venue
@@ -323,9 +328,11 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
 
 
 def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
-    """Convert a canonical review to Editorial Manager format (basic stub).
+    """Convert a canonical review to Editorial Manager format.
 
-    This is a lossy conversion that produces a minimal EM-like structure.
+    A review read from Editorial Manager is given back what its reader took: the reviewer,
+    the date received, the recommendation with its code and each rating with its label, so
+    that reading the result gives the same review.
 
     Args:
         canonical: A canonical review dictionary.
@@ -343,10 +350,18 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
         "manuscriptId": source_work_id(canonical.get("target", {})),
     }
 
-    # Map venue
-    venue = canonical.get("target", {}).get("venue")
-    if venue:
-        out["journalName"] = venue
+    referee = canonical.get("referee", {}) or {}
+    human = referee.get("human_referee", {}) or {}
+    for field, value in [
+        ("manuscriptTitle", canonical.get("target", {}).get("title")),
+        ("journalName", canonical.get("target", {}).get("venue")),
+        ("reviewerId", id_as_number(referee.get("referee_id"))),
+        ("reviewerName", human.get("name")),
+        ("reviewerOrcid", human.get("orcid")),
+        ("dateReceived", iso_date_or_time(canonical.get("created_at"))),
+    ]:
+        if value is not None and value != "":
+            out[field] = value
 
     # Map narrative
     nar = canonical.get("narrative", {}) or {}
@@ -366,6 +381,9 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
     dec = source_decision(canonical.get("decision", {}) or {})
     if isinstance(dec.get("recommendation"), str):
         out["recommendation"] = dec["recommendation"].replace("_", " ").title()
+        codes = {v: k for k, v in EM_RECOMMENDATION_MAP.items()}
+        if dec["recommendation"] in codes:
+            out["recommendationCode"] = codes[dec["recommendation"]]
 
     # Map round -> revisionNumber
     ctx = canonical.get("review_context", {}) or {}
@@ -386,6 +404,8 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
             rating["maxScore"] = scale["max"]
         else:
             rating["maxScore"] = 5
+        if m.get("justification"):
+            rating["label"] = m["justification"]
         ratings.append(rating)
 
     if ratings:

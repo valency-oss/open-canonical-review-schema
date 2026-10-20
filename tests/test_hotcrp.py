@@ -142,7 +142,7 @@ def test_hotcrp_to_and_back():
     back = map_to("hotcrp", canon)
 
     # Verify basic structure preserved
-    assert back.get("pid") == "183"
+    assert back.get("pid") == 183  # a number, as HotCRP gives it
     assert "overall_merit" in back or "comments" in back
     assert "strengths" in back or "weaknesses" in back
 
@@ -201,8 +201,8 @@ def test_hotcrp_to_stub():
     }
     back = to_hotcrp(canon)
 
-    assert back["id"] == "123"
-    assert back["pid"] == "42"
+    assert back["id"] == 123
+    assert back["pid"] == 42
     assert back.get("paper_summary") == "Paper summary here."
     assert "strengths" in back
     assert "- Strong point 1" in back["strengths"]
@@ -584,7 +584,7 @@ class TestToHotcrp:
     def test_minimal(self):
         """A minimal record maps the opinion summary to comments only."""
         back = to_hotcrp(_canon())
-        assert back == {"id": "7", "pid": "9", "comments": "Opinion summary."}
+        assert back == {"id": 7, "pid": 9, "comments": "Opinion summary."}
 
     def test_non_hotcrp_review_id_kept(self):
         """A review_id without the hotcrp_ prefix is kept as is."""
@@ -628,12 +628,12 @@ class TestToHotcrp:
             decision={"revision_requirement": "major"},
             metrics=[{"key": "overall", "value": 2}],
         )
-        assert to_hotcrp(canon)["overall_merit"] == "2: Major Revision"
+        assert to_hotcrp(canon)["overall_merit"] == "2. Major Revision"
 
     def test_no_recommendation(self):
-        """Without a recommendation there is no overall_merit."""
+        """Without a recommendation, the overall score is written alone."""
         canon = _canon(decision={"confidence": 0.5}, metrics=[{"key": "overall", "value": 4}])
-        assert "overall_merit" not in to_hotcrp(canon)
+        assert to_hotcrp(canon)["overall_merit"] == 4
 
     def test_confidence_metric_to_expertise(self):
         """The first confidence metric with a value becomes reviewer_expertise."""
@@ -662,10 +662,10 @@ class TestToHotcrp:
             "comments": "Solid.",
         }
         back = to_hotcrp(from_hotcrp(payload))
-        assert back["id"] == "11"
-        assert back["pid"] == "12"
-        assert back["overall_merit"] == "4: Accept"
-        assert back["reviewer_expertise"] == 3
+        assert back["id"] == 11
+        assert back["pid"] == 12
+        assert back["overall_merit"] == "4. Accept"
+        assert back["reviewer_expertise"] == "3. Knowledgeable"
         assert back["round"] == "R2"
         assert back["comments"] == "Solid."
 

@@ -492,7 +492,7 @@ def test_to_openreview_full():
         "review": "Opinion text.",
         "confidential_comments": "For the chairs.",
         "strengths": ["Clear"],
-        "recommendation": "Weak Accept",
+        # No recommendation field: a rating of 6 of 10 reads back as weak_accept
         "rating": 6,
         "confidence": 4,
         # the first metric with a key wins
@@ -506,7 +506,7 @@ def test_to_openreview_detailed_review_without_opinion_text():
     out = to_openreview(canon)
     assert out["content"]["review"] == "Detailed review."
     assert "recommendation" not in out["content"]
-    assert out["signatures"] == []
+    assert "signatures" not in out
 
 
 def test_to_openreview_opinion_text_without_summary():
@@ -542,8 +542,9 @@ def test_openreview_realistic_round_trip():
     canon = map_from("openreview", load_fixture("realistic_review.json"))
     note2 = map_to("openreview", canon)
     assert note2["forum"] == "xY9kL2mN3pQ"
-    assert note2["content"]["recommendation"] == "Accept"
-    assert note2["content"]["rating"] == 7
+    # The rating keeps its label, which says the recommendation, so no field repeats it
+    assert note2["content"]["rating"] == "7: Accept, but not among top submissions"
+    assert "recommendation" not in note2["content"]
 
     canon2 = map_from("openreview", note2)
     assert canon2["decision"] == canon["decision"]

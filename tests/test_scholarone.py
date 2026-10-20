@@ -247,7 +247,8 @@ def test_scholarone_to_stub():
     assert back["commentsToAuthor"] == "The paper is well written."
     assert back["commentsToEditor"] == "No concerns."
     assert back["overallRecommendation"] == 1
-    assert back["overallRecommendationLabel"] == "Accept"
+    # The code says the recommendation; a label is written only when the review gave one
+    assert "overallRecommendationLabel" not in back
     assert len(back["criteriaResponses"]) == 1
     assert back["criteriaResponses"][0]["criterionName"] == "Originality"
 
@@ -506,7 +507,11 @@ def _minimal_canonical(**overrides) -> dict:
 def test_scholarone_to_minimal():
     """Test to_scholarone on a minimal review omits optional fields."""
     back = map_to("scholarone", _minimal_canonical())
-    assert back == {"documentId": "DOC-X", "commentsToAuthor": "Summary text."}
+    assert back == {
+        "documentId": "DOC-X",
+        "dateReviewReceived": "2024-12-25",
+        "commentsToAuthor": "Summary text.",
+    }
 
 
 def test_scholarone_to_review_id_without_reviewer_number():
@@ -533,7 +538,8 @@ def test_scholarone_to_decision_variants():
     """Test revision requirements and unmapped recommendations in to_scholarone."""
     back = map_to("scholarone", _minimal_canonical(decision={"revision_requirement": "minor"}))
     assert back["overallRecommendation"] == 2
-    assert back["overallRecommendationLabel"] == "Minor Revision"
+    # The code says it; a label is written only when the review gave one, or no code applies
+    assert "overallRecommendationLabel" not in back
 
     back = map_to("scholarone", _minimal_canonical(decision={"recommendation": "weak_accept"}))
     assert "overallRecommendation" not in back

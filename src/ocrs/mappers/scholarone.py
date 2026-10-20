@@ -16,6 +16,7 @@ from ..schema import schema_id
 from ..util import (
     first_paragraph,
     first_present,
+    iso_date_or_time,
     map_recommendation_from_text,
     match_alias,
     now_iso,
@@ -309,7 +310,10 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
     if keep_raw:
         out["provenance"]["raw_payload"] = payload
 
-    # Map venue
+    # Map title and venue
+    title = payload.get("manuscriptTitle")
+    if isinstance(title, str) and title.strip():
+        out["target"]["title"] = title.strip()
     venue = payload.get("journalName") or payload.get("journal_name")
     if venue:
         out["target"]["venue"] = venue
@@ -393,9 +397,11 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
 
 
 def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
-    """Convert a canonical review to ScholarOne format (basic stub).
+    """Convert a canonical review to ScholarOne format.
 
-    This is a lossy conversion that produces a minimal ScholarOne-like structure.
+    A review read from ScholarOne is given back what its reader took: the reviewer, the date
+    received, the recommendation with its label, competing interests and each criterion with
+    its label, so that reading the result gives the same review.
 
     Args:
         canonical: A canonical review dictionary.
@@ -420,13 +426,21 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
         "documentId": source_work_id(canonical.get("target", {})),
     }
 
+    referee = canonical.get("referee", {}) or {}
+    human = referee.get("human_referee", {}) or {}
     if reviewer_num is not None:
         out["reviewerNumber"] = reviewer_num
-
-    # Map venue
-    venue = canonical.get("target", {}).get("venue")
-    if venue:
-        out["journalName"] = venue
+    elif referee.get("referee_id"):
+        out["reviewerId"] = referee["referee_id"]
+    for field, value in [
+        ("reviewerName", human.get("name")),
+        ("reviewerOrcid", human.get("orcid")),
+        ("manuscriptTitle", canonical.get("target", {}).get("title")),
+        ("journalName", canonical.get("target", {}).get("venue")),
+        ("dateReviewReceived", iso_date_or_time(canonical.get("created_at"))),
+    ]:
+        if value:
+            out[field] = value
 
     # Map narrative
     nar = canonical.get("narrative", {}) or {}
@@ -450,7 +464,19 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
         reverse_map = {v: k for k, v in S1_RECOMMENDATION_MAP.items()}
         if rec in reverse_map:
             out["overallRecommendation"] = reverse_map[rec]
-        out["overallRecommendationLabel"] = rec.replace("_", " ").title()
+        # The label the source gave, or one that says the recommendation when no code does
+        overall = next(
+            (
+                m
+                for m in canonical.get("metrics", []) or []
+                if isinstance(m, dict) and m.get("key") == "overall"
+            ),
+            {},
+        )
+        if overall.get("justification"):
+            out["overallRecommendationLabel"] = overall["justification"]
+        elif "overallRecommendation" not in out:
+            out["overallRecommendationLabel"] = rec.replace("_", " ").title()
 
     # Map metrics -> criteriaResponses
     criteria = []
@@ -470,9 +496,17 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             crit["maxResponse"] = scale["max"]
         else:
             crit["maxResponse"] = 5
+        if m.get("justification"):
+            crit["label"] = m["justification"]
         criteria.append(crit)
 
     if criteria:
         out["criteriaResponses"] = criteria
+
+    # Competing interests, as the reader takes them: a statement, or none declared
+    if referee.get("competing_interests_statement"):
+        out["competingInterests"] = referee["competing_interests_statement"]
+    elif referee.get("competing_interests_declared") is False:
+        out["competingInterests"] = "None declared"
 
     return out

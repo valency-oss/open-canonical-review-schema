@@ -11,9 +11,12 @@ from ..catalog import alias_map, load_catalog
 from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
 from ..util import (
+    field_name,
     first_paragraph,
     first_present,
+    from_source,
     guess_scale_from_value,
+    id_as_number,
     is_score_field,
     map_recommendation_from_numeric,
     map_recommendation_from_text,
@@ -21,6 +24,7 @@ from ..util import (
     normalize_linear,
     now_iso,
     parse_numeric_prefix,
+    score_with_label,
     source_decision,
     source_work_id,
     split_decision,
@@ -91,9 +95,8 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
 
     source_review_id = first_present(payload, ("reviewId", "id"))
     review_id = str(source_review_id if source_review_id is not None else uuid.uuid4())
-    created_at = (
-        payload.get("createdAt") if isinstance(payload.get("createdAt"), str) else now_iso()
-    )
+    created_at = first_present(payload, ("createdAt", "reviewDate"))
+    created_at = created_at if isinstance(created_at, str) else now_iso()
 
     identifiers = _build_target_identifiers(payload)
     venue = payload.get("conferenceName")
@@ -134,7 +137,10 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
         "metrics": [],
         "opinion": {},
     }
-    # Add venue/track only if present
+    # Add title, venue and track only if present
+    title = payload.get("paperTitle")
+    if isinstance(title, str) and title.strip():
+        out["target"]["title"] = title.strip()
     if venue:
         out["target"]["venue"] = venue
     if track:
@@ -187,11 +193,13 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
                     ),
                 }
             )
+            if rest:
+                out["metrics"][-1]["justification"] = rest
         elif isinstance(rec_raw, str):
             dec["recommendation"] = map_recommendation_from_text(rec_raw) or "borderline"
     conf_raw = payload.get("confidence")
     if conf_raw is not None:
-        num, _ = parse_numeric_prefix(conf_raw)
+        num, conf_label = parse_numeric_prefix(conf_raw)
         if num is not None:
             scale = guess_scale_from_value(num)
             n01 = normalize_linear(num, scale)
@@ -209,6 +217,8 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
                     ),
                 }
             )
+            if conf_label:
+                out["metrics"][-1]["justification"] = conf_label
             if n01 is not None:
                 dec["confidence"] = float(max(0.0, min(1.0, n01)))
     if dec:
@@ -223,6 +233,7 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
                 "reviewId",
                 "id",
                 "createdAt",
+                "reviewDate",
                 "paperId",
                 "submissionId",
                 "conferenceName",
@@ -268,40 +279,61 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
 
 
 def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
-    # Lossy dict approximating a CMT export row
-    out: dict[str, Any] = {}
-    out["reviewId"] = canonical.get("review_id")
-    out["paperId"] = source_work_id(canonical.get("target", {}))
-    out["conferenceName"] = canonical.get("target", {}).get("venue")
-    out["trackName"] = canonical.get("target", {}).get("track")
-    out["reviewerId"] = canonical.get("referee", {}).get("referee_id")
+    """A CMT export row with what OCRS holds. A review read from CMT is given back its scores
+    under their own field names, with their labels, so that reading the row gives the same
+    review; a review from elsewhere gives its scores under their catalog keys."""
+    target = canonical.get("target", {}) or {}
+    referee = canonical.get("referee", {}) or {}
+    same_source = from_source(canonical, "cmt")
+    out: dict[str, Any] = {
+        "reviewId": canonical.get("review_id"),
+        "paperId": id_as_number(source_work_id(target)),
+    }
+    for field, value in [
+        ("paperTitle", target.get("title")),
+        ("conferenceName", target.get("venue")),
+        ("trackName", target.get("track")),
+        ("reviewerId", referee.get("referee_id")),
+        ("reviewDate", canonical.get("created_at")),
+    ]:
+        if value is not None:
+            out[field] = value
 
     # narrative/opinion
     op = canonical.get("opinion", {}) or {}
-    if isinstance(op.get("summary"), str):
-        out["summary"] = op["summary"]
     nar = canonical.get("narrative", {}) or {}
-    if isinstance(nar.get("detailed_review"), str):
-        out["commentsToAuthors"] = nar["detailed_review"]
-    elif isinstance(op.get("text"), str):
-        out["commentsToAuthors"] = op["text"]
+    review_text = nar.get("detailed_review") or op.get("text")
+    # The summary, unless it is the first paragraph of the review, which the reader takes
+    summary = op.get("summary") or nar.get("summary")
+    if isinstance(summary, str) and (
+        "summary" in nar
+        or not isinstance(review_text, str)
+        or summary != first_paragraph(review_text)
+    ):
+        out["summary"] = summary
+    if isinstance(review_text, str):
+        out["commentsToAuthors"] = review_text
     if isinstance(nar.get("confidential_to_editors"), str):
         out["commentsToChairs"] = nar["confidential_to_editors"]
 
     # decision + metrics
     dec = source_decision(canonical.get("decision", {}) or {})
-    if isinstance(dec.get("recommendation"), str):
-        out["recommendation"] = dec["recommendation"]
-    # store overall/confidence metrics explicitly if available
-    for m in canonical.get("metrics", []) or []:
-        if not isinstance(m, dict):
+    rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
+    metrics = [m for m in canonical.get("metrics", []) or [] if isinstance(m, dict)]
+    for m in metrics:
+        if m.get("value") is None:
             continue
-        if m.get("key") == "overall":
-            if dec.get("revision_requirement") in {"minor", "major", "unspecified"}:
-                label = dec["recommendation"].replace("_", " ").title()
-                out.setdefault("overallEvaluation", f"{m.get('value')}: {label}")
-            else:
-                out.setdefault("overallEvaluation", m.get("value"))
-        if m.get("key") == "confidence":
-            out.setdefault("confidence", m.get("value"))
+        key = m.get("key")
+        if key == "overall":
+            # The score carries the recommendation in its label, which the reader takes first
+            label = m.get("justification") or (rec.replace("_", " ").title() if rec else None)
+            out.setdefault("overallEvaluation", score_with_label({**m, "justification": label}))
+        elif key == "confidence":
+            out.setdefault("confidence", score_with_label(m))
+        elif key:
+            label = m.get("label")
+            named = (same_source or key == "other") and isinstance(label, str) and label.strip()
+            out.setdefault(field_name(label) if named else key, score_with_label(m))
+    if rec and "overallEvaluation" not in out:
+        out["recommendation"] = rec
     return out

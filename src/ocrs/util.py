@@ -607,3 +607,60 @@ def source_decision(decision: dict[str, Any]) -> dict[str, Any]:
     if recommendation:
         result["recommendation"] = recommendation
     return result
+
+
+# Writing back to a source. A writer gives a source back what its reader took from it, in
+# the source's own form, so that reading what it writes gives the same review.
+
+
+def from_source(canonical: dict[str, Any], system: str) -> bool:
+    """Whether a review was read from `system`, so that its metric labels are that
+    system's field names."""
+    return (canonical.get("provenance") or {}).get("source_system") == system
+
+
+def score_with_label(metric: dict[str, Any], separator: str = ": ") -> Any:
+    """A score as a review form writes it: the value, with the label the reviewer gave it
+    ("6: Weak Accept"). A label that is the scale's own anchor for the value is the form's
+    description of it, which the value alone says."""
+    value, label = metric.get("value"), metric.get("justification")
+    anchors = (metric.get("scale") or {}).get("anchors") or []
+    form_labels = {a.get("value"): a.get("label") for a in anchors if isinstance(a, dict)}
+    if not isinstance(label, str) or not label.strip() or form_labels.get(value) == label:
+        return value
+    return f"{value}{separator}{label}"
+
+
+def field_name(label: str) -> str:
+    """A source's field name from the metric label its reader made of it, which spells
+    underscores as spaces."""
+    return label.strip().replace(" ", "_")
+
+
+def id_as_number(value: Any) -> Any:
+    """An identifier as a system that numbers its records writes it: a number when it is
+    one, written without leading zeros."""
+    if isinstance(value, str) and value.isdigit() and str(int(value)) == value:
+        return int(value)
+    return value
+
+
+def iso_to_epoch(iso: Any, *, ms: bool = False) -> int | None:
+    """An ISO 8601 time as Unix time, in seconds or milliseconds; None when it is not one."""
+    if not isinstance(iso, str):
+        return None
+    try:
+        dt = _dt.datetime.fromisoformat(iso.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_dt.UTC)
+    return round(dt.timestamp() * (1000 if ms else 1))
+
+
+def iso_date_or_time(iso: Any) -> Any:
+    """A time as a system that records dates writes it: the date alone when the time is
+    midnight UTC, which is how its reader takes a date."""
+    if isinstance(iso, str) and iso.endswith("T00:00:00Z"):
+        return iso[:10]
+    return iso

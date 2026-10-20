@@ -37,17 +37,19 @@ OCRS provides bidirectional mappers for converting between the canonical schema 
 |--------|:---------------:|:-------------:|-------|
 | **OpenReview** | Full | Full | Conference reviews with structured findings and metrics; also [a saved forum page](#reviews-from-a-saved-openreview-page) |
 | **CMT** | Full | Full | Microsoft Conference Management Toolkit exports |
-| **HotCRP** | Full | Basic | Conference reviews; `to_hotcrp` is a minimal stub |
-| **Editorial Manager** | Full | Basic | Journal manuscript system; `to_editorialmanager` is a minimal stub |
-| **ScholarOne** | Full | Basic | Clarivate journal system; `to_scholarone` is a minimal stub |
+| **HotCRP** | Full | Full | Conference reviews |
+| **Editorial Manager** | Full | Full | Journal manuscript system |
+| **ScholarOne** | Full | Full | Clarivate journal system |
 | **Journal Narrative** | Full | Full | Minimal free-text reviews with DOI/journal metadata |
 | **OpenAIReview** | Full | Full | AI reviewer ([ChicagoHAI/OpenAIReview](https://github.com/ChicagoHAI/OpenAIReview)): `paper.json` |
 | **DeepReview** | Full | Full | Google's AI reviewer: the Markdown that its "Copy Report" gives |
 | **Reviewer3** | Full | Full | AI reviewer: the Markdown export of its report |
 
 **Legend:**
-- **Full**: Complete mapping with all relevant fields preserved
-- **Basic**: Lossy stub that produces valid output but may not preserve all fields
+- **Full** source: the mapper reads every field of the system's review that OCRS has a place for
+- **Full** target: a review read from the system and written back to it reads back the same, its scores under their own field names and with their labels; a review from another system is written as well as the format allows
+
+Round trips are tested both ways for every system, with each system's fixtures: written back to its own format, a review OCRS read comes back unchanged, and `tests/test_roundtrip.py` lists the system's own fields that OCRS has no place for, which a review loses on the way.
 
 ## Use the schema
 

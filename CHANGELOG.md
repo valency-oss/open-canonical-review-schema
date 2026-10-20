@@ -26,6 +26,37 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
   reviews: the examples, the README and CONTRIBUTING blocks, each mapper's output for its
   fixtures, and every review one edit away from small reviews that use the restated parts,
   about 4,500 in all.
+- `map_to` gives a review read from OpenReview, CMT, HotCRP, Editorial Manager or ScholarOne
+  back as that system holds it, so that reading what it writes gives the same review. Before,
+  each writer lost part of what its reader took: OpenReview and CMT wrote scores under their
+  catalog keys or dropped them, and OpenReview's came back in another order; the labels the
+  reviewer gave scores were cut (`6: Weak Accept` came back `6`); review dates, reviewers,
+  meta-review and decision notes, questions for the authors, ScholarOne's competing interests
+  and criterion labels, and Editorial Manager's rating labels were lost. Now:
+  - Each score is written under its own field name with its label (`"7: Accept, but not among
+    top submissions"`; HotCRP's `"4. Accept"`). A label that is the review form's own
+    description of the value is left out, so the value alone says it. A review from another
+    system gives its scores under their catalog keys, as before.
+  - A recommendation the overall score's label already says is not written again as its own
+    field, which made OpenReview read the score as a second one.
+  - The review's time (`cdate`, `submitted_at`, `reviewDate`, `dateReceived`,
+    `dateReviewReceived`), the reviewer, the title, the questions for the authors
+    (HotCRP's `questions_for_authors`) and, for OpenReview meta-reviews and decisions, the
+    kind of note and its own fields (`metareview`, `comment`, `decision`) are written.
+  - HotCRP, CMT and Editorial Manager IDs that are numbers are written as numbers, and a
+    value the review does not have is left out rather than written as null.
+  - Editorial Manager writes the recommendation's code beside its text, and ScholarOne its
+    label only when the review gave one.
+- The readers keep a little more, so that their writers can give it back: CMT and OpenReview
+  keep the overall score's label, and CMT the confidence's, as the other scores' labels were
+  kept; CMT takes the paper's title from `paperTitle` and the review's date from `reviewDate`
+  as well as `createdAt`; Editorial Manager and ScholarOne take the title from
+  `manuscriptTitle`.
+- Tests write each fixture back in its source's format and read it again, both ways. Every
+  review OCRS reads from a system comes back unchanged through that system's format; going
+  the other way, `tests/test_roundtrip.py` lists the system's own fields that OCRS has no
+  place for, such as CMT's `bestPaperNomination` or HotCRP's `rtype`, and the tests fail if a
+  review loses more.
 
 ## 0.7.1
 

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for roundtrip conversion between source formats and canonical schema."""
 
+import importlib
 import json
 from pathlib import Path
 
@@ -101,7 +102,8 @@ def test_work_id_is_canonical_and_maps_back_to_the_source_id(fixture: Path) -> N
     target = canon["target"]
     assert target["work_id"] == generate_canonical_work_id(target["identifiers"])
     source_id = target["identifiers"]["internal_id"]["value"]
-    assert map_to(source, canon)[SOURCE_ID_FIELD[source]] == source_id
+    # A system that numbers its papers gets the number back
+    assert str(map_to(source, canon)[SOURCE_ID_FIELD[source]]) == source_id
 
 
 def test_journal_narrative_maps_the_doi_back() -> None:
@@ -117,3 +119,237 @@ def test_journal_narrative_maps_the_doi_back() -> None:
     )
     assert canon["target"]["work_id"] == "doi:10.1234/abc"
     assert map_to("journal_narrative", canon)["doi"] == "10.1234/abc"
+
+
+# Round trips through each source's own format. No mapper can be a bijection: OCRS holds
+# more than any one format, and some formats hold what OCRS has no place for. What a round
+# trip can do is give back what it took, and both directions are tested:
+#
+# - OCRS → source → OCRS: every review a mapper reads comes back the same when it is written
+#   in its source's format and read again. Each writer is a left inverse of its reader.
+# - Source → OCRS → source: a source review comes back with what OCRS holds of it. LOSSES
+#   lists, for each fixture, exactly what it does not give back: `-` a value lost, `+` a
+#   value gained, `~` a value changed, with list positions written `[]`. A fixture not
+#   listed comes back whole. The test fails when a review loses something new, and when a
+#   fix stops a listed loss, so that the table stays true.
+
+OPENREVIEW_V2 = FIXTURES / "openreview_v2"
+# What reading an OpenReview API v2 note needs besides the note
+OPENREVIEW_V2_FORM = {
+    "scale_bounds": json.loads((OPENREVIEW_V2 / "scale_bounds.json").read_text()),
+    "submission": json.loads((OPENREVIEW_V2 / "submission.json").read_text()),
+}
+# What reading an AI reviewer's output needs besides the output
+AI_RUN = {
+    "review_id": "review-1",
+    "source_system": "example-platform",
+    "work_id": "doi:10.1234/abc",
+    "work_type": "preprint",
+    "started_at": "2026-10-15T17:00:00Z",
+    "ended_at": "2026-10-15T17:30:00Z",
+}
+AI_SOURCES = {"openaireview", "deepreview", "reviewer3"}
+SOURCE_REVIEWS = [
+    *(
+        pytest.param(source, path, {}, id=f"{folder}/{path.name}")
+        for source, folder in [
+            ("cmt", "cmt"),
+            ("editorialmanager", "editorialmanager"),
+            ("hotcrp", "hotcrp"),
+            ("journal_narrative", "journal"),
+            ("openreview", "openreview"),
+            ("scholarone", "scholarone"),
+        ]
+        for path in sorted((FIXTURES / folder).glob("*.json"))
+    ),
+    *(
+        pytest.param("openreview", path, OPENREVIEW_V2_FORM, id=f"openreview_v2/{path.name}")
+        for path in (
+            OPENREVIEW_V2 / f"{name}.json" for name in ("review", "meta_review", "decision")
+        )
+    ),
+]
+AI_REVIEWS = [
+    pytest.param(source, FIXTURES / "ai" / name, {}, id=f"ai/{name}")
+    for source, name in [
+        ("openaireview", "openaireview_paper.json"),
+        ("deepreview", "deepreview_report.md"),
+        ("reviewer3", "reviewer3_report.md"),
+    ]
+]
+
+# Source → OCRS → source. The AI reviewers' formats are checked in test_ai_writers.py,
+# which compares the reports as their readers parse them.
+LOSSES = {
+    # A review that states no time gets the time of its import, which is written back
+    "cmt/minimal_review.json": {"+ reviewDate"},
+    "editorialmanager/minimal_review.json": {
+        "+ dateReceived",
+        # The recommendation is written with its code, as Editorial Manager gives it
+        "+ recommendationCode",
+    },
+    "scholarone/minimal_review.json": {"+ dateReviewReceived"},
+    # A review without an ID gets one on import, and it is written back
+    "journal/minimal_review.json": {"+ created_at", "+ review_id"},
+    # Fields OCRS has no place for
+    "cmt/realistic_review.json": {
+        "- bestPaperNomination",
+        "- confidentialToPC",
+        "- ethicsReview",
+        "- reviewerEmail",
+        "- submissionDate",
+    },
+    "editorialmanager/realistic_review.json": {
+        "- articleType",
+        "- dateDue",
+        "- dateRequested",
+        "- journalId",
+        "- keywords",
+        "- ratings[].questionId",
+    },
+    "editorialmanager/realistic_revision.json": {
+        "- articleType",
+        "- previousReviewId",
+        "- ratings[].questionId",
+    },
+    # HotCRP's bookkeeping, and the reviewer's name in two parts, which the reader does not take
+    "hotcrp/realistic_review.json": {
+        "- ordinal",
+        "- reviewer.first",
+        "- reviewer.last",
+        "- rtype",
+        "- rtype_name",
+        "- submitted",
+    },
+    # The note's bookkeeping, and form fields that are not part of the review
+    "openreview/realistic_review.json": {
+        "- content.code_of_conduct",
+        "- content.ethics_flag",
+        "- content.title",
+        "- invitation",
+        "- readers",
+        "- replyto",
+        "- tcdate",
+        "- tmdate",
+        "- writers",
+    },
+    # The fixture's ORCID fails its checksum, so the reader does not keep it
+    "scholarone/realistic_review.json": {
+        "- articleType",
+        "- criteriaResponses[].criterionId",
+        "- dateReviewRequested",
+        "- fundingStatement",
+        "- journalCode",
+        "- reviewerOrcid",
+        "- specialIssue",
+        "- submissionId",
+    },
+    # The writer writes API v1 notes, so a v2 note's `{"value": …}` fields come back
+    # unwrapped, and its invitations as one invitation that names the kind of note. A
+    # recommendation is one of OCRS's values: "Accept (Poster)" comes back "Accept"
+    "openreview_v2/review.json": {
+        "- content.code_of_conduct",
+        "- invitations",
+        "- mdate",
+        "- number",
+        "- readers",
+        "- replyto",
+        "~ content.clarity",
+        "~ content.confidence",
+        "~ content.quality",
+        "~ content.questions",
+        "~ content.rating",
+        "~ content.strengths",
+        "~ content.summary",
+        "~ content.weaknesses",
+    },
+    "openreview_v2/meta_review.json": {
+        "+ invitation",
+        "- invitations",
+        "- replyto",
+        "~ content.confidence",
+        "~ content.metareview",
+        "~ content.recommendation",
+    },
+    "openreview_v2/decision.json": {
+        "+ invitation",
+        "- invitations",
+        "- replyto",
+        "~ content.comment",
+        "~ content.decision",
+    },
+}
+
+
+@pytest.fixture
+def frozen_clock(monkeypatch):
+    """A review that states no time takes the time of its import, so two imports of it
+    agree only when the clock stands still."""
+    for name in ("cmt", "editorialmanager", "hotcrp", "journal", "openreview", "scholarone"):
+        monkeypatch.setattr(
+            importlib.import_module(f"ocrs.mappers.{name}"),
+            "now_iso",
+            lambda: "2026-01-01T00:00:00Z",
+        )
+
+
+def load(path: Path):
+    return json.loads(path.read_text()) if path.suffix == ".json" else path.read_text()
+
+
+def read(source: str, payload, form: dict):
+    if source in AI_SOURCES:
+        return map_from(source, {"output": payload, **AI_RUN})
+    return map_from(source, payload, **form)
+
+
+def differences(before, after, path: str = "") -> set[str]:
+    """What changed from `before` to `after`: `-` lost, `+` gained, `~` changed."""
+    if isinstance(before, dict) and isinstance(after, dict):
+        found = set()
+        for key in before.keys() | after.keys():
+            child = f"{path}.{key}" if path else key
+            if key not in after:
+                found.add(f"- {child}")
+            elif key not in before:
+                found.add(f"+ {child}")
+            else:
+                found |= differences(before[key], after[key], child)
+        return found
+    if isinstance(before, list) and isinstance(after, list):
+        found = {f"- {path}[]"} if len(after) < len(before) else set()
+        found |= {f"+ {path}[]"} if len(after) > len(before) else set()
+        for item_before, item_after in zip(before, after, strict=False):
+            found |= differences(item_before, item_after, f"{path}[]")
+        return found
+    return set() if before == after and type(before) is type(after) else {f"~ {path}"}
+
+
+def without_import_time(review: dict) -> dict:
+    """The review without the time of its import, which no two imports share."""
+    provenance = {k: v for k, v in review["provenance"].items() if k != "imported_at"}
+    return {**review, "provenance": provenance}
+
+
+def fixture_key(path: Path) -> str:
+    return f"{path.parent.name}/{path.name}"
+
+
+@pytest.mark.parametrize(("source", "path", "form"), SOURCE_REVIEWS + AI_REVIEWS)
+@pytest.mark.usefixtures("frozen_clock")
+def test_a_review_written_in_its_source_format_reads_back_the_same(source, path, form):
+    review = read(source, load(path), form)
+    again = read(source, map_to(source, review), form)
+    assert differences(without_import_time(review), without_import_time(again)) == set()
+
+
+@pytest.mark.parametrize(("source", "path", "form"), SOURCE_REVIEWS)
+@pytest.mark.usefixtures("frozen_clock")
+def test_a_source_review_read_and_written_back_is_given_back_as_listed(source, path, form):
+    payload = load(path)
+    written = map_to(source, read(source, payload, form))
+    assert differences(payload, written) == LOSSES.get(fixture_key(path), set())
+
+
+def test_the_loss_table_names_only_fixtures_that_are_tested():
+    assert set(LOSSES) <= {fixture_key(param.values[1]) for param in SOURCE_REVIEWS}

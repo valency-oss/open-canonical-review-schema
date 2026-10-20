@@ -216,7 +216,7 @@ def test_cmt_to_and_back():
     back = map_to("cmt", canon)
 
     # Verify basic structure preserved
-    assert back.get("paperId") == "2847"
+    assert back.get("paperId") == 2847  # a number, as CMT gives it
     assert back.get("conferenceName") == "ICML 2024"
     assert "commentsToAuthors" in back or "summary" in back
 
@@ -251,7 +251,7 @@ def test_cmt_to_stub():
     back = to_cmt(canon)
 
     assert back["reviewId"] == "cmt_123"
-    assert back["paperId"] == "42"
+    assert back["paperId"] == 42
     assert back.get("summary") == "Good paper."  # Uses opinion.summary
     assert back.get("commentsToAuthors") == "Detailed review text."
     assert back.get("commentsToChairs") == "Comments to chairs."
@@ -448,12 +448,13 @@ def test_to_cmt_opinion_text_fallback():
     assert "summary" not in back
     assert "recommendation" not in back
     assert "overallEvaluation" not in back
-    assert back["reviewerId"] is None
-    assert back["conferenceName"] is None
+    # What the review does not say is left out, not written as null
+    assert "reviewerId" not in back
+    assert "conferenceName" not in back
 
 
 def test_to_cmt_metrics():
-    """Test that overall and confidence metrics are written, and others skipped."""
+    """Test that every score is written, the overall one labelled with the recommendation."""
     scale = {"type": "ordinal", "min": 1, "max": 5}
     canon = cmt_canonical(
         decision={"recommendation": "accept"},
@@ -473,10 +474,13 @@ def test_to_cmt_metrics():
     canon["metrics"].insert(0, "not a metric")
     back = to_cmt(canon)
 
-    assert back["recommendation"] == "accept"
-    assert back["overallEvaluation"] == 4
+    # The label carries the recommendation, so no separate field repeats it
+    assert "recommendation" not in back
+    assert back["overallEvaluation"] == "4: Accept"
     assert back["confidence"] == 3
-    assert "novelty" not in back
+    # A review read from CMT gives its other scores under their own names
+    assert back["Novelty"] == 2
+    assert map_from("cmt", back)["decision"]["recommendation"] == "accept"
 
 
 def test_to_cmt_revision_requirement_labels_the_score():
@@ -490,7 +494,7 @@ def test_to_cmt_revision_requirement_labels_the_score():
     )
     back = to_cmt(canon)
 
-    assert back["recommendation"] == "minor_revision"
+    assert "recommendation" not in back
     assert back["overallEvaluation"] == "6: Minor Revision"
 
     again = map_from("cmt", back)

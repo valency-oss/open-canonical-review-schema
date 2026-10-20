@@ -452,6 +452,7 @@ def test_editorialmanager_to_minimal():
     assert back == {
         "reviewId": "REV-X",
         "manuscriptId": "MS-X",
+        "dateReceived": "2024-12-25",
         "commentsToAuthor": "Summary text.",
     }
 
