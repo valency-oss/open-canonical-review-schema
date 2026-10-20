@@ -464,11 +464,12 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
         out["scoreSheetCustomQuestions"] = questions
 
     # Map recommendation
+    # A recommendation OCRS cannot name goes back in the source's words, without a code
     dec = source_decision(canonical.get("decision", {}) or {})
-    if isinstance(dec.get("recommendation"), str):
-        out["recommendation"] = recommendation_label(canonical)
+    if label := recommendation_label(canonical):
+        out["recommendation"] = label
         codes = {v: k for k, v in EM_RECOMMENDATION_MAP.items()}
-        if dec["recommendation"] in codes:
+        if dec.get("recommendation") in codes:
             out["recommendationCode"] = codes[dec["recommendation"]]
 
     # Map round -> revisionNumber

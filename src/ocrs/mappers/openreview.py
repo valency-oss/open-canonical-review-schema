@@ -19,6 +19,7 @@ from ..util import (
     fields_for,
     first_paragraph,
     first_present_item,
+    for_authors,
     from_source,
     guess_scale_from_value,
     is_number,
@@ -808,9 +809,12 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     # still the ones the reader takes from it; otherwise each kind is a list under the first
     # field the reader takes it from
     findings = canonical.get("findings", {}) or {}
-    # The parts kept under their field names: those that are no summary, review or questions
+    # The parts kept under their field names: those that are no summary, review or questions,
+    # and that the authors may read
     sections = [
-        s for s in narrative_parts(canonical) if "role" not in s and isinstance(s.get("title"), str)
+        s
+        for s in narrative_parts(canonical)
+        if "role" not in s and isinstance(s.get("title"), str) and for_authors(s)
     ]
     texts: set[str] = set()
     for k, names in FINDING_KEYS.items():

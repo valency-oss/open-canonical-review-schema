@@ -575,3 +575,12 @@ def test_cmt_ids_and_times_set_off_by_separators_are_not_scores():
         {"reviewId": "r", "paperId": 1, "paper-id": 5, "Paper ID": 6, "CREATED_AT": 7, "valid": 3},
     )
     assert [m["label"] for m in canon["metrics"]] == ["valid"]
+
+
+def test_text_for_the_other_reviewers_is_not_sent_to_the_authors():
+    canon = map_from("cmt", load_fixture("minimal_review.json"))
+    canon["narrative"] = [
+        {"role": "review", "audience": "reviewers", "content": "Between us reviewers."},
+        {"role": "review", "content": "For the authors."},
+    ]
+    assert to_cmt(canon)["commentsToAuthors"] == "For the authors."

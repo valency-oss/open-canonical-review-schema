@@ -49,6 +49,10 @@ reviews one edit away from them) migrates to a valid 0.8 review.
   - `author_questions` becomes a part with role `questions`, and
     `confidential_to_editors` one with role `review` and audience `editors`.
   - Each of `sections` becomes a part as it is, without a title when the title was empty.
+- HotCRP's reviewer expertise, which 0.7 scored as a `confidence` metric labelled "Reviewer
+  Expertise", is an `expertise` metric. Migration: change that metric's `key` and `aspect`
+  to `expertise`, and a `metric_catalog_ref` of `metric-catalog.core.v1` to
+  `metric-catalog.core.v1.1`.
 - A narrative part's `title`, when given, may not be empty.
 - `validate_canonical` checks the new references as it checked the old ones. A point's
   `summarizes` and `addresses` must name findings in the review, and its `claim_ids` must
@@ -81,6 +85,11 @@ reviews one edit away from them) migrates to a valid 0.8 review.
 ### Python package
 
 - `ocrs.migrate.migrate` turns a 0.7 review into a 0.8 one.
+- A writer puts in a field the authors see only the narrative parts the authors may read:
+  those with no `audience`, or `public` or `authors`. The review's text for the editors goes
+  in the system's confidential field, when it has one. A part for the other reviewers goes
+  nowhere.
+  `ocrs.util.for_authors` tells which parts the authors may read.
 - New helpers in `ocrs.util`: `referee_of`, `section`, and `narrative_part`,
   `narrative_text`, `narrative_field` and `narrative_parts`, which find narrative parts by
   role and audience. `recommendation_label` gives the label to write for a decision.
@@ -98,7 +107,11 @@ reviews one edit away from them) migrates to a valid 0.8 review.
     bound's `values` becomes `scale.values`. The writer gives the license and the reply
     back to a note read from OpenReview.
   - **JATS:** the reader takes the report's license as `provenance.license`. The writer
-    writes it for a review from elsewhere.
+    writes the license `provenance.license` holds, even when the review was read from JATS
+    and its license was later changed. The report's body is every part that is the review,
+    or, without one, the other parts, with or without a title.
+  - **Editorial Manager and ScholarOne:** a recommendation OCRS cannot name ("Needs
+    discussion") is kept as `decision.source_label` alone, and written back in its words.
   - **HotCRP:** reviewer expertise, which was a `confidence` metric, is an `expertise`
     metric and the referee's expertise. A form's separate confidence is still a
     `confidence` metric, and it sets `decision.credence`.

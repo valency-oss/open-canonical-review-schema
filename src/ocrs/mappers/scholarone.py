@@ -586,6 +586,9 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             out["overallRecommendationLabel"] = label
         elif "overallRecommendation" not in out:
             out["overallRecommendationLabel"] = recommendation_label(canonical)
+    elif label := recommendation_label(canonical):
+        # A recommendation OCRS cannot name, in the source's words, as the reader takes it
+        out["overallRecommendationLabel"] = label
 
     # Map metrics -> criteriaResponses
     criteria = []

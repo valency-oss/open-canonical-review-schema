@@ -504,3 +504,14 @@ def test_editorialmanager_empty_or_short_questions_are_other():
     ratings = [{"question": "", "score": 3}, {"question": "ab", "score": 3}]
     canon = map_from("editorialmanager", {"manuscriptId": "M", "ratings": ratings})
     assert [m["key"] for m in canon["metrics"]] == ["other", "other"]
+
+
+def test_a_recommendation_ocrs_cannot_name_goes_back_in_its_words():
+    payload = {"documentId": "D1", "reviewerNumber": 1, "recommendation": "Needs discussion"}
+    payload["commentsToAuthor"] = "Text."
+    canon = from_editorialmanager(payload)
+    assert canon["decision"] == {"source_label": "Needs discussion"}
+    written = to_editorialmanager(canon)
+    assert written["recommendation"] == "Needs discussion"
+    assert "recommendationCode" not in written
+    assert from_editorialmanager(written)["decision"] == canon["decision"]
