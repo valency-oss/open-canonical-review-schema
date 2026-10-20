@@ -446,6 +446,8 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     nar = canonical.get("narrative", {}) or {}
     op = canonical.get("opinion", {}) or {}
 
+    if nar.get("summary"):
+        out["summary"] = nar["summary"]
     if nar.get("detailed_review"):
         out["commentsToAuthor"] = nar["detailed_review"]
     elif op.get("text"):

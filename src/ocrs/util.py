@@ -627,8 +627,8 @@ def score_with_label(
     (`form_gives_labels`), a label that is its anchor for the value is left out: that form
     says it for the value alone. Any other system needs the label written."""
     value, label = metric.get("value"), metric.get("justification")
-    # A list of values ("a", "b") has no one place for a label
-    if isinstance(value, (list, dict)):
+    # The readers take a label only after a number: any other value is written as it is
+    if not is_number(value):
         return value
     anchors = (metric.get("scale") or {}).get("anchors") or []
     form_labels = {a.get("value"): a.get("label") for a in anchors if isinstance(a, dict)}

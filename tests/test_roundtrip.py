@@ -483,3 +483,29 @@ def test_an_overall_score_that_is_not_a_number_makes_up_no_recommendation(writer
     overall = {"key": "overall", "label": "rating", "scale": {"type": "textual"}, "value": "Strong"}
     again = map_from(writer, map_to(writer, written_review(writer, metrics=[overall])))
     assert "recommendation" not in again.get("decision", {})
+
+
+@pytest.mark.parametrize(
+    ("writer", "payload"),
+    [
+        ("editorialmanager", {"reviewId": "r", "manuscriptId": "m"}),
+        ("scholarone", {"documentId": "d", "reviewerNumber": 1}),
+    ],
+)
+@pytest.mark.usefixtures("frozen_clock")
+def test_a_summary_beside_the_comments_is_given_back(writer, payload):
+    payload = {**payload, "summary": "Short summary.", "commentsToAuthor": "Long review."}
+    review = map_from(writer, payload)
+    written = map_to(writer, review)
+    assert written["summary"] == "Short summary."
+    assert without_import_time(map_from(writer, written)) == without_import_time(review)
+
+
+@pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
+@pytest.mark.parametrize("value", [True, "Strong", ["theory", "systems"]])
+def test_a_score_that_is_not_a_number_is_written_as_it_is(writer, value):
+    """The readers take a label only after a number, so another value is written alone."""
+    metric = {"key": "other", "label": "topics", "scale": {"type": "categorical"}}
+    review = written_review(writer, metrics=[{**metric, "value": value, "justification": "Why"}])
+    written = map_to(writer, review)
+    assert (written.get("content") or written)["topics"] == value
