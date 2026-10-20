@@ -803,28 +803,34 @@ def for_authors(part: dict[str, Any]) -> bool:
     return part.get("audience") in AUTHOR_AUDIENCES
 
 
+def narrative_matches(
+    canonical: dict[str, Any], role: str | None = None, *, audience: str | None = None
+) -> list[dict[str, Any]]:
+    """The parts of the review's own text with this role (any, without one), in order. Asked
+    for no audience, those the authors may read; asked for one, those for it."""
+    return [
+        part
+        for part in narrative_parts(canonical)
+        if (role is None or part.get("role") == role)
+        and (for_authors(part) if audience is None else part.get("audience") == audience)
+    ]
+
+
 def narrative_part(
     canonical: dict[str, Any], role: str | None = None, *, audience: str | None = None
 ) -> dict[str, Any] | None:
-    """The first part of the review's own text with this role (any, without one). Asked for
-    no audience, it is a part the authors may read; asked for one, a part for it."""
-    for part in narrative_parts(canonical):
-        if role is not None and part.get("role") != role:
-            continue
-        if audience is None and not for_authors(part):
-            continue
-        if audience is not None and part.get("audience") != audience:
-            continue
-        return part
-    return None
+    """The first of `narrative_matches`."""
+    parts = narrative_matches(canonical, role, audience=audience)
+    return parts[0] if parts else None
 
 
 def narrative_text(
     canonical: dict[str, Any], role: str | None = None, *, audience: str | None = None
 ) -> str | None:
-    """The text of `narrative_part`."""
-    part = narrative_part(canonical, role, audience=audience)
-    return part["content"] if part else None
+    """The text of `narrative_matches`, one part after another: a source with one field for
+    them gets them all."""
+    parts = narrative_matches(canonical, role, audience=audience)
+    return "\n\n".join(part["content"] for part in parts) if parts else None
 
 
 def narrative_field(
@@ -835,14 +841,15 @@ def narrative_field(
     audience: str | None = None,
     same_source: bool = False,
 ) -> tuple[str, str] | None:
-    """A part of the review's own text, and the field a source writes it in: its own field
-    (the part's `title`) when the review was read from that source and the reader takes the
-    part from that field, else the first of `fields`."""
+    """The review's own text with this role (`narrative_text`), and the field a source writes
+    it in: its own field (the first part's `title`) when the review was read from that source
+    and the reader takes the part from that field, else the first of `fields`."""
     part = narrative_part(canonical, role, audience=audience)
     if part is None or not fields:
         return None
     title = part.get("title")
-    return (title if same_source and title in fields else fields[0]), part["content"]
+    field = title if same_source and title in fields else fields[0]
+    return field, narrative_text(canonical, role, audience=audience) or ""
 
 
 def narrative_parts(canonical: dict[str, Any]) -> list[dict[str, Any]]:

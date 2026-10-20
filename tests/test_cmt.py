@@ -584,3 +584,12 @@ def test_text_for_the_other_reviewers_is_not_sent_to_the_authors():
         {"role": "review", "content": "For the authors."},
     ]
     assert to_cmt(canon)["commentsToAuthors"] == "For the authors."
+
+
+def test_every_part_that_is_the_review_goes_in_the_comments():
+    canon = map_from("cmt", load_fixture("minimal_review.json"))
+    canon["narrative"] = [
+        {"role": "review", "content": "First report."},
+        {"role": "review", "audience": "public", "content": "Second report."},
+    ]
+    assert to_cmt(canon)["commentsToAuthors"] == "First report.\n\nSecond report."
