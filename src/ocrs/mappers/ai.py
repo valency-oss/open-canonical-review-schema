@@ -45,7 +45,7 @@ from ..mapping import (
     UnanchoredQuote,
 )
 from ..schema import load_schema, require_content, schema_id, validate_canonical
-from ..util import migrate_work_id_to_identifiers
+from ..util import migrate_work_id_to_identifiers, narrative_text, referee_of
 
 __all__ = [
     "AIReviewMapper",
@@ -75,15 +75,14 @@ The output is the reviewer's JSON as a dict, or its text when the reviewer write
 
 REVIEW_VERSION = "1.0.0"
 UNSPECIFIED = "unspecified"
-# The mapping spec every mapper here follows: schemas/mapping-spec.v1.1.0.json.
+# The mapping spec every mapper here follows: schemas/mapping-spec.v1.2.0.json.
 MAPPING_SPEC_ID = "canonical-review.mapping.v1"
-MAPPING_SPEC_VERSION = "1.1.0"
+MAPPING_SPEC_VERSION = "1.2.0"
 # OCRS fields that cannot apply to a review written by one AI reviewer.
 NOT_FOR_AI_REVIEWS = {
-    "referees",
-    "referee.human_referee",
-    "referee.hybrid_workflow",
-    "referee.ai_referee.reference",
+    "referees[].human_referee",
+    "referees[].hybrid_workflow",
+    "referees[].ai_referee.reference",
     "provenance.raw_payload",
     "calibration",
     "signatures",
@@ -411,17 +410,19 @@ def build_review(
                 "mapper_version": mapper_version,
             },
         },
-        "referee": {
-            "referee_type": "ai",
-            "identity_mode": "open",
-            "ai_referee": {
-                "system": {
-                    "critic_framework": framework_info,
-                    "models": [{"role": "reviewer", "model_id": model_id or UNSPECIFIED}],
+        "referees": [
+            {
+                "referee_type": "ai",
+                "identity_mode": "open",
+                "ai_referee": {
+                    "system": {
+                        "critic_framework": framework_info,
+                        "models": [{"role": "reviewer", "model_id": model_id or UNSPECIFIED}],
+                    },
+                    "execution": execution,
                 },
-                "execution": execution,
-            },
-        },
+            }
+        ],
         "target": {
             "work_id": generate_canonical_work_id(identifiers),
             "work_type": work_type,
@@ -448,7 +449,7 @@ def extension(canonical: dict[str, Any], framework: str) -> dict[str, Any]:
 
 def reviewer_model(canonical: dict[str, Any]) -> str | None:
     """The model the review's AI referee ran as reviewer, if it says one."""
-    system = ((canonical.get("referee") or {}).get("ai_referee") or {}).get("system") or {}
+    system = (referee_of(canonical).get("ai_referee") or {}).get("system") or {}
     for model in system.get("models") or []:
         if model.get("role") == "reviewer" and model.get("model_id") not in (None, UNSPECIFIED):
             return model["model_id"]
@@ -457,11 +458,10 @@ def reviewer_model(canonical: dict[str, Any]) -> str | None:
 
 def overall_texts(canonical: dict[str, Any]) -> tuple[str | None, str | None]:
     """The review's summary and its full text, from `opinion` or else `narrative`. Text
-    for the editors only (`narrative.confidential_to_editors`) is never among them."""
+    for the editors only (a part with audience `editors`) is never among them."""
     opinion = canonical.get("opinion") or {}
-    narrative = canonical.get("narrative") or {}
-    summary = opinion.get("summary") or narrative.get("summary")
-    text = opinion.get("text") or narrative.get("detailed_review")
+    summary = opinion.get("summary") or narrative_text(canonical, "summary")
+    text = opinion.get("text") or narrative_text(canonical, "review")
     return summary or None, (text if text != summary else None) or None
 
 
@@ -614,7 +614,7 @@ def finish(
     `ignored` lists output paths that are deliberately not kept (`*` matches
     any key). `generic` turns an output path into the form gaps are summed by.
     """
-    framework = review["referee"]["ai_referee"]["system"]["critic_framework"]["name"]
+    framework = review["referees"][0]["ai_referee"]["system"]["critic_framework"]["name"]
     mapper_version = review["provenance"]["mapping"]["mapper_version"]
     left = leftover(output, recorder.read, ignored, generic)
     if left:

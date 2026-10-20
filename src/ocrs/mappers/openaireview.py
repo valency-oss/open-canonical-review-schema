@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from ..anchors import Block
 from ..gaps import generic_path
 from ..mapping import MappingResult
+from ..util import referee_of
 from .ai import (
     UNSPECIFIED,
     Recorder,
@@ -145,8 +146,8 @@ def map_openaireview(
             f"{prefix}.overall_feedback", "opinion.summary", method.overall_feedback
         )
     if method.prompt_tokens is not None and method.completion_tokens is not None:
-        target = "referee.ai_referee.outputs.token_usage"
-        review["referee"]["ai_referee"]["outputs"] = {
+        target = "referees[0].ai_referee.outputs.token_usage"
+        review["referees"][0]["ai_referee"]["outputs"] = {
             "token_usage": {
                 "input_tokens": recorder.copy(
                     f"{prefix}.prompt_tokens", f"{target}.input_tokens", method.prompt_tokens
@@ -288,7 +289,7 @@ def to_openaireview(canonical: dict[str, Any]) -> dict[str, Any]:
     method["comments"] = write_comments(
         findings_of(canonical, "weaknesses"), others, method.get("comments") or [], key in methods
     )
-    outputs = ((canonical.get("referee") or {}).get("ai_referee") or {}).get("outputs") or {}
+    outputs = (referee_of(canonical).get("ai_referee") or {}).get("outputs") or {}
     usage = outputs.get("token_usage") or {}
     if usage.get("input_tokens") is not None and usage.get("output_tokens") is not None:
         method["prompt_tokens"] = usage["input_tokens"]

@@ -16,6 +16,7 @@ from ..schema import schema_id
 from ..util import (
     epoch_ms_to_iso,
     field_name,
+    fields_for,
     first_paragraph,
     first_present_item,
     from_source,
@@ -26,10 +27,15 @@ from ..util import (
     map_recommendation_from_numeric,
     map_recommendation_from_text,
     match_alias,
+    narrative_field,
+    narrative_parts,
     normalize_linear,
     now_iso,
     parse_numeric_prefix,
+    recommendation_label,
+    referee_of,
     score_with_label,
+    section,
     source_decision,
     source_work_id,
     split_decision,
@@ -42,6 +48,22 @@ from . import openreview_page as page
 # `questions_to_authors`
 SUMMARY_KEYS = ("summary", "paper_summary", "review_summary")
 SUMMARY_ALIASES = ("summary_of_contributions", "summary_and_contributions")
+# The fields of the review's own text the reader takes, in order, each as a part with its
+# role and audience; the first the form fills for each role and audience
+NARRATIVE_FIELDS: tuple[tuple[str, str, str | None], ...] = (
+    ("summary", "summary", None),
+    *((alias, "summary", None) for alias in SUMMARY_ALIASES),
+    ("review", "review", None),
+    ("comments", "review", None),
+    ("main_review", "review", None),
+    ("detailed_review", "review", None),
+    ("strengths_and_weaknesses", "review", None),
+    ("metareview", "review", None),
+    ("comment", "review", None),
+    ("confidential_comments", "review", "editors"),
+    ("confidential_to_chairs", "review", "editors"),
+    ("author_questions", "questions", None),
+)
 FINDING_KEYS = {
     "strengths": ("strengths", "reasons_to_accept"),
     "weaknesses": ("weaknesses", "reasons_to_reject"),
@@ -322,7 +344,7 @@ def _points(text: str, kind: str) -> list[dict[str, Any]]:
     A list's items are its points (a lead-in such as "Major concerns:" is not one); text with no
     list has a point per line. Headings ("Major concerns:", "**Minor**", "## Clarity") are the
     `group` of the points under them, and a Minor or Typos heading makes its weaknesses minor
-    and its requested changes' priority minor. Text under a References heading is no point.
+    and its requested changes minor. Text under a References heading is no point.
     Questions are not split at headings: a bold line there is a question.
     """
     if kind == "questions":
@@ -348,7 +370,7 @@ def _points(text: str, kind: str) -> list[dict[str, Any]]:
             if heading:
                 point["group"] = [heading]
             if minor and kind in ("weaknesses", "changes"):
-                point["severity" if kind == "weaknesses" else "priority"] = "minor"
+                point["severity"] = "minor"
             points.append(point)
     return points
 
@@ -419,7 +441,7 @@ def _metric_key_for_label(
 
 def _bounded_scale(field: str, num: int | float, bounds: dict[str, Any] | None) -> dict[str, Any]:
     """The scale of a score: the review form's own bounds for the field (`{"min": 1, "max": 6,
-    "labels": {"6": "Strong Accept"}}`), else a guess from the value."""
+    "labels": {"6": "Strong Accept"}, "values": [1, 3, 5, 6]}`), else a guess from the value."""
     if not _has_bounds(field, bounds):
         return guess_scale_from_value(num)
     given = (bounds or {})[field]
@@ -432,6 +454,9 @@ def _bounded_scale(field: str, num: int | float, bounds: dict[str, Any] | None) 
             anchors.append({"value": number, "label": label.strip()})
     if anchors:
         scale["anchors"] = sorted(anchors, key=lambda a: a["value"])
+    values = given.get("values")
+    if isinstance(values, list) and values:
+        scale["values"] = values
     return scale
 
 
@@ -499,15 +524,17 @@ def from_openreview(
             "imported_at": now_iso(),
             "mapping": {
                 "mapping_spec_id": "canonical-review.mapping.v1",
-                "mapping_spec_version": "1.1.0",
+                "mapping_spec_version": "1.2.0",
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {
-            "referee_type": "human",
-            "identity_mode": "confidential",
-            "human_referee": {},
-        },
+        "referees": [
+            {
+                "referee_type": "human",
+                "identity_mode": "confidential",
+                "human_referee": {},
+            }
+        ],
         "target": _build_target(note, content, submission),
         "metric_catalog_ref": catalog.get("catalog_id"),
         "metrics": [],
@@ -523,47 +550,39 @@ def from_openreview(
     if isinstance(note.get("id"), str):
         out["provenance"]["source_review_id"] = note["id"]
     if signer:
-        out["referee"]["referee_id"] = signer
+        out["referees"][0]["referee_id"] = signer
+    # The license the review itself is published under, and the note it replies to when that
+    # is not the submission: another review
+    if isinstance(note.get("license"), str) and note["license"].strip():
+        out["provenance"]["license"] = {"name": note["license"].strip()}
+    replyto = note.get("replyto")
+    if isinstance(replyto, str) and replyto and replyto != note.get("forum"):
+        out["related_reviews"] = [{"type": "responds_to", "review_id": replyto}]
     if keep_raw:
         out["provenance"]["raw_payload"] = note
 
-    # narrative mapping
-    narrative = {}
-    for src, dst in [
-        ("summary", "summary"),
-        *((alias, "summary") for alias in SUMMARY_ALIASES),
-        ("review", "detailed_review"),
-        ("comments", "detailed_review"),
-        ("main_review", "detailed_review"),
-        ("detailed_review", "detailed_review"),
-        ("strengths_and_weaknesses", "detailed_review"),
-        ("metareview", "detailed_review"),
-        ("comment", "detailed_review"),
-        ("confidential_comments", "confidential_to_editors"),
-        ("confidential_to_chairs", "confidential_to_editors"),
-        ("author_questions", "author_questions"),
-    ]:
-        v = content.get(src)
-        if isinstance(v, str) and v.strip():
-            # keep the first non-empty for detailed_review fields
-            if dst not in narrative:
-                narrative[dst] = v.strip()
+    # The review's own text: the first field the form fills for each part, each under its name
+    narrative: list[dict[str, Any]] = []
+    taken: set[tuple[str, str | None]] = set()
+    for field, role, audience in NARRATIVE_FIELDS:
+        v = content.get(field)
+        if isinstance(v, str) and v.strip() and (role, audience) not in taken:
+            taken.add((role, audience))
+            narrative.append(section(v.strip(), title=field, role=role, audience=audience))
     # A finding field written as text is kept as written, beside the points read from it
     finding_texts = {
         found[0]
         for k in FINDING_KEYS
         if (found := _finding_field(content, k)) and isinstance(found[1], str) and found[1].strip()
     }
-    sections = [
-        {"title": k, "content": v.strip()}
+    narrative += [
+        section(v.strip(), title=k)
         for k, v in content.items()
         if (k in SECTION_FIELDS or k in finding_texts)
         and isinstance(v, str)
         and v.strip()
         and not (k in SCORE_OR_SECTION and parse_numeric_prefix(v)[0] is not None)
     ]
-    if sections:
-        narrative["sections"] = sections
     if narrative:
         out["narrative"] = narrative
 
@@ -656,6 +675,9 @@ def from_openreview(
                 out["metrics"][-1]["justification"] = label
         elif isinstance(rec_raw, str):
             decision["recommendation"] = map_recommendation_from_text(rec_raw) or "borderline"
+            # The recommendation in the form's own words ("Accept (Poster)")
+            if rec_raw.strip():
+                decision["source_label"] = rec_raw.strip()
     if conf_raw is not None:
         num, conf_label = parse_numeric_prefix(conf_raw)
         if num is not None:
@@ -681,7 +703,7 @@ def from_openreview(
             if conf_label:
                 out["metrics"][-1]["justification"] = conf_label
             if isinstance(n01, (int, float)):
-                decision["confidence"] = float(max(0.0, min(1.0, n01)))
+                decision["credence"] = float(max(0.0, min(1.0, n01)))
     if decision:
         out["decision"] = split_decision(decision)
 
@@ -764,21 +786,31 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
 
     # Map narrative/opinion
     op = canonical.get("opinion", {}) or {}
-    nar = canonical.get("narrative", {}) or {}
-    text = op.get("text") if isinstance(op.get("text"), str) else nar.get("detailed_review")
-    if isinstance(text, str):
-        content[_TEXT_FIELD.get(kind, "review")] = text
-    if "confidential_to_editors" in nar and isinstance(nar["confidential_to_editors"], str):
-        content["confidential_comments"] = nar["confidential_to_editors"]
+
+    # Each part of the review's own text under its own field, when read from OpenReview
+    def own_field(role: str, *, editors: bool = False, first: str | None = None):
+        fields = fields_for(NARRATIVE_FIELDS, role, editors=editors)
+        fields = (first, *fields) if first else fields
+        audience = "editors" if editors else None
+        return narrative_field(canonical, role, fields, audience=audience, same_source=same_source)
+
+    text_field = _TEXT_FIELD.get(kind, "review")
+    if isinstance(op.get("text"), str):
+        content[text_field] = op["text"]
+    elif review := own_field("review", first=text_field):
+        content[review[0]] = review[1]
+    if confidential := own_field("review", editors=True):
+        content[confidential[0]] = confidential[1]
+    if questions := own_field("questions"):
+        content[questions[0]] = questions[1]
 
     # Findings. A kind read from a field's text goes back as that text, while its points are
     # still the ones the reader takes from it; otherwise each kind is a list under the first
     # field the reader takes it from
     findings = canonical.get("findings", {}) or {}
+    # The parts kept under their field names: those that are no summary, review or questions
     sections = [
-        s
-        for s in nar.get("sections") or []
-        if isinstance(s, dict) and isinstance(s.get("title"), str)
+        s for s in narrative_parts(canonical) if "role" not in s and isinstance(s.get("title"), str)
     ]
     texts: set[str] = set()
     for k, names in FINDING_KEYS.items():
@@ -791,9 +823,9 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
         if points:
             content[names[0]] = [f.get("text") for f in points if f.get("text")]
     # The parts of the review kept under their field names, in order
-    for section in sections:
-        if section["title"] in SECTION_FIELDS or section["title"] in texts:
-            content.setdefault(section["title"], section.get("content"))
+    for part in sections:
+        if part["title"] in SECTION_FIELDS or part["title"] in texts:
+            content.setdefault(part["title"], part.get("content"))
 
     # Ethics: the form's flag as it gave it, while the review still says what it said, else
     # the review's concerns as ICLR's choices; and the reviewer's account of the concerns
@@ -810,17 +842,18 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
         content[ETHICS_NOTES_FIELD] = ethics["notes"]
 
     # The summary, unless the reader would take the same one from the text or the findings
-    summary = nar.get("summary") if isinstance(nar.get("summary"), str) else op.get("summary")
+    own_summary = own_field("summary")
+    summary = own_summary[1] if own_summary else op.get("summary")
     if isinstance(summary, str) and (
-        "summary" in nar or summary != _summary_the_reader_infers(content)
+        own_summary is not None or summary != _summary_the_reader_infers(content)
     ):
-        content = {"summary": summary, **content}
+        content = {(own_summary[0] if own_summary else "summary"): summary, **content}
 
     # Scores, each under its own field. A review read from OpenReview keeps its fields and
     # labels; one from elsewhere is written under the catalog's keys
     dec = source_decision(canonical.get("decision", {}) or {})
     rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
-    rec_label = rec.replace("_", " ").title() if rec else None
+    rec_label = recommendation_label(canonical)
     overall_written = False
     # Whether the overall score was written to a field the reader takes the recommendation from
     overall_says_recommendation = False
@@ -874,9 +907,20 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
         "forum": source_work_id(canonical.get("target", {})),
         "content": content,
     }
-    referee_id = canonical.get("referee", {}).get("referee_id")
+    referee_id = referee_of(canonical).get("referee_id")
     if referee_id:
         note["signatures"] = [referee_id]
+    if same_source:
+        license_ = (canonical.get("provenance") or {}).get("license") or {}
+        if isinstance(license_.get("name"), str):
+            note["license"] = license_["name"]
+        replies = [
+            r["review_id"]
+            for r in canonical.get("related_reviews") or []
+            if isinstance(r, dict) and r.get("type") == "responds_to" and r.get("review_id")
+        ]
+        if replies:
+            note["replyto"] = replies[0]
     cdate = iso_to_epoch(canonical.get("created_at"), ms=True)
     if cdate is not None:
         note["cdate"] = cdate

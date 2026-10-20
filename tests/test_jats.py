@@ -5,6 +5,8 @@
 import xml.etree.ElementTree as ET
 
 from ocrs import map_from, map_to
+from ocrs.mappers.jats import TERMS
+from ocrs.util import narrative_text
 
 XLINK = 'xmlns:xlink="http://www.w3.org/1999/xlink"'
 
@@ -27,19 +29,23 @@ def test_text_after_a_list_in_a_paragraph_is_kept():
         "<sec><title>Methods</title><p>Clear.</p><p>Sound.</p></sec>"
     )
     review = map_from("jats", payload(body=body, article_type="referee-report", id="r1"))
-    assert review["narrative"]["detailed_review"] == (
+    assert narrative_text(review, "review") == (
         "Before.\n\n1. One.\n2. Two.\n\nAfter the list.\n\nMethods:\n\nClear.\n\nSound."
     )
-    assert review["narrative"]["sections"] == [{"title": "Methods", "content": "Clear.\n\nSound."}]
+    assert [p for p in review["narrative"] if "role" not in p] == [
+        {"title": "Methods", "content": "Clear.\n\nSound."}
+    ]
     assert round_trip(review)["narrative"] == review["narrative"]
 
 
 def test_a_review_with_only_sections_is_written_with_a_body():
     review = map_from("jats", payload(article_type="referee-report", id="r1"))
-    review["narrative"] = {"sections": [{"title": "Strengths", "content": "Clear."}]}
+    review["narrative"] = [{"title": "Strengths", "content": "Clear."}]
     review["opinion"] = {}
     again = round_trip(review)
-    assert again["narrative"]["sections"] == review["narrative"]["sections"]
+    assert [p for p in again["narrative"] if "role" not in p] == [
+        p for p in review["narrative"] if "role" not in p
+    ]
 
 
 def test_a_date_without_a_type_is_kept():
@@ -63,7 +69,8 @@ def test_a_recommendation_ocrs_does_not_know_goes_back_as_written():
         "<meta-value>approve-in-part</meta-value></custom-meta></custom-meta-group>"
     )
     review = map_from("jats", payload(front=front, id="r1"))
-    assert "decision" not in review
+    # The source's term, with no recommendation OCRS can name
+    assert review["decision"] == {"source_label": "approve-in-part"}
     written = ET.fromstring(map_to("jats", review)["sub_article"])
     assert written.findtext(".//meta-value") == "approve-in-part"
     # A recommendation the review now makes replaces it
@@ -180,17 +187,22 @@ def test_every_recommendation_has_a_term():
         "strong_reject",
     ):
         review["decision"] = {"recommendation": recommendation}
-        assert round_trip(review)["decision"] == {"recommendation": recommendation}
+        # Written as its term, which reads back as the recommendation in the source's words
+        term = TERMS[recommendation]
+        assert round_trip(review)["decision"] == {
+            "recommendation": recommendation,
+            "source_label": term,
+        }
 
 
 def test_a_review_of_findings_alone_is_written_with_them():
     review = map_from("jats", payload(id="r1"))
-    review["narrative"], review["opinion"] = {}, {}
+    review["narrative"], review["opinion"] = [], {}
     review["findings"] = {
         "weaknesses": [{"title": "No ablation", "text": "Table 3 shows the full model only."}]
     }
     again = round_trip(review)
-    assert again["narrative"]["sections"] == [
+    assert [p for p in again["narrative"] if "role" not in p] == [
         {"title": "Weaknesses", "content": "- **No ablation** Table 3 shows the full model only."}
     ]
 
@@ -211,7 +223,7 @@ def test_a_list_nested_in_a_list_item_is_kept():
         "</list></list-item><list-item><p>Clear writing.</p></list-item></list>"
     )
     review = map_from("jats", payload(body=body, id="r1"))
-    assert review["narrative"]["detailed_review"] == (
+    assert narrative_text(review, "review") == (
         "- Methods: No ablation.; One dataset.\n- Clear writing."
     )
     assert round_trip(review)["narrative"] == review["narrative"]
@@ -219,10 +231,10 @@ def test_a_list_nested_in_a_list_item_is_kept():
 
 def test_findings_no_section_holds_are_written_after_the_sections():
     review = map_from("jats", payload(id="r1"))
-    review["narrative"] = {"sections": [{"title": "strengths", "content": "- Clear."}]}
+    review["narrative"] = [{"title": "strengths", "content": "- Clear."}]
     review["opinion"] = {}
     review["findings"] = {"strengths": [{"text": "Clear."}], "weaknesses": [{"text": "Small."}]}
-    sections = round_trip(review)["narrative"]["sections"]
+    sections = [p for p in round_trip(review)["narrative"] if "role" not in p]
     assert sections == [
         {"title": "strengths", "content": "- Clear."},
         {"title": "Weaknesses", "content": "- Small."},
@@ -237,10 +249,10 @@ def test_a_doi_in_the_work_id_alone_is_written():
 
 def test_findings_a_section_does_not_hold_are_written_too():
     review = map_from("jats", payload(id="r1"))
-    review["narrative"] = {"sections": [{"title": "strengths", "content": "- Clear."}]}
+    review["narrative"] = [{"title": "strengths", "content": "- Clear."}]
     review["opinion"] = {}
     review["findings"] = {"strengths": [{"text": "Clear."}, {"text": "Novel."}]}
-    sections = round_trip(review)["narrative"]["sections"]
+    sections = [p for p in round_trip(review)["narrative"] if "role" not in p]
     assert sections == [
         {"title": "strengths", "content": "- Clear."},
         {"title": "Strengths", "content": "- Novel."},
@@ -249,17 +261,17 @@ def test_findings_a_section_does_not_hold_are_written_too():
 
 def test_a_finding_inside_a_longer_item_is_not_held_by_it():
     review = map_from("jats", payload(id="r1"))
-    review["narrative"] = {
-        "sections": [{"title": "strengths", "content": "- Novel. The approach needs evidence."}]
-    }
+    review["narrative"] = [
+        {"title": "strengths", "content": "- Novel. The approach needs evidence."}
+    ]
     review["opinion"] = {}
     review["findings"] = {"strengths": [{"text": "Novel."}]}
-    sections = round_trip(review)["narrative"]["sections"]
+    sections = [p for p in round_trip(review)["narrative"] if "role" not in p]
     assert sections[-1] == {"title": "Strengths", "content": "- Novel."}
 
 
 def test_a_summary_that_starts_a_finding_is_still_written():
     review = map_from("jats", payload(id="r1"))
-    review["narrative"], review["opinion"] = {}, {"summary": "No"}
+    review["narrative"], review["opinion"] = [], {"summary": "No"}
     review["findings"] = {"weaknesses": [{"text": "No ablation."}]}
-    assert round_trip(review)["narrative"]["detailed_review"].startswith("No\n\nWeaknesses:")
+    assert narrative_text(round_trip(review), "review").startswith("No\n\nWeaknesses:")

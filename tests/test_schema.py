@@ -27,7 +27,7 @@ MINIMAL_REVIEW = {
     "version": "1.0.0",
     "created_at": "2026-10-06T12:00:00Z",
     "provenance": {"source_system": "example-journal"},
-    "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+    "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
     "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
     "opinion": {"summary": "A sound paper."},
 }
@@ -80,7 +80,7 @@ def test_an_anonymous_human_review_needs_no_human_referee():
             "version": "1.0.0",
             "created_at": "2026-10-06T12:00:00Z",
             "provenance": {"source_system": "example-journal"},
-            "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+            "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
             "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
             "opinion": {"summary": "A sound paper."},
         }
@@ -107,7 +107,7 @@ def _review_of(identifiers: dict) -> dict:
         "version": "1.0.0",
         "created_at": "2026-10-15T12:00:00Z",
         "provenance": {"source_system": "example-journal"},
-        "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
         "target": {
             "work_id": "internal_id:manuscript_id:paper-1",
             "work_type": "article",
@@ -161,7 +161,7 @@ def _review_with(finding: dict, claim: dict) -> dict:
         "version": "1.0.0",
         "created_at": "2026-10-07T12:00:00Z",
         "provenance": {"source_system": "example-journal"},
-        "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
         "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
         "opinion": {"summary": "A sound paper."},
         "findings": {"weaknesses": [finding]},
@@ -271,7 +271,7 @@ def _review_with_provenance(provenance: dict) -> dict:
         "version": "1.0.0",
         "created_at": "2026-10-15T12:00:00Z",
         "provenance": {"source_system": "example-journal", **provenance},
-        "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
         "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
         "opinion": {"summary": "A sound paper."},
     }
@@ -302,7 +302,7 @@ def _review_in_context(review_context: dict) -> dict:
         "version": "1.0.0",
         "created_at": "2026-10-15T12:00:00Z",
         "provenance": {"source_system": "example-journal"},
-        "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
         "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
         "review_context": review_context,
         "opinion": {"summary": "A sound paper."},
@@ -385,13 +385,9 @@ def _review_saying(**content) -> dict:
             ]
         },
         {"checks": [{"kind": "reference_verification", "summary": "All references found."}]},
-        {"narrative": {"detailed_review": "The paper is sound."}},
-        {"narrative": {"sections": [{"title": "Methods", "content": "Sound."}]}},
-        {
-            "narrative": {
-                "sections": [{"title": "", "content": ""}, {"title": "", "content": "Sound."}]
-            }
-        },
+        {"narrative": [{"role": "review", "content": "The paper is sound."}]},
+        {"narrative": [{"title": "Methods", "content": "Sound."}]},
+        {"narrative": [{"content": ""}, {"content": "Sound."}]},
         {"opinion": {"stance": "positive"}},
         {"opinion": {"high_level_reasons": ["The method is new."]}},
         {"findings": {"weaknesses": [{"title": "No ablation", "text": ""}]}},
@@ -399,7 +395,8 @@ def _review_saying(**content) -> dict:
         {"ethics_and_risk": {"ethical_concerns": True}},
         {"ethics_and_risk": {"notes": "The dataset exposes participant identities."}},
         {"ethics_and_risk": {"concern_categories": ["privacy"]}},
-        {"ethics_and_risk": {"required_mitigations": [{"text": "Anonymize the dataset."}]}},
+        {"findings": {"changes": [{"text": "Anonymize the dataset.", "scope": "ethics"}]}},
+        {"decision": {"source_label": "Accept (Oral)"}},
         {"written_report": {"content_type": "pdf", "filename": "review.pdf"}},
     ],
 )
@@ -431,15 +428,16 @@ def test_a_review_of_only_the_citations_is_a_review(flagged: bool) -> None:
         {},
         {"findings": {}},
         {"findings": {"strengths": [], "changes": []}},
-        {"decision": {"confidence": 0.8}},
+        {"decision": {"credence": 0.8}},
         {"metrics": [], "checks": [], "claim_assessments": [], "artifact_assessments": []},
-        {"narrative": {"detailed_review": "", "sections": []}},
-        {"narrative": {"sections": [{"title": "", "content": ""}]}},
-        {"narrative": {"summary": "  \n"}},
+        {"narrative": [{"role": "review", "content": ""}]},
+        {"narrative": [{"title": "Methods", "content": ""}]},
+        {"narrative": [{"role": "summary", "content": "  \n"}]},
         {"opinion": {"summary": " ", "high_level_reasons": ["", " "], "contributions": []}},
         {"findings": {"strengths": [{"text": ""}], "comments": [{"title": " ", "text": " "}]}},
-        {"decision": {"confidence": 0.8, "summary_rationale": ""}},
-        {"ethics_and_risk": {"ethical_concerns": False, "notes": "", "required_mitigations": []}},
+        {"decision": {"credence": 0.8, "summary_rationale": ""}},
+        {"ethics_and_risk": {"ethical_concerns": False, "notes": "", "concern_categories": []}},
+        {"decision": {"source_label": " "}},
     ],
 )
 def test_a_review_that_says_nothing_is_invalid(content: dict) -> None:

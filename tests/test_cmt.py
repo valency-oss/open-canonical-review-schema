@@ -6,9 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.cmt import from_cmt, to_cmt
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cmt"
 
@@ -48,9 +50,9 @@ def test_cmt_realistic():
 
     # Check narrative
     assert "narrative" in canon
-    assert canon["narrative"].get("summary")
-    assert canon["narrative"].get("detailed_review")
-    assert canon["narrative"].get("confidential_to_editors")
+    assert narrative_text(canon, "summary")
+    assert narrative_text(canon, "review")
+    assert narrative_text(canon, audience="editors")
 
     # Check decision
     assert "decision" in canon
@@ -134,7 +136,7 @@ def test_cmt_human_referee_orcid():
     canon = from_cmt(payload)
     validate_canonical(canon)
 
-    human_referee = canon["referee"]["human_referee"]
+    human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["orcid"] == "0000-0001-5000-0007"
     assert human_referee["name"] == "Dr. Jane Smith"
     assert human_referee["affiliation"] == "MIT"
@@ -152,7 +154,7 @@ def test_cmt_human_referee_orcid_url_format():
     canon = from_cmt(payload)
     validate_canonical(canon)
 
-    human_referee = canon["referee"]["human_referee"]
+    human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["orcid"] == "0000-0001-5000-0007"
 
 
@@ -169,7 +171,7 @@ def test_cmt_human_referee_invalid_orcid():
     canon = from_cmt(payload)
     validate_canonical(canon)
 
-    human_referee = canon["referee"]["human_referee"]
+    human_referee = canon["referees"][0]["human_referee"]
     assert "orcid" not in human_referee  # Invalid ORCID should be excluded
     assert human_referee["name"] == "Dr. Jane Smith"
 
@@ -187,7 +189,7 @@ def test_cmt_human_referee_alternative_field_names():
     canon = from_cmt(payload)
     validate_canonical(canon)
 
-    human_referee = canon["referee"]["human_referee"]
+    human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["name"] == "Prof. John Doe"
     assert human_referee["affiliation"] == "Stanford University"
 
@@ -237,14 +239,14 @@ def test_cmt_to_stub():
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:paperId:42", "work_type": "other"},
         "opinion": {"summary": "Good paper."},
-        "narrative": {
-            "summary": "Paper summary here.",
-            "detailed_review": "Detailed review text.",
-            "confidential_to_editors": "Comments to chairs.",
-        },
+        "narrative": [
+            {"role": "summary", "content": "Paper summary here."},
+            {"role": "review", "content": "Detailed review text."},
+            {"role": "review", "audience": "editors", "content": "Comments to chairs."},
+        ],
         "decision": {"recommendation": "accept"},
         "metrics": [{"key": "overall", "aspect": "overall", "value": 4}],
     }
@@ -271,7 +273,7 @@ def test_cmt_without_paper_id():
     assert canon["target"]["work_id"] == "unknown"
     assert canon["opinion"] == {"summary": "A summary."}
     assert "decision" not in canon
-    assert "referee_id" not in canon["referee"]
+    assert "referee_id" not in canon["referees"][0]
     assert "raw_payload" not in canon["provenance"]
     assert canon["metrics"] == []
 
@@ -286,7 +288,7 @@ def test_cmt_id_and_created_at_fallbacks():
     assert canon["provenance"]["source_review_id"] == "7"
     assert canon["created_at"] != 1735689600
     assert canon["created_at"].endswith("Z")
-    assert canon["referee"]["referee_id"] == "99"
+    assert canon["referees"][0]["referee_id"] == "99"
 
 
 def test_cmt_review_text_fallback_sets_opinion():
@@ -300,7 +302,7 @@ def test_cmt_review_text_fallback_sets_opinion():
     canon = map_from("cmt", payload)
 
     assert canon["opinion"]["summary"] == "First paragraph."
-    assert canon["narrative"] == {
+    assert narrative_fields(canon) == {
         "detailed_review": "First paragraph.\n\nSecond paragraph.",
         "confidential_to_editors": "Possible overlap with prior work.",
     }
@@ -311,20 +313,21 @@ def test_cmt_summary_wins_over_review_text_for_opinion():
     payload = {"reviewId": "r1", "paperId": 1, "summary": "Short.", "commentsToAuthors": "Long."}
     canon = map_from("cmt", payload)
     assert canon["opinion"]["summary"] == "Short."
-    assert canon["narrative"]["detailed_review"] == "Long."
+    assert narrative_text(canon, "review") == "Long."
 
 
 def test_cmt_text_recommendation():
     """Test that a text-only recommendation maps without an overall metric."""
     canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Weak Reject"})
-    assert canon["decision"] == {"recommendation": "weak_reject"}
+    assert canon["decision"] == {"recommendation": "weak_reject", "source_label": "Weak Reject"}
     assert canon["metrics"] == []
 
 
 def test_cmt_unrecognized_text_recommendation_is_borderline():
     """Test that unmapped recommendation text defaults to borderline."""
     canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Unsure"})
-    assert canon["decision"] == {"recommendation": "borderline"}
+    # The words are kept, though they say no recommendation OCRS knows
+    assert canon["decision"] == {"recommendation": "borderline", "source_label": "Unsure"}
 
 
 def test_cmt_non_text_recommendation_is_ignored():
@@ -362,14 +365,18 @@ def test_cmt_revision_recommendation_is_a_revision_requirement():
     """Test that a revision recommendation becomes a revision requirement."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Major revision"}
     canon = map_from("cmt", payload)
-    assert canon["decision"] == {"revision_requirement": "major"}
+    assert canon["decision"] == {"revision_requirement": "major", "source_label": "Major revision"}
 
 
 def test_cmt_confidence_ratio():
-    """Test that a 0-1 confidence becomes the decision confidence."""
+    """Test that a 0-1 confidence becomes the decision's credence."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Accept", "confidence": 0.8}
     canon = map_from("cmt", payload)
-    assert canon["decision"] == {"recommendation": "accept", "confidence": 0.8}
+    assert canon["decision"] == {
+        "recommendation": "accept",
+        "source_label": "Accept",
+        "credence": 0.8,
+    }
     conf = canon["metrics"][0]
     assert conf["key"] == "confidence"
     assert conf["scale"] == {"type": "ratio", "min": 0, "max": 1, "step": 0.01}
@@ -386,7 +393,7 @@ def test_cmt_unbounded_confidence_has_no_decision_confidence():
     """Test that confidence on an unknown scale is kept only as a raw metric."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Accept", "confidence": 50}
     canon = map_from("cmt", payload)
-    assert canon["decision"] == {"recommendation": "accept"}
+    assert canon["decision"] == {"recommendation": "accept", "source_label": "Accept"}
     conf = canon["metrics"][0]
     assert conf["value"] == 50
     assert "normalized" not in conf
@@ -429,7 +436,7 @@ def cmt_canonical(**fields) -> dict:
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:paperId:42", "work_type": "other"},
         "opinion": {"summary": "Good paper."},
     }

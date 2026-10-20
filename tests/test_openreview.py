@@ -7,11 +7,13 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.catalog import alias_map, load_catalog
 from ocrs.mappers.openreview import _metric_key_for_label, to_openreview
 from ocrs.scales import normalized_to_recommendation
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "openreview"
 # API v2 notes, and the form bounds and submission that go with them (not notes themselves)
@@ -65,13 +67,13 @@ def test_openreview_realistic():
     canon = map_from("openreview", payload, keep_raw=True)
 
     assert canon["provenance"]["raw_payload"] == payload
-    assert canon["referee"]["referee_id"] == "~Reviewer_ABC1"
+    assert canon["referees"][0]["referee_id"] == "~Reviewer_ABC1"
     assert canon["target"]["identifiers"]["internal_id"]["hyperlink"] == (
         "https://openreview.net/forum?id=xY9kL2mN3pQ"
     )
     assert canon["decision"]["recommendation"] == "accept"
-    assert canon["decision"]["confidence"] == 0.75
-    assert canon["narrative"]["detailed_review"].startswith("## Summary")
+    assert canon["decision"]["credence"] == 0.75
+    assert narrative_text(canon, "review").startswith("## Summary")
     assert len(canon["findings"]["strengths"]) == 4
     assert canon["findings"]["questions"][0]["text"] == (
         "Sensitivity to sparsity predictor architecture?"
@@ -146,7 +148,7 @@ def test_openreview_non_string_signature_is_ignored():
             signatures=[{"id": "~Reviewer1"}],
         ),
     )
-    assert "referee_id" not in canon["referee"]
+    assert "referee_id" not in canon["referees"][0]
     canon = map_from(
         "openreview",
         note(
@@ -156,7 +158,7 @@ def test_openreview_non_string_signature_is_ignored():
             signatures=[],
         ),
     )
-    assert "referee_id" not in canon["referee"]
+    assert "referee_id" not in canon["referees"][0]
 
 
 # from_openreview: target identifiers
@@ -254,7 +256,7 @@ def test_openreview_opinion_from_first_review_paragraph():
     review = "First paragraph of the review.\n\nSecond paragraph."
     canon = map_from("openreview", note({"main_review": review}))
     assert canon["opinion"]["summary"] == "First paragraph of the review."
-    assert canon["narrative"] == {"detailed_review": review}
+    assert narrative_fields(canon) == {"detailed_review": review}
 
 
 def test_openreview_opinion_without_text():
@@ -285,7 +287,7 @@ def test_openreview_narrative_keeps_first_detailed_review():
             }
         ),
     )
-    assert canon["narrative"] == {
+    assert narrative_fields(canon) == {
         "detailed_review": "From comments.",
         "confidential_to_editors": "For the chairs.",
         "author_questions": "Why this baseline?",
@@ -318,20 +320,20 @@ def test_openreview_findings_skip_blank_list_items():
 def test_openreview_decision_from_text():
     """Test that a text-only decision maps to a recommendation without a metric."""
     canon = map_from("openreview", note({"decision": "Reject"}))
-    assert canon["decision"] == {"recommendation": "reject"}
+    assert canon["decision"] == {"recommendation": "reject", "source_label": "Reject"}
     assert canon["metrics"] == []
 
 
 def test_openreview_unrecognized_text_recommendation_is_borderline():
     """Test that unmapped recommendation text defaults to borderline."""
     canon = map_from("openreview", note({"recommendation": "Not sure"}))
-    assert canon["decision"] == {"recommendation": "borderline"}
+    assert canon["decision"] == {"recommendation": "borderline", "source_label": "Not sure"}
 
 
 def test_openreview_revision_recommendation_is_a_revision_requirement():
     """Test that a revision recommendation becomes a revision requirement."""
     canon = map_from("openreview", note({"overallEvaluation": "Minor revision"}))
-    assert canon["decision"] == {"revision_requirement": "minor"}
+    assert canon["decision"] == {"revision_requirement": "minor", "source_label": "Minor revision"}
 
 
 def test_openreview_numeric_recommendation_falls_back_to_text():
@@ -362,9 +364,9 @@ def test_openreview_non_text_recommendation_is_ignored():
 
 
 def test_openreview_reviewer_confidence():
-    """Test that reviewer_confidence becomes a metric and the decision confidence."""
+    """Test that reviewer_confidence becomes a metric and the decision's credence."""
     canon = map_from("openreview", note({"rating": 8, "reviewer_confidence": "3: fair"}))
-    assert canon["decision"] == {"recommendation": "accept", "confidence": 0.5}
+    assert canon["decision"] == {"recommendation": "accept", "credence": 0.5}
     assert metric(canon, "confidence")["scale"] == {"type": "ordinal", "min": 1, "max": 5}
     assert metric(canon, "overall")["normalized"]["value_0_1"] == 7 / 9
 
@@ -441,7 +443,7 @@ def canonical(**fields) -> dict:
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:openreview_forum:F1", "work_type": "preprint"},
         "opinion": {"summary": "Good paper."},
     }
@@ -459,16 +461,18 @@ def canonical_metric(key: str, value: int) -> dict:
 def test_to_openreview_full():
     """Test mapping a canonical review with every mapped field to a note."""
     canon = canonical(
-        referee={
-            "referee_type": "human",
-            "identity_mode": "confidential",
-            "referee_id": "~Reviewer_One1",
-        },
+        referees=[
+            {
+                "referee_type": "human",
+                "identity_mode": "confidential",
+                "referee_id": "~Reviewer_One1",
+            }
+        ],
         opinion={"summary": "Good paper.", "text": "Opinion text."},
-        narrative={
-            "detailed_review": "Detailed review.",
-            "confidential_to_editors": "For the chairs.",
-        },
+        narrative=[
+            {"role": "review", "content": "Detailed review."},
+            {"role": "review", "audience": "editors", "content": "For the chairs."},
+        ],
         findings={
             "strengths": [{"text": "Clear"}, {"text": ""}],
             "weaknesses": [],
@@ -505,7 +509,7 @@ def test_to_openreview_full():
 
 def test_to_openreview_detailed_review_without_opinion_text():
     """Test that narrative.detailed_review is the review when there is no opinion text."""
-    canon = canonical(narrative={"detailed_review": "Detailed review."})
+    canon = canonical(narrative=[{"role": "review", "content": "Detailed review."}])
     out = to_openreview(canon)
     assert out["content"]["review"] == "Detailed review."
     assert "recommendation" not in out["content"]
@@ -553,7 +557,7 @@ def test_openreview_realistic_round_trip():
     assert canon2["decision"] == canon["decision"]
     assert canon2["findings"] == canon["findings"]
     assert canon2["target"]["work_id"] == canon["target"]["work_id"]
-    assert canon2["referee"]["referee_id"] == "~Reviewer_ABC1"
+    assert canon2["referees"][0]["referee_id"] == "~Reviewer_ABC1"
 
 
 def test_openreview_identifiers_are_not_scores():
@@ -667,9 +671,9 @@ def test_openreview_below_the_acceptance_threshold_leaves_the_score_to_decide():
 
 def test_openreview_numeric_reviewer_confidence_beside_text_confidence_sets_the_decision():
     canon = map_from("openreview", note({"confidence": "High", "reviewer_confidence": 4}))
-    assert canon["decision"]["confidence"] == 0.75
+    assert canon["decision"]["credence"] == 0.75
     again = map_from("openreview", map_to("openreview", canon))
-    assert again["decision"].get("confidence") == canon["decision"]["confidence"]
+    assert again["decision"].get("credence") == canon["decision"]["credence"]
 
 
 def test_openreview_a_verdict_beside_below_threshold_wording_is_kept():
@@ -686,7 +690,7 @@ def test_openreview_fallback_confidence_keeps_its_label():
     )
     [metric] = [m for m in canon["metrics"] if m["key"] == "confidence"]
     assert metric["justification"] == "I have substantial expertise"
-    assert canon["decision"]["confidence"] == 0.75
+    assert canon["decision"]["credence"] == 0.75
 
 
 # API v2 notes, form scale bounds, the submission, meta-reviews and decisions
@@ -727,7 +731,7 @@ def test_a_v2_note_maps_like_its_v1_equivalent():
     assert {
         "title": "strengths",
         "content": "1. Novel predictor.\n2. Strong results on all tasks.",
-    } in (canon["narrative"]["sections"])
+    } in ([p for p in canon["narrative"] if "role" not in p])
     assert len(canon["findings"]["weaknesses"]) == 2
     assert [f["text"] for f in canon["findings"]["questions"]] == [
         "How sensitive is it to the predictor?"
@@ -792,7 +796,7 @@ def test_scores_use_the_forms_bounds_and_labels():
     confidence = metric(canon, "confidence")
     assert confidence["scale"]["max"] == 5
     assert confidence["justification"] == "You are confident in your assessment."
-    assert canon["decision"]["confidence"] == pytest.approx(0.75)
+    assert canon["decision"]["credence"] == pytest.approx(0.75)
     quality = next(m for m in canon["metrics"] if m["label"] == "quality")
     assert quality["scale"]["max"] == 4
     assert quality["normalized"]["value_0_1"] == pytest.approx(2 / 3)
@@ -868,7 +872,7 @@ def test_a_meta_review_is_a_meta_review_with_a_recommendation():
     assert canon["opinion"]["summary"] == (
         "The reviewers agree the method is novel and well evaluated."
     )
-    assert canon["narrative"]["detailed_review"] == canon["opinion"]["summary"]
+    assert narrative_text(canon, "review") == canon["opinion"]["summary"]
     assert metric(canon, "confidence")["value"] == 4
     validate_canonical(canon)
 

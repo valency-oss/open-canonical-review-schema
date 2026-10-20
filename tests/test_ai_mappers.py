@@ -88,7 +88,7 @@ class TestOpenAIReview:
 
     def test_run_details(self):
         review = map_from("openaireview", _payload(OPENAIREVIEW))
-        framework = review["referee"]["ai_referee"]["system"]["critic_framework"]
+        framework = review["referees"][0]["ai_referee"]["system"]["critic_framework"]
         assert framework == {
             "name": "openaireview",
             "version": "27740f8434cf",
@@ -97,7 +97,7 @@ class TestOpenAIReview:
         assert review["provenance"]["source_system"] == "example-platform"
         assert review["provenance"]["mapping"] == {
             "mapping_spec_id": "canonical-review.mapping.v1",
-            "mapping_spec_version": "1.1.0",
+            "mapping_spec_version": "1.2.0",
             "mapper_version": "1.1.0",
         }
         assert review["target"]["version"] == RUN["work_version"]
@@ -212,7 +212,7 @@ class TestPickMethod:
         output = {"methods": {"progressive__m": {"comments": [{"explanation": "A gap."}]}}}
         review = map_with_record("openaireview", output, **RUN).review
         assert review["opinion"] == {}
-        assert "outputs" not in review["referee"]["ai_referee"]
+        assert "outputs" not in review["referees"][0]["ai_referee"]
         assert _weaknesses(review) == [{"id": "comment-1", "text": "A gap."}]
 
 

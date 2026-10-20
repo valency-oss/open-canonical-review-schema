@@ -3,13 +3,13 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/ci.yml?branch=main&label=CI)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/ci.yml)
 [![Links](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/links.yml?branch=main&label=links)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/links.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/docs.yml?branch=main&label=docs)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/docs.yml)
-[![Schema version](https://img.shields.io/badge/schema-v0.7.2-blue)](CHANGELOG.md#072)
+[![Schema version](https://img.shields.io/badge/schema-v0.8.0-blue)](CHANGELOG.md#080)
 [![Status: draft](https://img.shields.io/badge/status-draft-orange)](CONTRIBUTING.md#versioning)
 [![JSON Schema draft 2020-12](https://img.shields.io/badge/JSON%20Schema-draft%202020--12-blue)](https://json-schema.org/draft/2020-12)
 [![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-**Status: v0.7.2, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
+**Status: v0.8.0, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
 
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
@@ -57,20 +57,20 @@ Round trips are tested both ways for every system, with each system's fixtures: 
 The schema is at a permanent URL, one per version:
 
 ```
-https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json
+https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json
 ```
 
 Validate a review with any JSON Schema (draft 2020-12) validator, for example [check-jsonschema](https://github.com/python-jsonschema/check-jsonschema):
 
 ```bash
-uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json review.json
+uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json review.json
 ```
 
 A review names the version it follows in `$schema`, which the mappers set to the package's version. Editors such as VS Code use it to check the file as you write:
 
 ```json
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json"
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json"
 }
 ```
 
@@ -118,7 +118,7 @@ The review's text is copied as Markdown. Its Summary becomes `opinion.summary`; 
 
 A note made by a `Meta_Review` or `Decision` invitation has `review_context.review_type` `meta_review` or `recommendation`; its `metareview` or `comment` text becomes the opinion and its `recommendation` or `decision` the decision.
 
-A strengths, weaknesses, questions or requested-changes field written as text is read as a saved forum page's is: a list's items are its points, a heading above them (`Major concerns:`, `**Minor**`) is their `group`, and a Minor heading makes them minor. The field's text is kept as written in `narrative.sections`, and `map_to` gives it back. An ethics flag (ICLR's list of choices, COLM's Yes or No) becomes `ethics_and_risk`, and the note's last change (`tmdate` or `mdate`) `updated_at`.
+A strengths, weaknesses, questions or requested-changes field written as text is read as a saved forum page's is: a list's items are its points, a heading above them (`Major concerns:`, `**Minor**`) is their `group`, and a Minor heading makes them minor. The field's text is kept as written in `narrative`, as a part titled with the field's name, and `map_to` gives it back. The note's license becomes `provenance.license`, and the note it replies to, when that is not the submission, `related_reviews`. An ethics flag (ICLR's list of choices, COLM's Yes or No) becomes `ethics_and_risk`, and the note's last change (`tmdate` or `mdate`) `updated_at`.
 
 ```python
 from ocrs import map_from, validate_canonical
@@ -163,14 +163,14 @@ article_xml = """<article><front>
 review = map_from("jats", payload)
 assert review["provenance"]["review_doi"] == "10.1234/example.1.2.sa1"
 assert review["target"]["work_id"] == "doi:10.1234/example.1.2"
-assert review["referee"]["identity_mode"] == "single_blind"  # <anonymous/>
+assert review["referees"][0]["identity_mode"] == "single_blind"  # <anonymous/>
 assert review["opinion"]["summary"] == "A sound method, **well** tested."
 assert map_to("jats", review)["sub_article"].startswith(
     '<sub-article article-type="referee-report"'
 )
 ```
 
-The reader takes the report's type, its DOI, the referee (name, ORCID, affiliation, or `<anonymous/>`) and competing interests, its date, the version it reviews (its `related-article`, else the article's), its recommendation (F1000Research's `approve-with-reservations`, or a JATS4R term), and its text, with bold and italic as Markdown and the parts under headings such as "Summary:" as narrative sections. What OCRS has no field for, such as the report's license, an eLife Assessment's significance and strength terms and the authors' responses nested in a report, is kept in `extensions.jats`, and `map_to` gives it back.
+The reader takes the report's type, its DOI, the referee (name, ORCID, affiliation, or `<anonymous/>`) and competing interests, its date, the version it reviews (its `related-article`, else the article's), its license (`provenance.license`), its recommendation (F1000Research's `approve-with-reservations`, or a JATS4R term, with the term as written in `decision.source_label`), and its text, with bold and italic as Markdown and the parts under headings such as "Summary:" as narrative parts. What OCRS has no field for, such as an eLife Assessment's significance and strength terms and the authors' responses nested in a report, is kept in `extensions.jats`, and `map_to` gives it back.
 
 ## AI reviewers
 
@@ -272,16 +272,16 @@ A minimal canonical review in JSON:
     "source_system": "openreview",
     "source_review_id": "or_review_abc123"
   },
-  "referee": {
-    "referee_type": "human",
-    "identity_mode": "double_blind",
-    "human_referee": {
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "double_blind",
       "expertise": {
         "self_reported_level": "expert",
         "domain_tags": ["machine-learning", "nlp"]
       }
     }
-  },
+  ],
   "target": {
     "work_id": "internal_id:openreview_forum:xyz789",
     "identifiers": {
@@ -296,7 +296,8 @@ A minimal canonical review in JSON:
   },
   "decision": {
     "recommendation": "weak_accept",
-    "confidence": 0.8
+    "source_label": "Weak Accept",
+    "credence": 0.8
   },
   "findings": {
     "strengths": [
@@ -345,8 +346,7 @@ validate_canonical(canonical)
 ## Schema Overview
 
 A canonical review is one JSON object. Its top-level fields are grouped below by what
-they describe. Fields marked **required** must be present, and every review also needs
-`referee` or `referees`. Everything else is optional.
+they describe. Fields marked **required** must be present; everything else is optional.
 
 **The record**
 
@@ -356,22 +356,23 @@ they describe. Fields marked **required** must be present, and every review also
 | `review_id` **required** | ID of the review, unique within the system that produced it |
 | `version` **required** | Version of this review record (e.g. `1.0.0`) |
 | `created_at` **required**, `updated_at` | When the review was written and last changed; for AI reviews, `created_at` is when the run ended |
-| `provenance` **required** | Source system (required), original IDs, the review's own DOI, import time, raw payload, and how the record was mapped |
+| `provenance` **required** | Source system (required), original IDs, the review's own DOI and license, import time, raw payload, and how the record was mapped |
 
 **Who reviewed what**
 
 | Field | Description |
 |-------|-------------|
-| `referee` or `referees` **one required** | Human, AI, or hybrid reviewer with identity mode, expertise, competing interests, and reproducibility settings; `referees` lists a panel or collaborative review |
+| `referees` **required** | Who wrote the review: one referee, or several for a panel or collaborative review. Each is human, AI, or hybrid, with identity mode (open to triple blind), expertise, competing interests, and reproducibility settings |
 | `target` **required** | The version of the work being reviewed: `work_id` as `<type>:<value>` (e.g. `doi:10.1234/abc`), its identifiers, and `relations` to its other versions and forms |
-| `review_context` | Kind of review, stage (pre- or post-publication), round, who requested it, time spent, and expertise |
+| `review_context` | Kind of review, stage (pre- or post-publication), round, who requested it, and time spent |
+| `related_reviews` | Other reviews this one responds to, replaces, or summarizes (a meta-review) |
 
 **Overall judgment**
 
 | Field | Description |
 |-------|-------------|
 | `opinion` **required** | Summary text, overall stance, high-level reasons, and the work's contributions |
-| `decision` | Acceptance recommendation, independent revision requirement, and confidence |
+| `decision` | Acceptance recommendation, independent revision requirement, the source's own wording of them, and how firmly the reviewer holds the recommendation (`credence`) |
 | `metrics`, `metric_catalog_ref` | Scores, each on its own scale (soundness, clarity, novelty, etc.), and the catalog that defines their keys |
 | `calibration` | Information for comparing this reviewer's scores with other reviewers', such as leniency and historical accept rate |
 
@@ -379,17 +380,17 @@ they describe. Fields marked **required** must be present, and every review also
 
 | Field | Description |
 |-------|-------------|
-| `findings` | Strengths, weaknesses, questions, comments, and requested changes with priority (critical, major, minor, trivial); a point can say how likely it is to hold and how sure the reviewer is of that |
+| `findings` | Strengths, weaknesses, questions, comments, and requested changes. Each is a point of the same shape: text, severity (info to critical), scope, evidence, suggested edits, and the findings and claims it addresses. A point can say how likely it is to hold and how sure the reviewer is of that |
 | `claim_assessments` | The work's claims one by one, each with whether the evidence supports it, how likely it is true, and how sure the reviewer is of that |
 | `artifact_assessments` | Availability and adequacy of the work's code, data, models, and other materials |
 | `checks` | Systematic checks run on the work, such as reference verification or AI-text detection, including those that found nothing |
-| `ethics_and_risk` | Ethical concerns and required mitigations |
+| `ethics_and_risk` | Ethical concerns; a change they call for is a requested change with `scope: ethics` |
 
 **Text and documents**
 
 | Field | Description |
 |-------|-------------|
-| `narrative` | Free text as named fields, for systems that collect it that way: summary, detailed review, questions for the authors, confidential comments to editors |
+| `narrative` | The review's text as written, in parts and in order: the named text fields of a review form, the headed sections of a report, or one undivided text. A part's `role` (summary, review, questions) and `audience` (public, authors, reviewers, editors) say what it is and who may read it |
 | `text_format` | How to read the review's free text: its markup and math notation |
 | `written_report` | Uploaded report document (PDF, Word, Markdown, TXT) |
 
@@ -400,7 +401,7 @@ they describe. Fields marked **required** must be present, and every review also
 | `signatures` | Cryptographic signatures, so readers can check who wrote the review and that it was not changed |
 | `extensions` | Data with no OCRS field, kept under one key per source format (e.g. `extensions.openaireview`) |
 
-For AI referees, the schema supports detailed provenance including model specifications, execution traces, token usage, costs, and safety metadata. Review-run seeds, for AI and human reviewers alike, go in `referee.reproducibility.seed` and `referee.reproducibility.seeds`. They describe the review process, not experiments in the reviewed work, and an explicit stage seed overrides the whole-review seed for that stage.
+For AI referees, the schema supports detailed provenance including model specifications, execution traces, token usage, costs, and safety metadata. Review-run seeds, for AI and human reviewers alike, go in each referee's `reproducibility.seed` and `reproducibility.seeds`. They describe the review process, not experiments in the reviewed work, and an explicit stage seed overrides the whole-review seed for that stage.
 
 ### Acceptance and revision requirements
 
@@ -456,7 +457,7 @@ Findings and claim assessments take two numbers, each from 0 to 1:
 
 Scores and the recommendation say how sure the reviewer is in the same way: a metric in
 `uncertainty.credence`, with an optional `interval` and `rationale` (metrics within
-claim assessments too), and the recommendation in `decision.confidence`.
+claim assessments too), and the recommendation in `decision.credence`.
 
 All of these are optional, and all are worth giving: a rough estimate tells a reader more
 than none. Review forms ask for confidence once, for the whole review, and none of the AI
@@ -496,7 +497,7 @@ reviewers that do are read the same way.
       }
     }
   ],
-  "decision": {"recommendation": "weak_accept", "confidence": 0.6}
+  "decision": {"recommendation": "weak_accept", "credence": 0.6}
 }
 ```
 
@@ -596,7 +597,7 @@ The `target.identifiers` field supports structured metadata for papers and other
 
 ### Reviewer Identifiers
 
-The `referee.human_referee` object supports author/reviewer identification:
+Each referee's `human_referee` object supports author/reviewer identification:
 
 | Identifier | Pattern | Resolver URL | Description |
 |------------|---------|--------------|-------------|
@@ -632,15 +633,17 @@ assert validate_openalex_author("A5023888391")  # Author IDs start with 'A'
 The schema also supports OpenAlex Author IDs for reviewer identification:
 ```json
 {
-  "referee": {
-    "referee_type": "human",
-    "identity_mode": "open",
-    "human_referee": {
-      "orcid": "0000-0001-5000-0007",
-      "openalex_id": "A5023888391",
-      "name": "Dr. Jane Smith"
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "open",
+      "human_referee": {
+        "orcid": "0000-0001-5000-0007",
+        "openalex_id": "A5023888391",
+        "name": "Dr. Jane Smith"
+      }
     }
-  }
+  ]
 }
 ```
 
@@ -685,13 +688,15 @@ A review of a Hub work, by a reviewer with a Hub author page:
       }
     }
   },
-  "referee": {
-    "referee_type": "human",
-    "identity_mode": "open",
-    "human_referee": {
-      "valency_id": "A_7zdytxzb"
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "open",
+      "human_referee": {
+        "valency_id": "A_7zdytxzb"
+      }
     }
-  }
+  ]
 }
 ```
 

@@ -16,6 +16,7 @@ from ..scales import (
 from ..schema import schema_id
 from ..util import (
     department_affiliation,
+    fields_for,
     first_paragraph,
     first_present,
     from_source,
@@ -23,11 +24,16 @@ from ..util import (
     iso_date_or_time,
     map_recommendation_from_text,
     match_alias,
+    narrative_field,
+    narrative_parts,
     now_iso,
     parse_date_flexible,
     parse_labeled_score,
+    recommendation_label,
+    referee_of,
     score_sheet_answers,
     score_sheet_questions,
+    section,
     source_decision,
     source_work_id,
     split_decision,
@@ -76,6 +82,17 @@ def _with_known_names(payload: dict[str, Any]) -> dict[str, Any]:
 
 # The label of the overall score the reader makes of the recommendation's code
 RECOMMENDATION_LABEL = "Overall Recommendation"
+
+
+# The fields of the review's own text the reader takes, in order, each as a part with
+# its role and audience; the first the form fills for each role and audience
+NARRATIVE_FIELDS: tuple[tuple[str, str, str | None], ...] = (
+    ("summary", "summary", None),
+    ("commentsToAuthor", "review", "authors"),
+    ("comments_to_author", "review", "authors"),
+    ("commentsToEditor", "review", "editors"),
+    ("comments_to_editor", "review", "editors"),
+)
 
 
 def _extract_time(payload: dict[str, Any]) -> str:
@@ -342,11 +359,11 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
             "imported_at": now_iso(),
             "mapping": {
                 "mapping_spec_id": "canonical-review.mapping.v1",
-                "mapping_spec_version": "1.1.0",
+                "mapping_spec_version": "1.2.0",
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": referee,
+        "referees": [referee],
         "target": {
             "identifiers": identifiers,
             "work_id": generate_canonical_work_id(identifiers),
@@ -372,30 +389,29 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
     if venue:
         out["target"]["venue"] = venue
 
-    # Narrative mapping
-    narrative: dict[str, Any] = {}
-
-    for src, dst in [
-        ("commentsToAuthor", "detailed_review"),
-        ("comments_to_author", "detailed_review"),
-        ("commentsToEditor", "confidential_to_editors"),
-        ("comments_to_editor", "confidential_to_editors"),
-        ("summary", "summary"),
-    ]:
-        v = payload.get(src)
-        if isinstance(v, str) and v.strip():
-            if dst not in narrative:
-                narrative[dst] = v.strip()
-    if written:
-        narrative["sections"] = [{"title": q, "content": text} for q, text in written]
-
+    # The review's own text, each field as a part, then the score sheet's answers in words
+    narrative: list[dict[str, Any]] = []
+    taken: set[tuple[str, str | None]] = set()
+    for field, role, audience in NARRATIVE_FIELDS:
+        v = payload.get(field)
+        if isinstance(v, str) and v.strip() and (role, audience) not in taken:
+            taken.add((role, audience))
+            narrative.append(section(v.strip(), title=field, role=role, audience=audience))
+    narrative += [section(text, title=question) for question, text in written]
     if narrative:
         out["narrative"] = narrative
 
     # Decision
     rec = _parse_recommendation(payload)
-    if rec:
-        out["decision"] = split_decision({"recommendation": rec})
+    # Without a code, the label is the recommendation in the source's own words
+    label = payload.get("overallRecommendationLabel")
+    own = None
+    if _recommendation_code(payload.get("overallRecommendation")) is None and isinstance(
+        label, str
+    ):
+        own = label.strip() or None
+    if decision := split_decision({"recommendation": rec, "source_label": own}):
+        out["decision"] = decision
 
         # Also add overall metric if we have numeric recommendation
         rec_num = payload.get("overallRecommendation")
@@ -449,10 +465,10 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
     # Competing interests
     coi = payload.get("competingInterests")
     if isinstance(coi, str) and coi.strip().lower() not in ("none", "none declared"):
-        out["referee"]["competing_interests_declared"] = True
-        out["referee"]["competing_interests_statement"] = coi
+        referee["competing_interests_declared"] = True
+        referee["competing_interests_statement"] = coi
     elif coi:
-        out["referee"]["competing_interests_declared"] = False
+        referee["competing_interests_declared"] = False
 
     return out
 
@@ -471,6 +487,7 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     Returns:
         A ScholarOne-like review dictionary.
     """
+    same_source = from_source(canonical, "scholarone")
     # Extract review ID
     rid = canonical.get("review_id", "")
     if rid.startswith("s1_"):
@@ -493,7 +510,7 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     if person:
         out["reviewerPersonId"] = int(person.group(2))
 
-    referee = canonical.get("referee", {}) or {}
+    referee = referee_of(canonical)
     human = referee.get("human_referee", {}) or {}
     if reviewer_num is not None:
         out["reviewerNumber"] = reviewer_num
@@ -514,22 +531,27 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             out[field] = value
 
     # Map narrative
-    nar = canonical.get("narrative", {}) or {}
     op = canonical.get("opinion", {}) or {}
 
-    if nar.get("summary"):
-        out["summary"] = nar["summary"]
-    if nar.get("detailed_review"):
-        out["commentsToAuthor"] = nar["detailed_review"]
+    # Each part of the review's own text under its own field, when read from this system
+    def own_field(role: str, *, editors: bool = False) -> tuple[str, str] | None:
+        fields = fields_for(NARRATIVE_FIELDS, role, editors=editors)
+        audience = "editors" if editors else None
+        return narrative_field(canonical, role, fields, audience=audience, same_source=same_source)
+
+    if summary := own_field("summary"):
+        out[summary[0]] = summary[1]
+    if review := own_field("review"):
+        out[review[0]] = review[1]
     elif op.get("text"):
         out["commentsToAuthor"] = op["text"]
     elif op.get("summary"):
         out["commentsToAuthor"] = op["summary"]
 
-    if nar.get("confidential_to_editors"):
-        out["commentsToEditor"] = nar["confidential_to_editors"]
+    if confidential := own_field("review", editors=True):
+        out[confidential[0]] = confidential[1]
     # Parts of the text, as the score sheet's questions answered in words
-    questions = score_sheet_questions(nar.get("sections"))
+    questions = score_sheet_questions(narrative_parts(canonical))
     if questions:
         out["scoreSheetCustomQuestions"] = questions
 
@@ -537,7 +559,6 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     # the one the reader made of the code, "Overall Recommendation": a score-sheet question
     # it files as an overall score ("Overall score") is a criterion like any other, whatever
     # its value
-    same_source = from_source(canonical, "scholarone")
     dec = source_decision(canonical.get("decision", {}) or {})
 
     def is_code(m: Any) -> bool:
@@ -564,7 +585,7 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
         if label and (says == rec or ("overallRecommendation" in out and says is None)):
             out["overallRecommendationLabel"] = label
         elif "overallRecommendation" not in out:
-            out["overallRecommendationLabel"] = rec.replace("_", " ").title()
+            out["overallRecommendationLabel"] = recommendation_label(canonical)
 
     # Map metrics -> criteriaResponses
     criteria = []

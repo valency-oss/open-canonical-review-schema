@@ -15,11 +15,13 @@ def _minimal_review(**overrides):
         "version": "1.0.0",
         "created_at": "2025-01-15T14:30:00Z",
         "provenance": {"source_system": "test"},
-        "referee": {
-            "referee_type": "human",
-            "identity_mode": "double_blind",
-            "human_referee": {},
-        },
+        "referees": [
+            {
+                "referee_type": "human",
+                "identity_mode": "double_blind",
+                "human_referee": {},
+            }
+        ],
         "target": {"work_id": "internal_id:manuscript_id:paper_123", "work_type": "article"},
         "opinion": {"summary": "Test review."},
     }

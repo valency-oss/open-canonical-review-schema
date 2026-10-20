@@ -6,9 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.editorialmanager import from_editorialmanager, to_editorialmanager
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "editorialmanager"
 
@@ -30,7 +32,7 @@ def test_editorialmanager_minimal():
     assert canon["provenance"]["source_system"] == "editorialmanager"
     assert canon["target"]["work_id"] == "internal_id:manuscriptId:MS-2024-0042"
     assert canon["opinion"]["summary"]
-    assert canon["decision"] == {"revision_requirement": "major"}
+    assert canon["decision"] == {"revision_requirement": "major", "source_label": "Major Revision"}
 
 
 def test_editorialmanager_realistic():
@@ -48,11 +50,11 @@ def test_editorialmanager_realistic():
 
     # Check narrative
     assert "narrative" in canon
-    assert canon["narrative"].get("detailed_review")
-    assert canon["narrative"].get("confidential_to_editors")
+    assert narrative_text(canon, "review")
+    assert narrative_text(canon, audience="editors")
 
     # Check decision
-    assert canon["decision"] == {"revision_requirement": "major"}
+    assert canon["decision"] == {"revision_requirement": "major", "source_label": "Major Revision"}
 
     # Check round (revisionNumber 0 -> round 1)
     assert canon["review_context"]["round"] == 1
@@ -120,7 +122,8 @@ def test_editorialmanager_text_recommendation():
         }
         canon = from_editorialmanager(payload)
         validate_canonical(canon)
-        assert canon["decision"] == expected
+        # The recommendation in the source's own words is kept beside OCRS's reading of it
+        assert canon["decision"] == {**expected, "source_label": text}
 
 
 def test_editorialmanager_ratings_normalization():
@@ -181,17 +184,17 @@ def test_editorialmanager_to_stub():
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {
             "work_id": "internal_id:manuscriptId:MS-2024-TEST",
             "work_type": "article",
             "venue": "Test Journal",
         },
         "opinion": {"summary": "Good paper."},
-        "narrative": {
-            "detailed_review": "The paper is well written.",
-            "confidential_to_editors": "No concerns.",
-        },
+        "narrative": [
+            {"role": "review", "content": "The paper is well written."},
+            {"role": "review", "audience": "editors", "content": "No concerns."},
+        ],
         "decision": {"recommendation": "accept"},
         "metrics": [
             {
@@ -226,7 +229,7 @@ def test_editorialmanager_reviewer_id_fallbacks():
         ({"reviewerEmail": "ref@example.org"}, "ref@example.org"),
     ]:
         canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", **extra})
-        assert canon["referee"]["referee_id"] == expected
+        assert canon["referees"][0]["referee_id"] == expected
 
 
 def test_editorialmanager_work_id_fallbacks():
@@ -251,8 +254,8 @@ def test_editorialmanager_text_only_payload():
     canon = map_from("editorialmanager", TEXT)
     assert canon["target"]["identifiers"] == {}
     assert canon["target"]["work_id"] == "unknown"
-    assert "referee_id" not in canon["referee"]
-    assert canon["referee"]["human_referee"] == {}
+    assert "referee_id" not in canon["referees"][0]
+    assert canon["referees"][0]["human_referee"] == {}
     assert canon["opinion"] == {"summary": "A summary."}
     assert canon["metrics"] == []
     assert "decision" not in canon
@@ -303,7 +306,7 @@ def test_editorialmanager_human_referee_fields():
             "reviewerAffiliation": "University of London",
         },
     )
-    assert canon["referee"]["human_referee"] == {
+    assert canon["referees"][0]["human_referee"] == {
         "orcid": "0000-0002-1825-0097",
         "name": "Ada Lovelace",
         "affiliation": "University of London",
@@ -320,7 +323,7 @@ def test_editorialmanager_human_referee_fields():
             "affiliation": "Yale",
         },
     )
-    assert canon["referee"]["human_referee"] == {
+    assert canon["referees"][0]["human_referee"] == {
         "orcid": "0000-0002-1825-0097",
         "name": "Grace Hopper",
         "affiliation": "Yale",
@@ -330,7 +333,7 @@ def test_editorialmanager_human_referee_fields():
 def test_editorialmanager_invalid_orcid_dropped():
     """Test an ORCID that does not normalize is left out of human_referee."""
     canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "orcid": "1234"})
-    assert canon["referee"]["human_referee"] == {}
+    assert canon["referees"][0]["human_referee"] == {}
 
 
 def test_editorialmanager_unknown_code_falls_back_to_text():
@@ -339,7 +342,7 @@ def test_editorialmanager_unknown_code_falls_back_to_text():
         "editorialmanager",
         {"manuscriptId": "MS-1", "recommendationCode": 9, "recommendation": "Reject"},
     )
-    assert canon["decision"] == {"recommendation": "reject"}
+    assert canon["decision"] == {"recommendation": "reject", "source_label": "Reject"}
 
 
 def test_editorialmanager_narrative_variants():
@@ -354,7 +357,7 @@ def test_editorialmanager_narrative_variants():
             "summary": "A short summary.",
         },
     )
-    assert canon["narrative"] == {
+    assert narrative_fields(canon) == {
         "detailed_review": "Snake case comments.\n\nSecond paragraph.",
         "confidential_to_editors": "For the editor only.",
         "summary": "A short summary.",
@@ -369,7 +372,7 @@ def test_editorialmanager_narrative_first_key_wins():
         "editorialmanager",
         {"manuscriptId": "MS-1", "commentsToAuthor": "Camel.", "comments_to_author": "Snake."},
     )
-    assert canon["narrative"] == {"detailed_review": "Camel."}
+    assert narrative_fields(canon) == {"detailed_review": "Camel."}
 
 
 def test_editorialmanager_opinion_from_comments():
@@ -438,7 +441,7 @@ def _minimal_canonical(**overrides) -> dict:
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:manuscriptId:MS-X", "work_type": "article"},
         "opinion": {"summary": "Summary text."},
     }

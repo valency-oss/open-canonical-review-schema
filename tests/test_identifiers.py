@@ -230,11 +230,13 @@ class TestValencyValidation:
                 "version": "1.0.0",
                 "created_at": "2026-10-17T12:00:00Z",
                 "provenance": {"source_system": "valency-hub"},
-                "referee": {
-                    "referee_type": "human",
-                    "identity_mode": "open",
-                    "human_referee": {"valency_id": "A_7zdytxzb"},
-                },
+                "referees": [
+                    {
+                        "referee_type": "human",
+                        "identity_mode": "open",
+                        "human_referee": {"valency_id": "A_7zdytxzb"},
+                    }
+                ],
                 "target": {
                     "work_id": "valency_id:W_6r533gdt_v1",
                     "work_type": "preprint",

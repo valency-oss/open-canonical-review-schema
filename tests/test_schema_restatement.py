@@ -22,7 +22,7 @@ from jsonschema import Draft202012Validator
 from ocrs import map_from
 from ocrs.gaps import iter_schema_paths
 from ocrs.mappers.openreview_page import reviews_from_forum_page
-from ocrs.schema import _evidence_links, has_content
+from ocrs.schema import _evidence_links
 
 ROOT = Path(__file__).parent.parent
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -295,10 +295,14 @@ def test_both_versions_accept_and_reject_the_same_reviews(corpus):
     assert sum(not before for before, _ in verdicts) > 1000
 
 
-def test_has_content_follows_the_previous_content_rule(corpus):
+def test_the_content_rule_follows_the_previous_one(corpus):
+    """0.7.2's content rule, checked alone with the definitions it refers to, as `has_content`
+    checked it, takes the same reviews as 0.7.1's."""
     [rule] = [r for r in PREVIOUS["allOf"] if r.get("$anchor") == "reviewContent"]
     previous = Draft202012Validator(rule)
-    assert [i for i, r in enumerate(corpus) if has_content(r) != previous.is_valid(r)] == []
+    [rule] = [r for r in RESTATED["allOf"] if r.get("$anchor") == "reviewContent"]
+    restated = Draft202012Validator({**rule, "$defs": RESTATED["$defs"]})
+    assert [i for i, r in enumerate(corpus) if restated.is_valid(r) != previous.is_valid(r)] == []
 
 
 def test_both_versions_allow_the_same_property_paths():

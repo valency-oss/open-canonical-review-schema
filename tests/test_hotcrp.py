@@ -7,9 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.hotcrp import from_hotcrp, to_hotcrp
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "hotcrp"
 
@@ -47,8 +49,8 @@ def test_hotcrp_realistic():
 
     # Check narrative
     assert "narrative" in canon
-    assert canon["narrative"].get("summary")
-    assert canon["narrative"].get("confidential_to_editors")
+    assert narrative_text(canon, "summary")
+    assert narrative_text(canon, audience="editors")
 
     # Check findings
     assert "findings" in canon
@@ -104,13 +106,13 @@ def test_hotcrp_expertise_mapping():
     canon = from_hotcrp(payload)
     validate_canonical(canon)
 
-    # Check expertise in review_context
-    assert canon["review_context"]["expertise"]["self_reported_level"] == "expert"
+    # The referee's expertise, as a level
+    assert canon["referees"][0]["expertise"]["self_reported_level"] == "expert"
 
-    # Check expertise as metric
-    conf_metric = next((m for m in canon["metrics"] if m["key"] == "confidence"), None)
-    assert conf_metric is not None
-    assert conf_metric["value"] == 4
+    # And as a metric of its own, apart from confidence
+    expertise = next((m for m in canon["metrics"] if m["key"] == "expertise"), None)
+    assert expertise is not None
+    assert expertise["value"] == 4
 
 
 def test_hotcrp_round_parsing():
@@ -184,13 +186,13 @@ def test_hotcrp_to_stub():
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:hotcrp_pid:42", "work_type": "article"},
         "opinion": {"summary": "Good paper."},
-        "narrative": {
-            "summary": "Paper summary here.",
-            "detailed_review": "Detailed review text.",
-        },
+        "narrative": [
+            {"role": "summary", "content": "Paper summary here."},
+            {"role": "review", "content": "Detailed review text."},
+        ],
         "findings": {
             "strengths": [{"text": "Strong point 1"}, {"text": "Strong point 2"}],
             "weaknesses": [{"text": "Weak point 1"}],
@@ -249,25 +251,25 @@ class TestFromHotcrpReviewerAndTarget:
         canon = map_from(
             "hotcrp", {**TEXT, "id": 1, "pid": 1, "reviewer": {"user": 5, "email": "r@x.org"}}
         )
-        assert canon["referee"]["referee_id"] == "r@x.org"
+        assert canon["referees"][0]["referee_id"] == "r@x.org"
 
     def test_reviewer_dict_without_ids_falls_back_to_top_level(self):
         """With no usable id in reviewer, top-level reviewer_id is used."""
         payload = {**TEXT, "id": 1, "pid": 1, "reviewer": {"name": "Ada"}, "reviewer_id": "rev-9"}
         canon = map_from("hotcrp", payload)
-        assert canon["referee"]["referee_id"] == "rev-9"
-        assert canon["referee"]["human_referee"] == {"name": "Ada"}
+        assert canon["referees"][0]["referee_id"] == "rev-9"
+        assert canon["referees"][0]["human_referee"] == {"name": "Ada"}
 
     def test_reviewer_email_top_level(self):
         """reviewerEmail is used when there is no reviewer object."""
         canon = map_from("hotcrp", {**TEXT, "id": 1, "pid": 1, "reviewerEmail": "r@x.org"})
-        assert canon["referee"]["referee_id"] == "r@x.org"
+        assert canon["referees"][0]["referee_id"] == "r@x.org"
 
     def test_no_reviewer_id(self):
         """Without any reviewer identifier, referee_id is omitted."""
         canon = map_from("hotcrp", {**TEXT, "id": 1, "pid": 1})
-        assert "referee_id" not in canon["referee"]
-        assert canon["referee"]["human_referee"] == {}
+        assert "referee_id" not in canon["referees"][0]
+        assert canon["referees"][0]["human_referee"] == {}
 
     def test_reviewer_identity_fields(self):
         """ORCID, name and affiliation come from the reviewer object."""
@@ -283,7 +285,7 @@ class TestFromHotcrpReviewerAndTarget:
             },
         }
         canon = map_from("hotcrp", payload)
-        assert canon["referee"]["human_referee"] == {
+        assert canon["referees"][0]["human_referee"] == {
             "orcid": "0000-0002-1825-0097",
             "name": "Ada Lovelace",
             "affiliation": "Analytical Engines Ltd",
@@ -299,13 +301,13 @@ class TestFromHotcrpReviewerAndTarget:
             "reviewerOrcid": "https://orcid.org/0000-0002-1825-0097",
         }
         canon = map_from("hotcrp", payload)
-        assert canon["referee"]["human_referee"] == {"orcid": "0000-0002-1825-0097"}
+        assert canon["referees"][0]["human_referee"] == {"orcid": "0000-0002-1825-0097"}
 
     def test_invalid_orcid_is_dropped(self):
         """An ORCID that fails normalization is not recorded."""
         payload = {**TEXT, "id": 1, "pid": 1, "reviewer": {"orcid": "not-an-orcid"}}
         canon = map_from("hotcrp", payload)
-        assert canon["referee"]["human_referee"] == {}
+        assert canon["referees"][0]["human_referee"] == {}
 
     def test_doi_becomes_primary_identifier(self):
         """A valid DOI is added to identifiers and drives the work_id."""
@@ -370,7 +372,7 @@ class TestFromHotcrpText:
             "questions_for_authors": "Why?",
         }
         canon = map_from("hotcrp", payload)
-        assert canon["narrative"] == {
+        assert narrative_fields(canon) == {
             "summary": "The paper summary.",
             "detailed_review": "Detailed comments.",
             "confidential_to_editors": "For the PC only.",
@@ -426,18 +428,24 @@ class TestFromHotcrpRecommendation:
     def test_text_only_recommendation(self):
         """A text-only rating sets the recommendation but no metric."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "recommendation": "Strong Reject"})
-        assert canon["decision"] == {"recommendation": "strong_reject"}
+        assert canon["decision"] == {
+            "recommendation": "strong_reject",
+            "source_label": "Strong Reject",
+        }
         assert canon["metrics"] == []
 
     def test_unrecognized_text_is_borderline(self):
         """Unrecognized recommendation text defaults to borderline."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "rating": "Hmm"})
-        assert canon["decision"] == {"recommendation": "borderline"}
+        assert canon["decision"] == {"recommendation": "borderline", "source_label": "Hmm"}
 
     def test_revision_text_becomes_revision_requirement(self):
         """A revision label is split out of the recommendation."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "score": "Minor revision"})
-        assert canon["decision"] == {"revision_requirement": "minor"}
+        assert canon["decision"] == {
+            "revision_requirement": "minor",
+            "source_label": "Minor revision",
+        }
 
     def test_non_string_non_numeric_rating_is_ignored(self):
         """A rating that is neither text nor a number yields no decision."""
@@ -455,50 +463,52 @@ class TestFromHotcrpExpertiseAndConfidence:
     """Reviewer expertise and confidence."""
 
     def test_numeric_expertise_without_label(self):
-        """A bare expertise number gives a confidence metric and a level."""
+        """A bare expertise number gives an expertise metric and a level."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "expertise": 2})
         metric = canon["metrics"][0]
-        assert metric["key"] == "confidence"
+        assert metric["key"] == "expertise"
         assert metric["label"] == "Reviewer Expertise"
         assert metric["value"] == 2
         assert "justification" not in metric
-        assert canon["review_context"]["expertise"]["self_reported_level"] == "somewhat_familiar"
+        assert canon["referees"][0]["expertise"]["self_reported_level"] == "somewhat_familiar"
 
     def test_out_of_range_expertise_level_defaults(self):
         """An expertise number off the level map is reported as knowledgeable."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "reviewer_expertise": 7})
-        assert canon["review_context"]["expertise"]["self_reported_level"] == "knowledgeable"
+        assert canon["referees"][0]["expertise"]["self_reported_level"] == "knowledgeable"
 
     def test_text_only_expertise_is_ignored(self):
         """Expertise text without a number adds neither a metric nor a level."""
         canon = map_from("hotcrp", {**TEXT, "id": 1, "pid": 1, "reviewer_expertise": "Expert"})
         assert canon["metrics"] == []
-        assert "review_context" not in canon
+        assert "expertise" not in canon["referees"][0]
 
-    def test_confidence_metric_and_decision_confidence(self):
-        """A separate confidence field adds a metric and decision.confidence."""
+    def test_confidence_metric_and_decision_credence(self):
+        """A separate confidence field adds a metric and decision.credence."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "confidence": "2. Low"})
         metric = canon["metrics"][0]
         assert metric["key"] == "confidence"
         assert metric["label"] == "Reviewer Confidence"
         assert metric["value"] == 2
         assert metric["justification"] == "Low"
-        assert canon["decision"] == {"confidence": 0.25}
+        assert canon["decision"] == {"credence": 0.25}
 
     def test_numeric_confidence_without_label(self):
         """A bare confidence number has no justification."""
         canon = map_from("hotcrp", {"id": 1, "pid": 1, "confidence": 5})
         assert "justification" not in canon["metrics"][0]
-        assert canon["decision"]["confidence"] == 1.0
+        assert canon["decision"]["credence"] == 1.0
 
-    def test_confidence_does_not_duplicate_expertise_metric(self):
-        """With expertise present, confidence only sets decision.confidence."""
+    def test_expertise_and_confidence_are_separate_metrics(self):
+        """Expertise and confidence are each a metric of their own; confidence also sets
+        decision.credence."""
         payload = {"id": 1, "pid": 1, "reviewer_expertise": "4. Expert", "confidence": 3}
         canon = map_from("hotcrp", payload)
-        conf_metrics = [m for m in canon["metrics"] if m["key"] == "confidence"]
-        assert len(conf_metrics) == 1
-        assert conf_metrics[0]["label"] == "Reviewer Expertise"
-        assert canon["decision"]["confidence"] == 0.5
+        assert [(m["key"], m["label"]) for m in canon["metrics"]] == [
+            ("expertise", "Reviewer Expertise"),
+            ("confidence", "Reviewer Confidence"),
+        ]
+        assert canon["decision"]["credence"] == 0.5
 
     def test_text_only_confidence_is_ignored(self):
         """Confidence text without a number adds nothing."""
@@ -570,12 +580,10 @@ class TestFromHotcrpRound:
         assert "review_context" not in map_from("hotcrp", {**TEXT, "id": 1, "round": 2.5})
 
     def test_round_merges_with_expertise(self):
-        """Round is added next to expertise in review_context."""
+        """Round goes in review_context, and expertise on the referee."""
         canon = map_from("hotcrp", {"id": 1, "round": "R3", "expertise": 3})
-        assert canon["review_context"] == {
-            "expertise": {"self_reported_level": "knowledgeable"},
-            "round": 3,
-        }
+        assert canon["review_context"] == {"round": 3}
+        assert canon["referees"][0]["expertise"] == {"self_reported_level": "knowledgeable"}
 
 
 class TestToHotcrp:
@@ -603,7 +611,7 @@ class TestToHotcrp:
     def test_confidential_and_questions(self):
         """Confidential narrative and question findings are mapped."""
         canon = _canon(
-            narrative={"confidential_to_editors": "PC only."},
+            narrative=[{"role": "review", "audience": "editors", "content": "PC only."}],
             findings={
                 "questions": [{"text": "Q1"}, {"text": ""}, "bad"],
                 "strengths": [],
@@ -632,19 +640,23 @@ class TestToHotcrp:
 
     def test_no_recommendation(self):
         """Without a recommendation, the overall score is written alone."""
-        canon = _canon(decision={"confidence": 0.5}, metrics=[{"key": "overall", "value": 4}])
+        canon = _canon(decision={"credence": 0.5}, metrics=[{"key": "overall", "value": 4}])
         assert to_hotcrp(canon)["overall_merit"] == 4
 
-    def test_confidence_metric_to_expertise(self):
-        """The first confidence metric with a value becomes reviewer_expertise."""
+    def test_expertise_and_confidence_metrics_to_their_fields(self):
+        """The first expertise and confidence metrics with a value go to reviewer_expertise
+        and confidence."""
         canon = _canon(
             metrics=[
                 {"key": "confidence", "value": None},
                 {"key": "confidence", "value": 4},
                 {"key": "confidence", "value": 2},
+                {"key": "expertise", "value": 3},
             ]
         )
-        assert to_hotcrp(canon)["reviewer_expertise"] == 4
+        back = to_hotcrp(canon)
+        assert back["confidence"] == 4
+        assert back["reviewer_expertise"] == 3
 
     def test_no_round(self):
         """A review_context without a round adds no round field."""
@@ -687,7 +699,7 @@ def test_hotcrp_identifiers_and_dates_are_not_scores():
 
 def test_hotcrp_numeric_contact_id_is_the_referee():
     canon = map_from("hotcrp", {**TEXT, "pid": 1, "contactId": 77})
-    assert canon["referee"]["referee_id"] == "77"
+    assert canon["referees"][0]["referee_id"] == "77"
     assert canon["metrics"] == []
 
 
