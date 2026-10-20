@@ -406,3 +406,23 @@ def test_a_list_valued_score_with_a_label_is_written(writer):
     again = map_from(writer, map_to(writer, review))
     validate_canonical(again)
     assert again["decision"]["recommendation"] == "accept"
+
+
+@pytest.mark.parametrize(
+    ("label", "kept"),
+    [("Minor Revision", True), ("Publish as is", True), ("Excellent", True), ("Reject", False)],
+)
+def test_scholarone_keeps_a_recommendation_label_unless_it_says_another(label, kept):
+    """With a code, the code says the recommendation and the source's label is kept, unless
+    it says a different recommendation."""
+    scale = {"type": "ordinal", "min": 1, "max": 5}
+    overall = {"key": "overall", "label": "Overall", "scale": scale, "value": 2}
+    review = written_review(
+        "elsewhere",
+        decision={"revision_requirement": "minor"},
+        metrics=[{**overall, "justification": label}],
+    )
+    written = map_to("scholarone", review)
+    assert written["overallRecommendation"] == 2
+    assert ("overallRecommendationLabel" in written) is kept
+    assert map_from("scholarone", written)["decision"] == {"revision_requirement": "minor"}
