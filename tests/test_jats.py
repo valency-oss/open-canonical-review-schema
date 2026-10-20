@@ -245,3 +245,14 @@ def test_findings_a_section_does_not_hold_are_written_too():
         {"title": "strengths", "content": "- Clear."},
         {"title": "Strengths", "content": "- Novel."},
     ]
+
+
+def test_a_finding_inside_a_longer_item_is_not_held_by_it():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = {
+        "sections": [{"title": "strengths", "content": "- Novel. The approach needs evidence."}]
+    }
+    review["opinion"] = {}
+    review["findings"] = {"strengths": [{"text": "Novel."}]}
+    sections = round_trip(review)["narrative"]["sections"]
+    assert sections[-1] == {"title": "Strengths", "content": "- Novel."}

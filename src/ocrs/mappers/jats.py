@@ -568,10 +568,22 @@ def _write_contributor(
             _add(contrib, "aff", human["affiliation"])
 
 
-def _findings_text(findings: dict[str, Any], held: dict[str, str] | None = None) -> str:
+_MARKER = re.compile(r"^\s*(?:[-*+•]|\d+[.)])\s+")
+
+
+def _items(text: str) -> set[str]:
+    """The whole items of a text, as findings could be written in it: each line without its
+    list marker, and each paragraph, with their spacing squashed."""
+    lines = {_squash(_MARKER.sub("", line)) for line in text.splitlines()}
+    paragraphs = {_squash(_MARKER.sub("", p)) for p in re.split(r"\n\s*\n", text)}
+    return {item for item in lines | paragraphs if item}
+
+
+def _findings_text(findings: dict[str, Any], held: dict[str, set[str]] | None = None) -> str:
     """Findings as text, for a review that has no other: each kind under its heading, a point
-    to a line, with its title in bold. `held` holds, by kind, the text the review already
-    gives that kind's findings in (its sections), whose points are not written again."""
+    to a line, with its title in bold. `held` holds, by kind, the items of the text the
+    review already gives that kind's findings in (its sections): a point that is one of them
+    is not written again."""
     blocks = []
     for kind, heading in FINDING_HEADINGS.items():
         lines = []
@@ -579,7 +591,7 @@ def _findings_text(findings: dict[str, Any], held: dict[str, str] | None = None)
             if not isinstance(point, dict):
                 continue
             words = " ".join(str(point.get("text") or "").split())
-            if words and words in (held or {}).get(kind, ""):
+            if words and words in (held or {}).get(kind, set()):
                 continue
             title = " ".join(str(point.get("title") or "").split())
             line = f"**{title}** {words}".strip() if title else words
@@ -723,11 +735,12 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         written = [s for s in sections if s.get("title") and s.get("content")]
         # Findings whose text no section holds come after the sections
         held = {
-            kind: " ".join(
-                _squash(str(s["content"]))
+            kind: {
+                item
                 for s in written
                 if str(s["title"]).casefold().replace("_", " ").strip() in titles
-            )
+                for item in _items(str(s["content"]))
+            }
             for kind, titles in FINDING_SECTIONS.items()
         }
         parts_ = [f"{s['title']}:\n\n{s['content']}" for s in written]
