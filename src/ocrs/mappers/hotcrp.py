@@ -47,12 +47,12 @@ KNOWN_TEXT_KEYS = {
 }
 
 # HotCRP's API gives a review object (`"object": "review"`) with the review's ID as `rid`, its
-# last change as `modified_at`, the reviewer as `reviewer` (a name) and `reviewer_email`, and
-# each review-form field under its UID: `OveMer`, `RevExp`, `PapSum`, `ComAut` and `ComPC` in
-# HotCRP's default form. These are the fields of the same names the reader takes elsewhere.
+# last change as `modified_at` (`updated_at`: it says no time of submission), the reviewer as
+# `reviewer` (a name) and `reviewer_email`, and each review-form field under its UID: `OveMer`,
+# `RevExp`, `PapSum`, `ComAut` and `ComPC` in HotCRP's default form. These are the fields of
+# the same names the reader takes elsewhere.
 API_FIELDS = {
     "rid": "id",
-    "modified_at": "submitted_at",
     "reviewer_email": "reviewerEmail",
     "OveMer": "overall_merit",
     "RevExp": "reviewer_expertise",
@@ -287,6 +287,12 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
         "review_id": f"hotcrp_{review_id}",
         "version": "1.0.0",
         "created_at": created,
+        **(
+            {"updated_at": updated}
+            if isinstance(payload.get("modified_at"), (int, float, str))
+            and (updated := parse_date_flexible(payload["modified_at"])) != created
+            else {}
+        ),
         "provenance": provenance,
         "referee": referee,
         "target": {
@@ -553,6 +559,9 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
     submitted_at = iso_to_epoch(canonical.get("created_at"))
     if submitted_at is not None:
         out["submitted_at"] = submitted_at
+    modified_at = iso_to_epoch(canonical.get("updated_at"))
+    if modified_at is not None:
+        out["modified_at"] = modified_at
 
     # The reviewer, as the reader takes it
     referee = canonical.get("referee", {}) or {}

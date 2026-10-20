@@ -327,7 +327,8 @@ LOSSES = {
     | renamed(recommendation="decision")
     | unwrapped("audience", "claims_and_evidence", "comment"),
     # HotCRP's API review object comes back in the fields the writer writes: the review's ID
-    # as `id`, its time as `submitted_at`, the reviewer under `reviewer`, and the default
+    # as `id`, the time it was imported as `submitted_at` (it says no time of submission), the
+    # reviewer under `reviewer`, and the default
     # form's fields under the names the reader takes them as. HotCRP's bookkeeping (`object`,
     # `ordinal`, `rtype`, `status`, `version`) and whether the review is `blind` are lost
     "hotcrp/documented_api_review.json": {
@@ -344,7 +345,6 @@ LOSSES = {
         "- PapSum",
         "- RevExp",
         "- blind",
-        "- modified_at",
         "- object",
         "- ordinal",
         "- reviewer_email",
@@ -536,7 +536,9 @@ def test_hotcrp_reads_its_apis_review_object():
     assert review["provenance"]["source_review_id"] == "193"
     assert review["referee"]["referee_id"] == "pat@example.org"
     assert review["referee"]["human_referee"]["name"] == "Pat Example"
-    assert review["created_at"] == "2025-01-01T00:00:00Z"
+    # Its last change; it says no time of submission, so it was written when it was imported
+    assert review["updated_at"] == "2025-01-01T00:00:00Z"
+    assert review["created_at"] != review["updated_at"]
     assert [m["label"] for m in review["metrics"]] == ["Overall Merit", "Reviewer Expertise"]
     assert set(review["narrative"]) == {"summary", "detailed_review", "confidential_to_editors"}
 

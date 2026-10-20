@@ -113,7 +113,7 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
     or its `model`), raises when `model_id` names none of several, and the writer writes back
     to that method.
   - HotCRP: the reader takes the review object HotCRP's API returns: the review's ID as `rid`,
-    which it read as a score (193 on a 1–5 scale), its time as `modified_at`, the reviewer's
+    which it read as a score (193 on a 1–5 scale), its last change, `modified_at`, as `updated_at`, the reviewer's
     name and `reviewer_email`, and the default form's fields under their UIDs (`OveMer`,
     `RevExp`, `PapSum`, `ComAut`, `ComPC`), whose text it dropped.
   - ScholarOne and Editorial Manager: the readers took only the comments and IDs of the record
