@@ -26,6 +26,7 @@ Science is entering an agentic era. AI agents now draft papers, run analyses and
 - **Treating human, AI and hybrid reviews alike**: First-class AI/hybrid referee metadata with execution traces, model specifications, and cost tracking, so a reader can see how an AI reviewer reached its conclusions
 - **Preserving provenance**: Track who reviewed, where the data came from, and how it was transformed
 - **Keeping findings structured**: Findings, decisions and metrics stay machine-readable, so an agent can act on them, a site can show them, and analysts can compare reviews across platforms
+- **Saying how sure**: A reviewer, human or AI, can state how likely each point is to hold and how firmly it holds that view, so a reader or an agent can tell a checked result from a hunch ([why this matters](#how-sure-the-reviewer-is-probability-and-credence))
 - **Ensuring validation**: JSON Schema validation catches malformed data early
 
 ## Supported Systems
@@ -340,8 +341,8 @@ they describe. Fields marked **required** must be present, and every review also
 
 | Field | Description |
 |-------|-------------|
-| `findings` | Strengths, weaknesses, questions, comments, and requested changes with priority (critical, major, minor, trivial) |
-| `claim_assessments` | The work's claims one by one, each with whether the evidence supports it |
+| `findings` | Strengths, weaknesses, questions, comments, and requested changes with priority (critical, major, minor, trivial); a point can say how likely it is to hold and how sure the reviewer is of that |
+| `claim_assessments` | The work's claims one by one, each with whether the evidence supports it, how likely it is true, and how sure the reviewer is of that |
 | `artifact_assessments` | Availability and adequacy of the work's code, data, models, and other materials |
 | `checks` | Systematic checks run on the work, such as reference verification or AI-text detection, including those that found nothing |
 | `ethics_and_risk` | Ethical concerns and required mitigations |
@@ -379,14 +380,71 @@ provided no revision requirement; it does not mean `none`.
 }
 ```
 
-### Confidence in a metric score
+### How sure the reviewer is: probability and credence
 
-Use `metrics[].uncertainty.credence` for overall confidence in a score, from 0 to 1,
-alongside an optional `interval` and `rationale`. Metrics within claim assessments
-work the same way.
+A review judges a work. OCRS also lets a reviewer judge its own judgements: how likely
+each point is to hold, and how firmly it holds that view. This is metacognition, a
+reviewer reporting what it knows and how well it knows it, and OCRS records it as
+numbers a program can read.
+
+It matters most for AI reviewers. A language model writes a guess in the same fluent,
+assured prose as a point it has checked line by line, so its text does not show which is
+which. Hedges do not help a program either: one reviewer's "may" is another's "almost
+certainly". A number can be compared, and with it:
+
+- **an agent can triage**: an agent revising the paper fixes the points the reviewer is
+  sure of first, and checks the uncertain ones, or sends them to a person, before acting
+  on them;
+- **reviews can be combined**: points from several reviewers, human and AI, are weighed
+  by how sure each reviewer is, not by how forcefully each one writes;
+- **reviewers can be calibrated**: a stated probability can be scored once the outcome is
+  known, when the authors confirm an error, a result replicates or a claim is retracted.
+  A reviewer whose 0.9s come true nine times in ten is well calibrated; one whose 0.9s
+  come true half the time is overconfident, and readers can discount it. Confidence that
+  is never stated can never be checked;
+- **a reviewer can say it is unsure**: a low credence keeps a tentative point in the
+  review, marked as tentative, instead of forcing a choice between asserting it and
+  leaving it out.
+
+Findings and claim assessments take two numbers, each from 0 to 1:
+
+- `probability`: how likely the reviewer thinks the point holds. For a weakness, that the
+  problem is real; for a claim, that it is true.
+- `credence`: how firmly the reviewer holds that probability. It is about the estimate,
+  not the work: a reviewer can think a flaw likely (probability 0.9) after a quick read
+  and hold that loosely (credence 0.3), or, after checking a proof with care, judge a
+  claim a coin toss (probability 0.5) and be sure of exactly that (credence 0.9).
+  `credence` needs `probability`.
+
+Scores and the recommendation say how sure the reviewer is in the same way: a metric in
+`uncertainty.credence`, with an optional `interval` and `rationale` (metrics within
+claim assessments too), and the recommendation in `decision.confidence`.
+
+All of these are optional, and all are worth giving: a rough estimate tells a reader more
+than none. Review forms ask for confidence once, for the whole review, and none of the AI
+reviewers OCRS maps today gives it for each point; OCRS has a place for it so that the
+reviewers that do are read the same way.
 
 ```json
 {
+  "findings": {
+    "weaknesses": [
+      {
+        "title": "No ablation of the gating module",
+        "text": "Table 3 reports only the full model, so the gating module's effect is untested.",
+        "severity": "major",
+        "probability": 0.95,
+        "credence": 0.9
+      },
+      {
+        "title": "Theorem 2 may not hold for a decaying step size",
+        "text": "The proof of Theorem 2 assumes a fixed step size, but Algorithm 1 decays it.",
+        "severity": "critical",
+        "probability": 0.6,
+        "credence": 0.3
+      }
+    ]
+  },
   "metrics": [
     {
       "key": "overall",
@@ -394,14 +452,20 @@ work the same way.
       "scale": {"type": "ordinal", "min": 1, "max": 5},
       "value": 4,
       "uncertainty": {
-        "credence": 0.8,
+        "credence": 0.6,
         "interval": {"low": 3, "high": 5},
-        "rationale": "The evaluation leaves some open questions."
+        "rationale": "The score depends on whether Theorem 2 holds."
       }
     }
-  ]
+  ],
+  "decision": {"recommendation": "weak_accept", "confidence": 0.6}
 }
 ```
+
+The first weakness is one the reviewer checked: almost certainly real, and held firmly.
+The second is a suspicion: critical if real, somewhat more likely than not, and held
+loosely. It is the point an agent should verify before rewriting the proof, and the
+reason the reviewer's score and recommendation carry less certainty.
 
 ### Linking assessments to passages
 
