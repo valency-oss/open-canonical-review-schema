@@ -32,11 +32,14 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
     - Action items become points: `priority` becomes `severity`, and `applies_to` becomes
       `evidence_links` (its section, figure and table), `claim_ids` and `addresses` (its
       finding). `ethics_and_risk.required_mitigations` join `findings.changes`, with scope
-      `ethics`. A contribution's `claim_id` becomes `claim_ids`.
+      `ethics`, or tagged `ethics` when they have another scope. A contribution's
+      `claim_id` becomes `claim_ids`.
     - `narrative`'s named fields become its parts, each with its role, and the text for the
       editors has audience `editors`; its `sections` follow them, an empty title left out.
     - A reviewer's expertise that 0.7 scored as a confidence (HotCRP's "Reviewer Expertise")
       is an `expertise` metric, and the core metric catalog v1 is v1.1, which adds that key.
+    - A review read from JATS, whose license 0.7 kept only in `extensions.jats`, has it in
+      `provenance.license`, as the 0.8 reader gives it.
     """
     out = copy.deepcopy(review)
     _referees(out)
@@ -46,6 +49,7 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
         decision.pop("confidence", None)
     _points(out)
     _metrics(out)
+    _license(out)
     narrative = out.get("narrative")
     if isinstance(narrative, dict):
         parts = [
@@ -105,7 +109,11 @@ def _points(review: dict[str, Any]) -> None:
         for mitigation in mitigations:
             if isinstance(mitigation, dict):
                 _as_point(mitigation)
-                mitigation.setdefault("scope", "ethics")
+                # Still a change that ethics calls for, whatever its scope
+                if mitigation.setdefault("scope", "ethics") != "ethics":
+                    tags = mitigation.get("tags")
+                    tags = tags if isinstance(tags, list) else []
+                    mitigation["tags"] = tags if "ethics" in tags else [*tags, "ethics"]
                 changes.append(mitigation)
     opinion = review.get("opinion")
     opinion = opinion if isinstance(opinion, dict) else {}
@@ -125,6 +133,22 @@ def _metrics(review: dict[str, Any]) -> None:
                 metric["aspect"] = "expertise"
     if review.get("metric_catalog_ref") == CATALOG_V1:
         review["metric_catalog_ref"] = CATALOG_V1_1
+
+
+def _license(review: dict[str, Any]) -> None:
+    provenance = review.get("provenance")
+    if not isinstance(provenance, dict) or "license" in provenance:
+        return
+    jats = (review.get("extensions") or {}).get("jats")
+    permissions = jats.get("permissions") if isinstance(jats, dict) else None
+    licenses = permissions.get("licenses") if isinstance(permissions, dict) else None
+    first = licenses[0] if isinstance(licenses, list) and licenses else None
+    first = first if isinstance(first, dict) else {}
+    # The first license's URL, else its statement, as the JATS reader takes it
+    if isinstance(first.get("url"), str) and first["url"]:
+        provenance["license"] = {"url": first["url"]}
+    elif isinstance(first.get("text"), str) and first["text"]:
+        provenance["license"] = {"name": first["text"]}
 
 
 def _as_point(item: Any) -> None:

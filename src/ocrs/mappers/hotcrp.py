@@ -643,6 +643,9 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
             label = m.get("justification")
             if rec and _recommendation_read_back(m["value"], label) != rec:
                 label = rec_label
+                # Words the score's number would read past ("Not sure") give way to OCRS's
+                if _recommendation_read_back(m["value"], label) != rec:
+                    label = recommendation_label(canonical, own=False)
             out.setdefault("overall_merit", score_with_label({**m, "justification": label}, ". "))
         elif key in ("expertise", "confidence"):
             # HotCRP's form asks for the reviewer's expertise, and some forms for confidence

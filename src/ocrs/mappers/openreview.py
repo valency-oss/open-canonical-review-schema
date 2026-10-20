@@ -811,11 +811,12 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     findings = canonical.get("findings", {}) or {}
     # The parts kept under their field names: those that are no summary, review or questions,
     # and that the authors may read
-    sections = [
+    others = [
         s
         for s in narrative_parts(canonical)
-        if "role" not in s and isinstance(s.get("title"), str) and for_authors(s)
+        if s.get("role") in (None, "other") and for_authors(s) and s["content"].strip()
     ]
+    sections = [s for s in others if isinstance(s.get("title"), str)]
     texts: set[str] = set()
     for k, names in FINDING_KEYS.items():
         points = [f for f in findings.get(k) or [] if isinstance(f, dict)]
@@ -830,6 +831,11 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     for part in sections:
         if part["title"] in SECTION_FIELDS or part["title"] in texts:
             content.setdefault(part["title"], part.get("content"))
+    # A review from elsewhere with no text of its own: its other parts, under their headings
+    if not same_source and text_field not in content and others:
+        content[text_field] = "\n\n".join(
+            f"{s['title']}:\n\n{s['content']}" if s.get("title") else s["content"] for s in others
+        )
 
     # Ethics: the form's flag as it gave it, while the review still says what it said, else
     # the review's concerns as ICLR's choices; and the reviewer's account of the concerns
@@ -888,7 +894,15 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             label = m.get("justification") if same_source else None
             scale = m.get("scale") if same_source else None
             if rec and _recommendation_read_back(val, label, scale) != rec:
-                label = rec_label
+                rec_field = _RECOMMENDATION_FIELD.get(kind, "recommendation")
+                if _recommendation_read_back(val, rec_label, scale) == rec:
+                    label = rec_label
+                elif RECOMMENDATION_KEYS.index(rec_field) < RECOMMENDATION_KEYS.index(field):
+                    # Words the score's number would read past ("Not sure" beside an 8) go in
+                    # a field the reader takes the recommendation from first
+                    overall_says_recommendation = False
+                else:
+                    label = recommendation_label(canonical, own=False)
             labelled = {**m, "justification": label}
             content[field] = score_with_label(labelled, form_gives_labels=same_source)
         elif key == "confidence":

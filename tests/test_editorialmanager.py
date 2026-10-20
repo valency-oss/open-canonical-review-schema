@@ -515,3 +515,13 @@ def test_a_recommendation_ocrs_cannot_name_goes_back_in_its_words():
     assert written["recommendation"] == "Needs discussion"
     assert "recommendationCode" not in written
     assert from_editorialmanager(written)["decision"] == canon["decision"]
+
+
+def test_a_part_with_the_role_other_is_a_score_sheet_answer():
+    canon = from_editorialmanager(
+        {"documentId": "D1", "reviewerNumber": 1, "commentsToAuthor": "T."}
+    )
+    canon["narrative"].append({"role": "other", "title": "Is the data shared?", "content": "Yes."})
+    assert to_editorialmanager(canon)["scoreSheetCustomQuestions"] == [
+        {"questionText": "Is the data shared?", "scoreSheetCustomAnswer": {"answerText": "Yes."}}
+    ]
