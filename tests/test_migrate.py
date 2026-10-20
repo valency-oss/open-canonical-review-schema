@@ -122,3 +122,31 @@ def test_review_context_expertise_moves_onto_each_referee():
     migrated = migrate(review)
     assert migrated["referees"][0]["expertise"] == {"self_reported_level": "knowledgeable"}
     assert "review_context" not in migrated
+
+
+def test_a_hotcrp_expertise_scored_as_a_confidence_is_an_expertise():
+    from ocrs import map_to
+
+    expertise = {
+        "key": "confidence",
+        "label": "Reviewer Expertise",
+        "aspect": "confidence",
+        "scale": {"type": "ordinal", "min": 1, "max": 4},
+        "value": 3,
+    }
+    review = {
+        **REVIEW_07,
+        "provenance": {"source_system": "hotcrp"},
+        "metric_catalog_ref": "metric-catalog.core.v1",
+        "metrics": [expertise, {**expertise, "label": "Reviewer Confidence"}],
+    }
+    migrated = migrate(review)
+    validate_canonical(migrated)
+    assert migrated["metric_catalog_ref"] == "metric-catalog.core.v1.1"
+    assert [(m["key"], m["aspect"]) for m in migrated["metrics"]] == [
+        ("expertise", "expertise"),
+        ("confidence", "confidence"),
+    ]
+    written = map_to("hotcrp", migrated)
+    assert written["reviewer_expertise"] == 3
+    assert written["confidence"] == 3

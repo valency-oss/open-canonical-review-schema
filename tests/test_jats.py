@@ -275,3 +275,49 @@ def test_a_summary_that_starts_a_finding_is_still_written():
     review["narrative"], review["opinion"] = [], {"summary": "No"}
     review["findings"] = {"weaknesses": [{"text": "No ablation."}]}
     assert narrative_text(round_trip(review), "review").startswith("No\n\nWeaknesses:")
+
+
+def test_a_part_with_no_title_or_role_is_written():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"], review["opinion"] = [{"content": "A sound method."}], {}
+    assert narrative_text(round_trip(review), "review") == "A sound method."
+
+
+def test_every_part_that_is_the_review_is_written():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = [
+        {"role": "review", "content": "First report."},
+        {"role": "review", "content": "Second report."},
+    ]
+    assert narrative_text(round_trip(review), "review") == "First report.\n\nSecond report."
+
+
+def test_a_part_the_authors_may_not_read_is_not_published():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = [
+        {"role": "review", "audience": "reviewers", "content": "For the other reviewers."},
+        {"title": "To the editor", "audience": "editors", "content": "Reject it."},
+        {"title": "Strengths", "content": "Clear."},
+    ]
+    review["opinion"] = {}
+    written = map_to("jats", review)["sub_article"]
+    assert "Clear." in written
+    assert "other reviewers" not in written and "Reject it." not in written
+
+
+def test_a_license_changed_in_ocrs_is_written():
+    front = (
+        '<permissions><copyright-statement>© The authors</copyright-statement><license xlink:href="'
+        'https://creativecommons.org/licenses/by/4.0/"><license-p>CC BY</license-p></license>'
+        "</permissions>"
+    )
+    review = map_from("jats", payload(front=front, id="r1"))
+    assert review["provenance"]["license"] == {
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+    assert round_trip(review)["provenance"]["license"] == review["provenance"]["license"]
+    review["provenance"]["license"] = {"name": "CC0 1.0"}
+    again = round_trip(review)
+    assert again["provenance"]["license"] == {"name": "CC0 1.0"}
+    # What OCRS has no field for stays
+    assert again["extensions"]["jats"]["permissions"]["copyright_statement"] == "© The authors"

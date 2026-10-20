@@ -37,6 +37,7 @@ from ..identifiers import (
 from ..schema import schema_id
 from ..util import (
     first_paragraph,
+    for_authors,
     narrative_parts,
     narrative_text,
     now_iso,
@@ -685,14 +686,18 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         _add(date, "day", str(int(day)))
         _add(date, "month", str(int(month)))
         _add(date, "year", year)
-    kept_permissions = kept.get("permissions")
+    kept_permissions = kept.get("permissions") or {}
     license_ = (canonical.get("provenance") or {}).get("license") or {}
-    if not kept_permissions and (license_.get("url") or license_.get("name")):
-        # A review from elsewhere: its license, as OCRS holds it
-        kept_permissions = {
-            "licenses": [{"url": license_.get("url"), "text": license_.get("name")}]
-        }
-    if kept_permissions:
+    # The license as the reader takes it from the kept permissions: the first one's URL, else
+    # its statement
+    first = (kept_permissions.get("licenses") or [{}])[0]
+    read = {"url": first["url"]} if first.get("url") else {}
+    read = read or ({"name": first["text"]} if first.get("text") else {})
+    if license_ != read:
+        # A license changed in OCRS, or a review from elsewhere: the license as OCRS holds it
+        licenses = [{"url": license_.get("url"), "text": license_.get("name")}] if license_ else []
+        kept_permissions = {**kept_permissions, "licenses": licenses}
+    if any(kept_permissions.values()):
         permissions = _add(stub, "permissions")
         if kept_permissions.get("copyright_statement"):
             _add(permissions, "copyright-statement", kept_permissions["copyright_statement"])
@@ -749,24 +754,36 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         _add(meta, "meta-value", term)
 
     opinion = canonical.get("opinion") or {}
-    text = narrative_text(canonical, "review") or opinion.get("text")
+    # The report: the parts of the review's text that are the review, as the authors may read
+    # them, in order
+    reports = [
+        p["content"]
+        for p in narrative_parts(canonical)
+        if p.get("role") == "review" and for_authors(p) and p["content"].strip()
+    ]
+    text = "\n\n".join(reports) or opinion.get("text")
     if not (isinstance(text, str) and text.strip()):
-        # A review without a full text: its summary, then its named parts under their headings
-        # or else its findings; the summary is left out when it is the start of one of them
-        # (a reader may take it from the first finding)
-        sections = [s for s in narrative_parts(canonical) if "role" not in s]
-        written = [s for s in sections if s.get("title") and s.get("content")]
+        # A review without a full text: its summary, then its other parts, each under its
+        # heading when it has one, or else its findings; the summary is left out when it is
+        # the start of one of them (a reader may take it from the first finding)
+        written = [
+            s
+            for s in narrative_parts(canonical)
+            if "role" not in s and for_authors(s) and s["content"]
+        ]
         # Findings whose text no section holds come after the sections
         held = {
             kind: {
                 item
                 for s in written
-                if str(s["title"]).casefold().replace("_", " ").strip() in titles
-                for item in _items(str(s["content"]))
+                if str(s.get("title") or "").casefold().replace("_", " ").strip() in titles
+                for item in _items(s["content"])
             }
             for kind, titles in FINDING_SECTIONS.items()
         }
-        parts_ = [f"{s['title']}:\n\n{s['content']}" for s in written]
+        parts_ = [
+            f"{s['title']}:\n\n{s['content']}" if s.get("title") else s["content"] for s in written
+        ]
         parts_.append(_findings_text(canonical.get("findings") or {}, held))
         rest = "\n\n".join(part for part in parts_ if part)
         summary = opinion.get("summary") or narrative_text(canonical, "summary")

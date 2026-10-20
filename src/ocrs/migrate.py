@@ -18,6 +18,8 @@ NARRATIVE_FIELDS = (
 )
 # Where 0.7's `applies_to` places go among a point's evidence links
 APPLIES_TO_LINKS = {"section": "paper_section", "figure": "figure", "table": "table"}
+# The metric catalog 0.7 reviews name, and the one that adds `expertise` to it
+CATALOG_V1, CATALOG_V1_1 = "metric-catalog.core.v1", "metric-catalog.core.v1.1"
 
 
 def migrate(review: dict[str, Any]) -> dict[str, Any]:
@@ -33,6 +35,8 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
       `ethics`. A contribution's `claim_id` becomes `claim_ids`.
     - `narrative`'s named fields become its parts, each with its role, and the text for the
       editors has audience `editors`; its `sections` follow them, an empty title left out.
+    - A reviewer's expertise that 0.7 scored as a confidence (HotCRP's "Reviewer Expertise")
+      is an `expertise` metric, and the core metric catalog v1 is v1.1, which adds that key.
     """
     out = copy.deepcopy(review)
     _referees(out)
@@ -41,6 +45,7 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
         decision.setdefault("credence", decision.pop("confidence"))
         decision.pop("confidence", None)
     _points(out)
+    _metrics(out)
     narrative = out.get("narrative")
     if isinstance(narrative, dict):
         parts = [
@@ -107,6 +112,19 @@ def _points(review: dict[str, Any]) -> None:
     for contribution in opinion.get("contributions") or []:
         if isinstance(contribution, dict) and "claim_id" in contribution:
             contribution["claim_ids"] = [contribution.pop("claim_id")]
+
+
+def _metrics(review: dict[str, Any]) -> None:
+    for metric in review.get("metrics") or []:
+        if not isinstance(metric, dict) or metric.get("key") != "confidence":
+            continue
+        label = metric.get("label")
+        if isinstance(label, str) and label.strip().casefold() == "reviewer expertise":
+            metric["key"] = "expertise"
+            if metric.get("aspect") == "confidence":
+                metric["aspect"] = "expertise"
+    if review.get("metric_catalog_ref") == CATALOG_V1:
+        review["metric_catalog_ref"] = CATALOG_V1_1
 
 
 def _as_point(item: Any) -> None:

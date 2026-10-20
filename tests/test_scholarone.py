@@ -614,3 +614,14 @@ def test_scholarone_reviewer_number_zero_is_kept():
     assert canon["referees"][0]["referee_id"] == "reviewer_0"
     assert canon["review_id"].endswith("D_r0")
     assert map_to("scholarone", canon)["reviewerNumber"] == 0
+
+
+def test_a_recommendation_ocrs_cannot_name_goes_back_in_its_words():
+    payload = {"documentId": "D1", "reviewerNumber": 1, "commentsToAuthor": "Text."}
+    payload["overallRecommendationLabel"] = "Needs discussion"
+    canon = from_scholarone(payload)
+    assert canon["decision"] == {"source_label": "Needs discussion"}
+    written = to_scholarone(canon)
+    assert written["overallRecommendationLabel"] == "Needs discussion"
+    assert "overallRecommendation" not in written
+    assert from_scholarone(written)["decision"] == canon["decision"]
