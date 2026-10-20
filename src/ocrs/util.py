@@ -707,6 +707,8 @@ def score_sheet_answers(
     """
     scored: list[tuple[str, int | float, str | None]] = []
     written: list[tuple[str, str]] = []
+    # The services document XML only: in JSON, one question may come as an object, not a list
+    questions = [questions] if isinstance(questions, dict) else questions
     for question in questions if isinstance(questions, list) else []:
         if not isinstance(question, dict):
             continue

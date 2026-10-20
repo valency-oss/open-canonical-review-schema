@@ -990,3 +990,12 @@ def test_an_ethics_flag_given_as_a_number_in_text_reads_by_the_forms_label():
     review = from_openreview(note, scale_bounds=bounds)
     assert review["ethics_and_risk"] == {"ethical_concerns": False}
     assert not review["metrics"]
+
+
+@pytest.mark.parametrize("system", ["scholarone", "editorialmanager"])
+def test_a_score_sheet_of_one_question_may_come_as_an_object(system):
+    """The JSON shape is not documented: a lone question may come unwrapped from its list."""
+    record = real(f"{system}/documented_api_reviewer.json")
+    first = record["scoreSheetCustomQuestions"][0]
+    review = map_from(system, {**record, "scoreSheetCustomQuestions": first})
+    assert [m["label"] for m in review["metrics"]] == [first["questionText"]]
