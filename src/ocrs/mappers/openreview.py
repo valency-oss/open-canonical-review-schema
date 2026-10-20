@@ -916,8 +916,9 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             if field not in RECOMMENDATION_KEYS and field not in CONFIDENCE_KEYS:
                 content.setdefault(field, written)
 
-    # Without a score to carry it, the recommendation has its own field
-    if rec and not overall_says_recommendation:
+    # Without a score to carry it, the recommendation has its own field, as do the words of
+    # one OCRS cannot name
+    if rec_label and not overall_says_recommendation:
         content[_RECOMMENDATION_FIELD.get(kind, "recommendation")] = rec_label
 
     note: dict[str, Any] = {
