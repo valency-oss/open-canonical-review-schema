@@ -568,18 +568,19 @@ def _write_contributor(
             _add(contrib, "aff", human["affiliation"])
 
 
-def _findings_text(findings: dict[str, Any], skip: set[str] = frozenset()) -> str:
+def _findings_text(findings: dict[str, Any], held: dict[str, str] | None = None) -> str:
     """Findings as text, for a review that has no other: each kind under its heading, a point
-    to a line, with its title in bold. `skip` holds the kinds the text already has."""
+    to a line, with its title in bold. `held` holds, by kind, the text the review already
+    gives that kind's findings in (its sections), whose points are not written again."""
     blocks = []
     for kind, heading in FINDING_HEADINGS.items():
-        if kind in skip:
-            continue
         lines = []
         for point in findings.get(kind) or []:
             if not isinstance(point, dict):
                 continue
             words = " ".join(str(point.get("text") or "").split())
+            if words and words in (held or {}).get(kind, ""):
+                continue
             title = " ".join(str(point.get("title") or "").split())
             line = f"**{title}** {words}".strip() if title else words
             if line:
@@ -722,10 +723,12 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         written = [s for s in sections if s.get("title") and s.get("content")]
         # Findings whose text no section holds come after the sections
         held = {
-            kind
+            kind: " ".join(
+                _squash(str(s["content"]))
+                for s in written
+                if str(s["title"]).casefold().replace("_", " ").strip() in titles
+            )
             for kind, titles in FINDING_SECTIONS.items()
-            for s in written
-            if str(s["title"]).casefold().replace("_", " ").strip() in titles
         }
         parts_ = [f"{s['title']}:\n\n{s['content']}" for s in written]
         parts_.append(_findings_text(canonical.get("findings") or {}, held))

@@ -233,3 +233,15 @@ def test_a_doi_in_the_work_id_alone_is_written():
     review = map_from("jats", payload(id="r1"))
     review["target"] = {"work_id": "doi:10.1234/j.9", "work_type": "article"}
     assert round_trip(review)["target"]["work_id"] == "doi:10.1234/j.9"
+
+
+def test_findings_a_section_does_not_hold_are_written_too():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = {"sections": [{"title": "strengths", "content": "- Clear."}]}
+    review["opinion"] = {}
+    review["findings"] = {"strengths": [{"text": "Clear."}, {"text": "Novel."}]}
+    sections = round_trip(review)["narrative"]["sections"]
+    assert sections == [
+        {"title": "strengths", "content": "- Clear."},
+        {"title": "Strengths", "content": "- Novel."},
+    ]
