@@ -19,6 +19,7 @@ from ..util import (
     first_present_item,
     from_source,
     guess_scale_from_value,
+    is_number,
     is_score_field,
     iso_to_epoch,
     map_recommendation_from_numeric,
@@ -423,7 +424,7 @@ def from_openreview(
             out["metrics"].append(
                 {
                     "key": "overall",
-                    "label": "Overall Assessment",
+                    "label": rec_key.replace("_", " ").strip(),
                     "aspect": "overall",
                     "scale": scale,
                     "value": num,
@@ -448,7 +449,7 @@ def from_openreview(
             out["metrics"].append(
                 {
                     "key": "confidence",
-                    "label": "Reviewer Confidence",
+                    "label": conf_key.replace("_", " ").strip(),
                     "aspect": "confidence",
                     "scale": scale,
                     "value": num,
@@ -565,8 +566,12 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     ):
         content = {"summary": summary, **content}
 
-    # Scores, each under its own field. A review read from OpenReview keeps its labels
-    overall = None
+    # Scores, each under its own field. A review read from OpenReview keeps its fields and
+    # labels; one from elsewhere is written under the catalog's keys
+    dec = source_decision(canonical.get("decision", {}) or {})
+    rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
+    rec_label = rec.replace("_", " ").title() if rec else None
+    overall_written = False
     for m in canonical.get("metrics", []) or []:
         if not isinstance(m, dict):
             continue
@@ -574,31 +579,33 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
         val = m.get("value")
         if not key or val is None:
             continue
-        written = score_with_label(m) if same_source else val
+        name = field_name(m["label"]) if same_source and isinstance(m.get("label"), str) else ""
         if key == "overall":
-            overall = overall or m
-            content.setdefault("rating", written)
+            # The reader takes the recommendation from this score, so it must be one it can
+            # read; a list leaves the recommendation to its own field
+            if overall_written or not is_number(val):
+                continue
+            overall_written = True
+            # The score's label says the recommendation, read first; a label that would
+            # read back as another gives way to the decision's
+            label = m.get("justification") if same_source else None
+            scale = m.get("scale") if same_source else None
+            if rec and _recommendation_read_back(val, label, scale) != rec:
+                label = rec_label
+            field = name if name in RECOMMENDATION_KEYS else "rating"
+            labelled = {**m, "justification": label}
+            content[field] = score_with_label(labelled, form_gives_labels=same_source)
         elif key == "confidence":
-            content.setdefault("confidence", written)
+            field = name if name in CONFIDENCE_KEYS else "confidence"
+            written = score_with_label(m, form_gives_labels=True) if same_source else val
+            content.setdefault(field, written)
         else:
-            label = m.get("label")
-            named = same_source and isinstance(label, str) and label.strip()
-            content.setdefault(field_name(label) if named else key, written)
+            written = score_with_label(m, form_gives_labels=True) if same_source else val
+            content.setdefault(name or key, written)
 
-    # The recommendation, unless the overall score says it: the reader takes the score's
-    # label first, then its value
-    dec = source_decision(canonical.get("decision", {}) or {})
-    rec = dec.get("recommendation")
-    if isinstance(rec, str):
-        implied = None
-        if same_source and overall is not None:
-            implied = map_recommendation_from_text(
-                overall.get("justification") or ""
-            ) or map_recommendation_from_numeric(overall["value"], overall.get("scale") or {})
-        if implied != rec:
-            content[_RECOMMENDATION_FIELD.get(kind, "recommendation")] = rec.replace(
-                "_", " "
-            ).title()
+    # Without a score to carry it, the recommendation has its own field
+    if rec and not overall_written:
+        content[_RECOMMENDATION_FIELD.get(kind, "recommendation")] = rec_label
 
     note: dict[str, Any] = {
         "id": canonical.get("review_id"),
@@ -616,6 +623,16 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
         venueid = ((canonical.get("extensions") or {}).get("openreview") or {}).get("venueid")
         note["invitation"] = f"{venueid or ''}/-/{kind}"
     return note
+
+
+def _recommendation_read_back(
+    value: int | float, label: str | None, scale: dict[str, Any] | None
+) -> str | None:
+    """The recommendation from_openreview takes from an overall score with this label, on the
+    score's own scale; None when it would fall back to a guess."""
+    return map_recommendation_from_text(label or "") or (
+        map_recommendation_from_numeric(value, scale) if scale else None
+    )
 
 
 def _summary_the_reader_infers(content: dict[str, Any]) -> str:

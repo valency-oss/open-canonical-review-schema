@@ -38,7 +38,10 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
     description of the value is left out, so the value alone says it. A review from another
     system gives its scores under their catalog keys, as before.
   - A recommendation the overall score's label already says is not written again as its own
-    field, which made OpenReview read the score as a second one.
+    field, which made OpenReview read the score as a second one. A label that would read back
+    as another recommendation gives way to the decision's own (`4: Major Revision`), so the
+    decision survives. A form's own label for a value is left out only when writing back to
+    that form; another system gets it written.
   - The review's time (`cdate`, `submitted_at`, `reviewDate`, `dateReceived`,
     `dateReviewReceived`), the reviewer, the title, the questions for the authors
     (HotCRP's `questions_for_authors`) and, for OpenReview meta-reviews and decisions, the
@@ -49,7 +52,10 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
     label only when the review gave one.
 - The readers keep a little more, so that their writers can give it back: CMT and OpenReview
   keep the overall score's label, and CMT the confidence's, as the other scores' labels were
-  kept; CMT takes the paper's title from `paperTitle` and the review's date from `reviewDate`
+  kept; OpenReview labels the overall score and the confidence with their form fields
+  (`rating`, `overall rating`, `confidence`), as it labels its other scores, where they were
+  `Overall Assessment` and `Reviewer Confidence`, so that each is written back to its own field
+  and the form's bounds for it apply again; CMT takes the paper's title from `paperTitle` and the review's date from `reviewDate`
   as well as `createdAt`; Editorial Manager and ScholarOne take the title from
   `manuscriptTitle`.
 - Tests write each fixture back in its source's format and read it again, both ways. Every

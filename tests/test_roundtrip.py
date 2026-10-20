@@ -426,3 +426,51 @@ def test_scholarone_keeps_a_recommendation_label_unless_it_says_another(label, k
     assert written["overallRecommendation"] == 2
     assert ("overallRecommendationLabel" in written) is kept
     assert map_from("scholarone", written)["decision"] == {"revision_requirement": "minor"}
+
+
+@pytest.mark.parametrize("writer", ["cmt", "hotcrp"])
+def test_a_score_labelled_by_its_form_keeps_the_label_in_another_system(writer):
+    """OpenReview's form names its scores' values ("Accept: Technically solid paper"), so a
+    note gives the number alone; another system needs the label written to read the same
+    recommendation from the score."""
+    review = read("openreview", load(OPENREVIEW_V2 / "review.json"), OPENREVIEW_V2_FORM)
+    again = map_from(writer, map_to(writer, review))
+    assert again["decision"]["recommendation"] == review["decision"]["recommendation"]
+
+
+def test_a_decision_note_keeps_its_revision_beside_a_score():
+    """The reader takes the recommendation from the score before a Decision note's own
+    `decision` field, so a decision the score does not say goes in the score's label."""
+    scale = {"type": "ordinal", "min": 1, "max": 10}
+    review = written_review(
+        "openreview",
+        review_context={"review_type": "recommendation"},
+        decision={"revision_requirement": "major"},
+        metrics=[{"key": "overall", "label": "rating", "scale": scale, "value": 4}],
+    )
+    again = map_from("openreview", map_to("openreview", review))
+    assert again["decision"] == {"revision_requirement": "major"}
+    assert again["review_context"] == {"review_type": "recommendation"}
+
+
+def test_an_openreview_score_goes_back_to_its_own_field():
+    """A score keeps its field, so the form's bounds for it apply when it is read again."""
+    bounds = {"overall_rating": {"min": 1, "max": 10}}
+    note = {"id": "n1", "forum": "f1", "content": {"summary": "S.", "overall_rating": 4}}
+    review = map_from("openreview", note, scale_bounds=bounds)
+    written = map_to("openreview", review)
+    assert written["content"]["overall_rating"] == 4
+    again = map_from("openreview", written, scale_bounds=bounds)
+    assert again["decision"] == review["decision"] == {"recommendation": "weak_reject"}
+
+
+@pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
+def test_an_overall_score_that_is_a_list_leaves_the_recommendation_to_its_field(writer):
+    scale = {"type": "categorical"}
+    overall = {"key": "overall", "label": "rating", "scale": scale, "value": ["a", "b"]}
+    review = written_review(
+        writer,
+        decision={"recommendation": "accept"},
+        metrics=[{**overall, "justification": "Accept"}],
+    )
+    assert map_from(writer, map_to(writer, review))["decision"]["recommendation"] == "accept"

@@ -619,17 +619,22 @@ def from_source(canonical: dict[str, Any], system: str) -> bool:
     return (canonical.get("provenance") or {}).get("source_system") == system
 
 
-def score_with_label(metric: dict[str, Any], separator: str = ": ") -> Any:
+def score_with_label(
+    metric: dict[str, Any], separator: str = ": ", *, form_gives_labels: bool = False
+) -> Any:
     """A score as a review form writes it: the value, with the label the reviewer gave it
-    ("6: Weak Accept"). A label that is the scale's own anchor for the value is the form's
-    description of it, which the value alone says."""
+    ("6: Weak Accept"). Written back to the form whose scale anchors the score
+    (`form_gives_labels`), a label that is its anchor for the value is left out: that form
+    says it for the value alone. Any other system needs the label written."""
     value, label = metric.get("value"), metric.get("justification")
     # A list of values ("a", "b") has no one place for a label
     if isinstance(value, (list, dict)):
         return value
     anchors = (metric.get("scale") or {}).get("anchors") or []
     form_labels = {a.get("value"): a.get("label") for a in anchors if isinstance(a, dict)}
-    if not isinstance(label, str) or not label.strip() or form_labels.get(value) == label:
+    if not isinstance(label, str) or not label.strip():
+        return value
+    if form_gives_labels and form_labels.get(value) == label:
         return value
     return f"{value}{separator}{label}"
 
