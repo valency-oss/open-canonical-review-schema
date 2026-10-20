@@ -344,3 +344,14 @@ def test_a_part_with_no_role_is_written_after_the_review():
     assert narrative_text(again, "review") == "A sound method.\n\nlimitations:\n\nOne dataset."
     # A report read from JATS: its parts are in its text, and are not written twice
     assert round_trip(again)["narrative"] == again["narrative"]
+
+
+def test_a_part_whose_words_the_review_uses_is_still_written():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = [
+        {"role": "review", "content": "The paper has limitations."},
+        {"title": "Limitations", "content": "limitations"},
+    ]
+    assert narrative_text(round_trip(review), "review") == (
+        "The paper has limitations.\n\nLimitations:\n\nlimitations"
+    )
