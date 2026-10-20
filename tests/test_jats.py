@@ -321,3 +321,14 @@ def test_a_license_changed_in_ocrs_is_written():
     assert again["provenance"]["license"] == {"name": "CC0 1.0"}
     # What OCRS has no field for stays
     assert again["extensions"]["jats"]["permissions"]["copyright_statement"] == "© The authors"
+
+
+def test_questions_for_the_authors_are_written():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"], review["opinion"] = [{"role": "questions", "content": "Why 3?"}], {}
+    assert narrative_text(round_trip(review), "review") == "Why 3?"
+    review["narrative"].insert(0, {"role": "review", "content": "A sound method."})
+    review["narrative"][1]["title"] = "Questions"
+    assert narrative_text(round_trip(review), "review") == (
+        "A sound method.\n\nQuestions:\n\nWhy 3?"
+    )

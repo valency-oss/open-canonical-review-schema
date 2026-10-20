@@ -101,7 +101,8 @@ reviews one edit away from them) migrates to a valid 0.8 review.
   - **Recommendation wording:** a recommendation given in words keeps its wording in
     `decision.source_label`, and writers give it back verbatim, so `Accept (Poster)` no
     longer comes back as `Accept`. This holds for OpenReview, CMT, HotCRP, Editorial
-    Manager, ScholarOne and JATS.
+    Manager, ScholarOne and JATS. Words that name no recommendation (`Not sure`), which
+    the OpenReview, CMT and HotCRP readers take as `borderline`, go back as written too.
   - **OpenReview:** the reader takes the note's `license` as `provenance.license`.
     `replyto`, when it is not the forum, becomes a `responds_to` related review. A form
     bound's `values` becomes `scale.values`. The writer gives the license and the reply
@@ -109,7 +110,8 @@ reviews one edit away from them) migrates to a valid 0.8 review.
   - **JATS:** the reader takes the report's license as `provenance.license`. The writer
     writes the license `provenance.license` holds, even when the review was read from JATS
     and its license was later changed. The report's body is every part that is the review,
-    or, without one, the other parts, with or without a title.
+    then the questions for the authors and the other parts they may read. Without a part
+    that is the review, it is the other parts, with or without a title.
   - **Editorial Manager and ScholarOne:** a recommendation OCRS cannot name ("Needs
     discussion") is kept as `decision.source_label` alone, and written back in its words.
   - **HotCRP:** reviewer expertise, which was a `confidence` metric, is an `expertise`
