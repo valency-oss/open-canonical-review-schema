@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "- The authors tackle the problem of applying LLMs to tabular data.\n- The authors show that providing an LLM with information about a decision tree can improve performance.\n- The authors present a method to train a decision tree using feedback from a large language model.\n- Experiments are carried out vs. a number of baselines, across four datasets."
+    },
+    "soundness": {
+      "value": "2 fair"
+    },
+    "presentation": {
+      "value": "2 fair"
+    },
+    "contribution": {
+      "value": "1 poor"
+    },
+    "strengths": {
+      "value": "- (S0) This paper presents a novel idea in which we train a decision tree as an aid to a language model in answering queries pertaining to tabular data."
+    },
+    "weaknesses": {
+      "value": "- (W0) While the paper has a neat idea, I'm not certain that the contribution and results are significant. There are some obvious baselines missing, the problem setting is quite niche, there are some obvious drawbacks of the method, and the writing is not very polished (see below). Overall the weaknesses below outweigh the strengths, and therefore I do not recommend acceptance to ICLR.\n\n- (W1) The performance of TAP-OT is not very impressive: From Table 1, TAP-OT does not reliably beat baselines once the number of few-shot examples is 16 or more, and improvement margins (if present) are quite thin across the board.\n\n- (W2) The paper tackles a problem that is quite niche. The usefulness of this method only arises in cases of very limited data such that a decision tree cannot be trained on its own.\n\n- (W3) 1) I would like to see an LLM baseline using an optimized prompt (you don’t show this prompt). Since the datasets involved have few features and you are using very few training examples, it is hard to see why you need a complicated search procedure to provide the LLM this data. 2) I also would like to see a baseline that uses chain-of-thought and/or self-consistency (SC). I suspect you could improve the baseline LLM results by more than TAP-OT’s outperformance margin using just SC.\n\n- (W4) The authors don’t show results for various choices of hyperparameter $\\lambda$ and $\\mu$. I presume the algorithm is not very robust to various choices of hyperparameters, and in the best case (after searching over a set of $\\mu$s and $\\lambda$s), you can marginally beat GPT3.5.\n\n- (W5) TAP-OT requires an order of magnitude more calls to the LLM compared to the LLM baseline, before hyperparameter search over $\\mu$ and $\\lambda$. This is probably not worthwhile in most settings.\n\n- (W6) The writing is not very polished. There are typos (e.g. “standard derivation”), and a few areas in which the claim is exaggerated (e.g. “our tree emerges as more rational”, “registering near-optimal accuracy”), and some sentences which are not clear (e.g. “...with scarce normal feature values” etc.). The explanation of the algorithm (Section 4) could also be clearer. Finally, related works on using LLMs to augment data should be mentioned. The diabetes dataset first mentioned isn't referenced until the 6th page."
+    },
+    "questions": {
+      "value": "1) What is the prompt in the LLM baseline?\n\n2) Can you clarify how many average LLM calls on line 15 in Algorithm 1 are there in each of your experiments in Table 1?\n\n3) Could you confirm whether there is a different $\\mu$ and $\\lambda$ for each row in Table 1? (i.e. a different $\\mu$ and $\\lambda$ for each (dataset, #example) tuple).\n\n4) Can you confirm how the OT baseline deals with training examples where the decision tree outputs \"unknown\"?"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": "3: reject, not good enough"
+    },
+    "confidence": {
+      "value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "xZzCQESypD",
+  "forum": "SJTSvRtGsN",
+  "replyto": "SJTSvRtGsN",
+  "signatures": [
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_fSXp"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2024/Conference",
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_fSXp"
+  ],
+  "number": 2,
+  "invitations": [
+    "ICLR.cc/2024/Conference/Submission770/-/Official_Review",
+    "ICLR.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2024/Conference",
+  "tcdate": 1698827650139,
+  "cdate": 1698827650139,
+  "tmdate": 1699636004445,
+  "mdate": 1699636004445,
+  "license": "CC BY 4.0",
+  "version": 2
+}

@@ -1,0 +1,57 @@
+{
+  "Official_Review": {
+    "soundness": {
+      "min": 1,
+      "max": 4,
+      "labels": {
+        "4": "excellent",
+        "3": "good",
+        "2": "fair",
+        "1": "poor"
+      }
+    },
+    "presentation": {
+      "min": 1,
+      "max": 4,
+      "labels": {
+        "4": "excellent",
+        "3": "good",
+        "2": "fair",
+        "1": "poor"
+      }
+    },
+    "contribution": {
+      "min": 1,
+      "max": 4,
+      "labels": {
+        "4": "excellent",
+        "3": "good",
+        "2": "fair",
+        "1": "poor"
+      }
+    },
+    "rating": {
+      "min": 1,
+      "max": 10,
+      "labels": {
+        "1": "strong reject",
+        "3": "reject, not good enough",
+        "5": "marginally below the acceptance threshold",
+        "6": "marginally above the acceptance threshold",
+        "8": "accept, good paper",
+        "10": "strong accept, should be highlighted at the conference"
+      }
+    },
+    "confidence": {
+      "min": 1,
+      "max": 5,
+      "labels": {
+        "1": "You are unable to assess this paper and have alerted the ACs to seek an opinion from different reviewers.",
+        "2": "You are willing to defend your assessment, but it is quite likely that you did not understand the central parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked.",
+        "3": "You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked.",
+        "4": "You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work.",
+        "5": "You are absolutely certain about your assessment. You are very familiar with the related work and checked the math/other details carefully."
+      }
+    }
+  }
+}

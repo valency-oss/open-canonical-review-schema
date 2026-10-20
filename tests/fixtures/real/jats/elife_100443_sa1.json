@@ -1,0 +1,8 @@
+{
+  "sub_article": "<sub-article article-type=\"referee-report\" id=\"sa1\"><front-stub><article-id pub-id-type=\"doi\">10.7554/eLife.100443.2.sa1</article-id><title-group><article-title>Reviewer #1 (Public review):</article-title></title-group><contrib-group><contrib contrib-type=\"author\"><anonymous /><role specific-use=\"referee\">Reviewer</role></contrib></contrib-group></front-stub><body><p>Summary:</p><p>This is an important contribution to the field of molecular embryology of the lung. The authors introduce a novel mesenchymally expressed molecule Svep1. Knocking it out in mice produces a profoundly hypoplastic phenotype which can be rescued in vitro. Svep1 interacts with the FGF signaling complex to control differentiation and expression of smooth muscle in lung mesenchyme, thereby affecting proximal-distal patterning of the airway branches by acting as a putative branch suppressor.</p><p>Strengths:</p><p>The study shows strong evidence in mouse knockouts, in vitro embryonic lung culture as well as gene expression and in vitro rescue studies that confirm a key role for Svep1. It is a beautiful piece of work and an important contribution to our understanding of early lung branching morphogenesis.</p><p>Weaknesses:</p><p>Claiming a possible therapeutic role for this gene is a bit far-fetched at the present state of the art.</p></body></sub-article>",
+  "article": {
+    "doi": "10.7554/eLife.100443.2",
+    "title": "Svep1 orchestrates distal airway patterning and alveolar differentiation in murine lung development",
+    "journal": "eLife"
+  }
+}

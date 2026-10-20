@@ -37,9 +37,10 @@ OCRS provides bidirectional mappers for converting between the canonical schema 
 |--------|:---------------:|:-------------:|-------|
 | **OpenReview** | Full | Full | Conference reviews with structured findings and metrics; also [a saved forum page](#reviews-from-a-saved-openreview-page) |
 | **CMT** | Full | Full | Microsoft Conference Management Toolkit exports |
-| **HotCRP** | Full | Full | Conference reviews |
-| **Editorial Manager** | Full | Full | Journal manuscript system |
-| **ScholarOne** | Full | Full | Clarivate journal system |
+| **HotCRP** | Full | Full | Conference reviews; also the review object of its API |
+| **Editorial Manager** | Full | Full | Journal manuscript system; also the reviewer record of its web service (`getReviewerInfoFull`) |
+| **ScholarOne** | Full | Full | Clarivate journal system; also the reviewer record of its web service (`getReviewerInfoFull`) |
+| **JATS** | Full | Full | Review reports published as JATS `<sub-article>`s (eLife, F1000Research, PeerJ), as [JATS4R](https://jats4r.niso.org/peer-review-materials/) recommends |
 | **Journal Narrative** | Full | Full | Minimal free-text reviews with DOI/journal metadata |
 | **OpenAIReview** | Full | Full | AI reviewer ([ChicagoHAI/OpenAIReview](https://github.com/ChicagoHAI/OpenAIReview)): `paper.json` |
 | **DeepReview** | Full | Full | Google's AI reviewer: the Markdown that its "Copy Report" gives |
@@ -49,7 +50,7 @@ OCRS provides bidirectional mappers for converting between the canonical schema 
 - **Full** source: the mapper reads every field of the system's review that OCRS has a place for
 - **Full** target: a review read from the system and written back to it reads back the same, its scores under their own field names and with their labels; a review from another system is written as well as the format allows
 
-Round trips are tested both ways for every system, with each system's fixtures: written back to its own format, a review OCRS read comes back unchanged, and `tests/test_roundtrip.py` lists the system's own fields that OCRS has no place for, which a review loses on the way.
+Round trips are tested both ways for every system, with each system's fixtures: written back to its own format, a review OCRS read comes back unchanged, and `tests/test_roundtrip.py` lists the system's own fields that OCRS has no place for, which a review loses on the way. `tests/test_real_reviews.py` runs the same tests on published reviews from OpenReview (ICLR, NeurIPS, COLM, TMLR), eLife, F1000Research and OpenAIReview, listed with their sources and licenses in [tests/fixtures/real/](tests/fixtures/real/README.md).
 
 ## Use the schema
 
@@ -117,6 +118,8 @@ The review's text is copied as Markdown. Its Summary becomes `opinion.summary`; 
 
 A note made by a `Meta_Review` or `Decision` invitation has `review_context.review_type` `meta_review` or `recommendation`; its `metareview` or `comment` text becomes the opinion and its `recommendation` or `decision` the decision.
 
+A strengths, weaknesses, questions or requested-changes field written as text is read as a saved forum page's is: a list's items are its points, a heading above them (`Major concerns:`, `**Minor**`) is their `group`, and a Minor heading makes them minor. The field's text is kept as written in `narrative.sections`, and `map_to` gives it back. An ethics flag (ICLR's list of choices, COLM's Yes or No) becomes `ethics_and_risk`, and the note's last change (`tmdate` or `mdate`) `updated_at`.
+
 ```python
 from ocrs import map_from, validate_canonical
 
@@ -136,6 +139,39 @@ validate_canonical(canonical)
 assert canonical["decision"]["recommendation"] == "accept"
 ```
 
+## Reviews published in JATS
+
+Journals that publish their reviews (eLife, F1000Research, PeerJ, Copernicus) put each report, editor's assessment and author response in the reviewed article's JATS XML, as a `<sub-article>`. `sub_articles` splits an article into one payload per report, with the article's version DOI, title and journal, which a sub-article may not repeat:
+
+```python
+from ocrs import map_from, map_to
+from ocrs.mappers.jats import sub_articles
+
+article_xml = """<article><front>
+  <journal-meta><journal-title-group><journal-title>Example Journal</journal-title>
+  </journal-title-group></journal-meta>
+  <article-meta><article-id pub-id-type="doi" specific-use="version">10.1234/example.1.2</article-id>
+  </article-meta></front>
+  <sub-article article-type="referee-report" id="sa1"><front-stub>
+    <article-id pub-id-type="doi">10.1234/example.1.2.sa1</article-id>
+    <contrib-group><contrib contrib-type="author"><anonymous/><role>Reviewer</role></contrib>
+    </contrib-group></front-stub>
+    <body><p>Summary:</p><p>A sound method, <bold>well</bold> tested.</p></body>
+  </sub-article></article>"""
+
+(payload,) = sub_articles(article_xml)
+review = map_from("jats", payload)
+assert review["provenance"]["review_doi"] == "10.1234/example.1.2.sa1"
+assert review["target"]["work_id"] == "doi:10.1234/example.1.2"
+assert review["referee"]["identity_mode"] == "single_blind"  # <anonymous/>
+assert review["opinion"]["summary"] == "A sound method, **well** tested."
+assert map_to("jats", review)["sub_article"].startswith(
+    '<sub-article article-type="referee-report"'
+)
+```
+
+The reader takes the report's type, its DOI, the referee (name, ORCID, affiliation, or `<anonymous/>`) and competing interests, its date, the version it reviews (its `related-article`, else the article's), its recommendation (F1000Research's `approve-with-reservations`, or a JATS4R term), and its text, with bold and italic as Markdown and the parts under headings such as "Summary:" as narrative sections. What OCRS has no field for, such as the report's license, an eLife Assessment's significance and strength terms and the authors' responses nested in a report, is kept in `extensions.jats`, and `map_to` gives it back.
+
 ## AI reviewers
 
 The OpenAIReview, DeepReview and Reviewer3 mappers copy the reviewer's own output into OCRS; they never rewrite or invent text. Whatever has no OCRS field is kept, unchanged, in `extensions.<reviewer>`.
@@ -149,7 +185,7 @@ The OpenAIReview, DeepReview and Reviewer3 mappers copy the reviewer's own outpu
 
 Each step also says how its value was taken: `copied`, `looked up` in a table, or `parsed` out of the reviewer's text by a pattern (a page number from a location, for example).
 
-`output` is the reviewer's own file, unchanged: its JSON, or its text when the reviewer writes Markdown. The keyword arguments are what that file doesn't say: which review and paper, who produced it, the reviewer's commit or version, the model, and the run's times and cost. A hosted reviewer may publish no version or model; leave them out and the review says `unspecified`. `work_id` can be a DOI, a URL, a canonical work ID such as `doi:10.1234/abc`, or the platform's own ID, which is kept as an `internal_id` named after `source_system`. Give the paper as plain-text `blocks` (body, abstract, references) to also check each quote against it; the record then says where each quote was found. Without `blocks`, quotes are copied but not checked.
+`output` is the reviewer's own file, unchanged: its JSON, or its text when the reviewer writes Markdown. The keyword arguments are what that file doesn't say: which review and paper, who produced it, the reviewer's commit or version, the model, and the run's times and cost. A hosted reviewer may publish no version or model; leave them out and the review says `unspecified`. An OpenAIReview paper.json holds one review for each model it ran, and `model_id` says which to map; without it, the first is. `work_id` can be a DOI, a URL, a canonical work ID such as `doi:10.1234/abc`, or the platform's own ID, which is kept as an `internal_id` named after `source_system`. Give the paper as plain-text `blocks` (body, abstract, references) to also check each quote against it; the record then says where each quote was found. Without `blocks`, quotes are copied but not checked.
 
 ```python
 from ocrs import map_with_record, render_mapping_markdown

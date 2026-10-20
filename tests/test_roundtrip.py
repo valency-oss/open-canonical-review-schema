@@ -221,10 +221,11 @@ LOSSES = {
         "- rtype_name",
         "- submitted",
     },
-    # The note's bookkeeping, and form fields that are not part of the review
+    # The note's bookkeeping, and form fields that are not part of the review. The time of
+    # its last change comes back as `mdate`, beside `cdate`
     "openreview/realistic_review.json": {
+        "+ mdate",
         "- content.code_of_conduct",
-        "- content.ethics_flag",
         "- content.title",
         "- invitation",
         "- readers",
@@ -250,7 +251,6 @@ LOSSES = {
     "openreview_v2/review.json": {
         "- content.code_of_conduct",
         "- invitations",
-        "- mdate",
         "- number",
         "- readers",
         "- replyto",

@@ -1,0 +1,69 @@
+{
+  "content": {
+    "summary": {
+      "value": "The paper describes a new physics-oriented benchmark and dataset that focuses on the gap between simulated and real experimental data. \n\nThe paper presents $5$ applications and provides metrics for evaluation, alongside classical and recent benchmark methods. \n\nThe description of the \"TASK DEFINITION\" should be improved and linked to the experiments, for example, in Table.1. \n\nThe dataset is not well described; a summary table is necessary (how many samples, what is the size of each sample, what is the total real time duration, step size, dimension of the problem 1d, 2d, 3d, ...). \n\nThe authors provide code to run the experiment, some sample data (real and simulated), but do not provide the script to generate the numerical data."
+    },
+    "soundness": {
+      "value": 2
+    },
+    "presentation": {
+      "value": 2
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "This dataset addresses the important aspect of bridging the gap between the simulated (numerical) and the physical system. \n\nWhile is not possible to cover a large experimental setup, the authors provide $5$ taks with both numerical and physical data.\n\nThis work will therefore help in evaluating new models, even if may not cover all possible scenarios."
+    },
+    "weaknesses": {
+      "value": "It is hard to say, but it is not possible to cover all possible physical experimental conditions. Nevertheless, the paper is a good contribution in the right direction. \n\nThe main point is that the numerical generation scripts are missing, therefore not possible to extend the data (at least numerical) to other scenarios. \n\nOn the experimental side, I am not able to judge if the information is sufficient. \n\nI found the task description disconnected to the actual experiments. I would encourage the authors to improve that section."
+    },
+    "questions": {
+      "value": "One possible source of difference between experimental and numerical experiments is the measurement noise, but i can assume there could be a larger difference, for example, if the state is not directly measurable (pressure is not available, but only velocity).\n\nCould the author expand and position this paper in this context? What are the possible main and most critical differences between experiments and numerical simulations?"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "details_of_ethics_concerns": {
+      "value": "None"
+    },
+    "rating": {
+      "value": 6
+    },
+    "confidence": {
+      "value": 3
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "8245mXvN5V",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_kvd1"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_kvd1"
+  ],
+  "number": 3,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Official_Review",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1761918132086,
+  "cdate": 1761918132086,
+  "tmdate": 1762916168986,
+  "mdate": 1762916168986,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Official_Review",
+  "license": "CC BY 4.0",
+  "version": 2
+}

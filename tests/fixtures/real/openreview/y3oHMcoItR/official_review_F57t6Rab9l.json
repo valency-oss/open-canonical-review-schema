@@ -1,0 +1,66 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper proposes a benchmark that pairs real measurements with matched numerical simulations across five scenarios (cylinder wake, controlled cylinder, FSI, foil, and combustion; governing equations span Navier-Stokes, coupled FSI, and reactive Navier-Stokes with species transport). The benchmark defines three training regimes (train on simulation, train on real, pretrain on simulation then finetune on real), includes a mix of pixel and physics flavored metrics, and evaluates a set of neural PDE baselines including a pretrained foundation model. The headline empirical messages are: there is a nontrivial gap between simulation and laboratory data; pretraining on simulation generally helps downstream on real; and the codebase makes it straightforward to add models or datasets.\n\nI think this is timely and potentially useful. If we are serious about sim2real for scientific ML, we need carefully curated real data and a shared protocol. However, the current paper mixes benchmarking with a sim2real narrative in ways that are a bit loose, the experimental details are too thin for others to trust or extend the datasets, and some of the metrics and literature framing are not well aligned with fluid mechanics and combustion practice.\n\nAm open to potentially increasing my score if the authors narrow the claims, remove the robotics sim2real framing argument and instead point to real sim2real problems in fluid dynamics, add significantly more context to place this in the existing fluid dynamics literature, and substantially improve the experimental documentation and physics grounded evaluation."
+    },
+    "soundness": {
+      "value": 2
+    },
+    "presentation": {
+      "value": 2
+    },
+    "contribution": {
+      "value": 2
+    },
+    "strengths": {
+      "value": "- The benchmark collects paired real and simulated trajectories for several nontrivial systems instead of yet another synthetic-only PDE suite. This is likely to be useful for the community.\n- The split of training regimes (simulation only, real only, pretrain on simulation then finetune on real) is useful, and the pretraining result is consistent with what many of us have seen in practice.\n- The code appears modular enough to add a new dataset or baseline without painful surgery, and using a single file format lowers friction for adoption.\n- Including both data oriented metrics and physics oriented diagnostics is better than reporting only RMSE. The autoregressive evaluation option is also a good idea.\n- The combustion scenario is ambitious and, if documented properly, could become a valuable stress test beyond the usual laminar toy problems.\n- The baseline measurements for their benchmark are very extensive."
+    },
+    "weaknesses": {
+      "value": "Major concerns:\n\n- The documentation about the experiment is unacceptably thin in its current form. If the experimental data was created or modified from another source, you need to cite it. If someone else created the dataset for you, you need them to write documentation for it. The current documentation on experimental data generation (which, of course, can be included in the appendix) is simply unacceptable for publication, especially for a paper which is supposed to be about this very dataset.\n- The paper motivates the sim2real gap by citing mostly work from robotics, which I found very strange, almost as if the authors are guessing there is a sim2real gap in fluids, without actually surveying the literature. Robotics has a much different sim2real gap than turbulence research does. In fluids, the sources of discrepancy, data acquisition, and noise models can be quite different. Please ground the narrative in fluids and combustion references. If you are addressing the sim2real gap in fluids, you must speak from the context of the fluids community, and discuss the ways in which the fluids community has quantified this gap.\n- Please state clearly whether you will release raw data (e.g., the PIV frames), calibration files, and the full processing scripts, not just the final HDF5 arrays, so that it can be checked by others. If raw data cannot be released, say so and justify it. Benchmarks live or die by their data hygiene, and biases in a benchmark can leak into biases in the community's preferred models.\n- Several figures quantify differences using frequency or Fourier errors over image-like arrays. This is admittedly a start, but it is not a physics grounded measure of mismatch between experiment and simulation, and certainly not something people in the fluids community would actually use as a robust measure of discrepancies between simulation and real data. In fact, for several real-world experimental problems, there is a difference here that is simply due to the nature of the real-world experiment, yet the simulation and experiment can actually have no discrepancy. This is because you would only care about some summary statistic, and not care about some wave mode that you know does not affect your statistic. Yet, your metric would completely miss this. I recommend reviewing and citing the fluids literature and how people measure discrepancies between simulations and real data. Note that this is a problem people have studied for literally decades in the fluids community. These additions would make your claims about a \"gap\" more convincing.\n- Simulation contains modalities that are not observed in the lab, and the current strategy randomly masks channels and adds noise. That is a start, but it does not reflect the actual sensor physics. Please consider sensor specific degradations (camera noise models, optical blur, saturation, PIV algorithmic artifacts) and state explicitly which channels are used for training and which are hidden. It would also help to define tasks that force parity, for example training all models only on the modalities that the lab provides.\n- The paper claims to be the first benchmark that integrates real-world measurements with paired numerical simulations across complex physical systems. Within fluids, this is far from true; as just one demonstration, \"ERCOFTAC\" has hosted combined experimental and numerical reference cases since 1995 across a wide range of flows. Please narrow the novelty claim to something that accurately represents existing datasets and benchmarks, and perhaps cite existing databases.\n\n\nAdditional comments and suggestions\n\n- The update ratio metric is interesting, but it conflates pretraining data scale with optimization effects.\n- Please make the train, validation, and test splits explicit at the parameter level so that generalization across Reynolds number, control frequency, mass ratio, or equivalence ratio is clear. I consider those to be most interesting axes. And if you already do this, show it more prominently.\n- The autoregressive evaluation stops very early. If you want to make claims about stability, show longer horizons and add probe based diagnostics, not only field RMSE.\n- The baselines are modern ML models, which is fine for a benchmark, but the story would be stronger if you add one or two domain baselines for each scenario (for example a simple reduced order model, or even a physics based filter) so readers have a calibration point.\n- Throughout the paper there are small terminology issues. I would prefer \"numerical error\" over \"computational error\" (computational error sounds like a code bug). Be precise about whether errors arise from discretization, closure modeling, boundary conditions, or measurement.\n- Not a criticism, but I think it would be better to rename the benchmark. \"RealBench\" seems far too broad and will clash with many domains. Something like \"RealPDEBench\" or \"RealFlowBench\" might be more appropriate."
+    },
+    "questions": {
+      "value": "[Several questions discussed above]"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 4
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "F57t6Rab9l",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_6AF9"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_6AF9"
+  ],
+  "number": 4,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Official_Review",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1762241594100,
+  "cdate": 1762241594100,
+  "tmdate": 1762916168832,
+  "mdate": 1762916168832,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Official_Review",
+  "license": "CC BY 4.0",
+  "version": 2
+}

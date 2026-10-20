@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -14,14 +15,19 @@ from ..scales import (
 )
 from ..schema import schema_id
 from ..util import (
+    department_affiliation,
     first_paragraph,
     first_present,
+    from_source,
+    id_as_number,
     iso_date_or_time,
     map_recommendation_from_text,
     match_alias,
     now_iso,
     parse_date_flexible,
     parse_labeled_score,
+    score_sheet_answers,
+    score_sheet_questions,
     source_decision,
     source_work_id,
     split_decision,
@@ -35,6 +41,41 @@ S1_RECOMMENDATION_MAP = {
     4: "reject",
     5: "revise",  # Reject with option to resubmit
 }
+
+
+# ScholarOne's web service (getReviewerInfoFull) gives one record per reviewer of a manuscript
+# revision: the reviewer as `reviewerPersonId`, `reviewerFullName`, `reviewerORCIDId` and
+# `reviewerResearcherId`, their `departments`, the recommendation's text as
+# `reviewerRecommendation`, the time the score sheet was completed, and the score sheet's
+# questions and answers. These are the fields of the names the reader takes elsewhere. Its
+# `reviewerRatingCustomQuestions` and `reviewRScore` are the editor's rating of the reviewer, and
+# its M-scores sums of the score sheet's values, so none of them is part of the review.
+API_FIELDS = {
+    "reviewerPersonId": "reviewerId",
+    "reviewerFullName": "reviewerName",
+    "reviewerORCIDId": "reviewerOrcid",
+    "reviewerRecommendation": "overallRecommendationLabel",
+    "scoreSheetCompletedDate": "dateReviewReceived",
+}
+# A review's ID from the service's record: the manuscript revision and the reviewer
+_PERSON_REVIEW = re.compile(r"^(.+)_p(\d+)$")
+
+
+def _with_known_names(payload: dict[str, Any]) -> dict[str, Any]:
+    """The review with the web service's field names as the names the reader takes, and the
+    reviewer's first department as `reviewerAffiliation`."""
+    out = dict(payload)
+    for api_name, name in API_FIELDS.items():
+        if api_name in payload and name not in out:
+            out[name] = payload[api_name]
+    affiliation = department_affiliation(payload.get("departments"))
+    if affiliation and "reviewerAffiliation" not in out:
+        out["reviewerAffiliation"] = affiliation
+    return out
+
+
+# The label of the overall score the reader makes of the recommendation's code
+RECOMMENDATION_LABEL = "Overall Recommendation"
 
 
 def _extract_time(payload: dict[str, Any]) -> str:
@@ -117,6 +158,10 @@ def _build_human_referee(payload: dict[str, Any]) -> dict[str, Any]:
     if affiliation and isinstance(affiliation, str):
         human_referee["affiliation"] = affiliation
 
+    researcher_id = payload.get("reviewerResearcherId")
+    if isinstance(researcher_id, str) and researcher_id.strip():
+        human_referee["third_party_id"] = {"key": "researcherid", "value": researcher_id.strip()}
+
     return human_referee
 
 
@@ -129,6 +174,10 @@ def _get_review_id(payload: dict[str, Any]) -> str:
 
     if doc_id and rev_num != "":
         return f"{doc_id}_r{rev_num}"
+    # The web service's record, one for each reviewer of the revision
+    person = payload.get("reviewerPersonId")
+    if doc_id and person is not None:
+        return f"{doc_id}_p{person}"
     if sub_id and rev_num != "":
         return f"{sub_id}_r{rev_num}"
     if doc_id:
@@ -266,6 +315,7 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
     catalog = load_catalog()
     amap = alias_map(catalog)
 
+    raw, payload = payload, _with_known_names(payload)
     created = _extract_time(payload)
     identifiers = _build_target_identifiers(payload)
     reviewer_id = _get_reviewer_id(payload)
@@ -308,7 +358,11 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
     }
 
     if keep_raw:
-        out["provenance"]["raw_payload"] = payload
+        out["provenance"]["raw_payload"] = raw
+
+    # The score sheet's answers: those with a number are scores, those in words parts of the
+    # review's text
+    scored, written = score_sheet_answers(payload.get("scoreSheetCustomQuestions"))
 
     # Map title and venue
     title = payload.get("manuscriptTitle")
@@ -332,6 +386,8 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
         if isinstance(v, str) and v.strip():
             if dst not in narrative:
                 narrative[dst] = v.strip()
+    if written:
+        narrative["sections"] = [{"title": q, "content": text} for q, text in written]
 
     if narrative:
         out["narrative"] = narrative
@@ -357,7 +413,7 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
             if parsed["numeric"] is not None:
                 metric_entry: dict[str, Any] = {
                     "key": "overall",
-                    "label": "Overall Recommendation",
+                    "label": RECOMMENDATION_LABEL,
                     "aspect": "overall",
                     "scale": parsed["scale"],
                     "value": parsed["numeric"],  # Always numeric
@@ -377,7 +433,12 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
 
     # Criteria responses -> metrics
     criteria = payload.get("criteriaResponses", [])
-    if isinstance(criteria, list) and criteria:
+    criteria = [*criteria] if isinstance(criteria, list) else []
+    criteria += [
+        {"criterionName": q, "response": value} | ({"label": label} if label else {})
+        for q, value, label in scored
+    ]
+    if criteria:
         out["metrics"].extend(_map_criteria_to_metrics(criteria, catalog, amap))
 
     # Clean up null normalized values
@@ -400,8 +461,9 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     """Convert a canonical review to ScholarOne format.
 
     A review read from ScholarOne is given back what its reader took: the reviewer, the date
-    received, the recommendation with its label, competing interests and each criterion with
-    its label, so that reading the result gives the same review.
+    received, the recommendation with its label, competing interests, each criterion with
+    its label, and the score sheet's answers in words as its questions, so that reading the
+    result gives the same review.
 
     Args:
         canonical: A canonical review dictionary.
@@ -423,8 +485,13 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             rid = parts[0]
 
     out: dict[str, Any] = {
-        "documentId": source_work_id(canonical.get("target", {})),
+        # ScholarOne numbers its documents; an ID that is a number is written as one
+        "documentId": id_as_number(source_work_id(canonical.get("target", {}))),
     }
+    # A review read from the web service's record names its reviewer by person
+    person = _PERSON_REVIEW.match(rid) if reviewer_num is None else None
+    if person:
+        out["reviewerPersonId"] = int(person.group(2))
 
     referee = canonical.get("referee", {}) or {}
     human = referee.get("human_referee", {}) or {}
@@ -432,9 +499,13 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
         out["reviewerNumber"] = reviewer_num
     elif referee.get("referee_id"):
         out["reviewerId"] = referee["referee_id"]
+    third_party = human.get("third_party_id") or {}
+    researcher_id = third_party.get("value") if third_party.get("key") == "researcherid" else None
     for field, value in [
         ("reviewerName", human.get("name")),
+        ("reviewerAffiliation", human.get("affiliation")),
         ("reviewerOrcid", human.get("orcid")),
+        ("reviewerResearcherId", researcher_id),
         ("manuscriptTitle", canonical.get("target", {}).get("title")),
         ("journalName", canonical.get("target", {}).get("venue")),
         ("dateReviewReceived", iso_date_or_time(canonical.get("created_at"))),
@@ -457,26 +528,37 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
 
     if nar.get("confidential_to_editors"):
         out["commentsToEditor"] = nar["confidential_to_editors"]
+    # Parts of the text, as the score sheet's questions answered in words
+    questions = score_sheet_questions(nar.get("sections"))
+    if questions:
+        out["scoreSheetCustomQuestions"] = questions
+
+    # The overall score the recommendation's code gave. In a review read from ScholarOne it is
+    # the one the reader made of the code, "Overall Recommendation": a score-sheet question
+    # it files as an overall score ("Overall score") is a criterion like any other, whatever
+    # its value
+    same_source = from_source(canonical, "scholarone")
+    dec = source_decision(canonical.get("decision", {}) or {})
+
+    def is_code(m: Any) -> bool:
+        return (
+            isinstance(m, dict)
+            and m.get("key") == "overall"
+            and (not same_source or m.get("label") == RECOMMENDATION_LABEL)
+        )
 
     # Map recommendation
-    dec = source_decision(canonical.get("decision", {}) or {})
     if isinstance(dec.get("recommendation"), str):
         rec = dec["recommendation"]
-        # Reverse map to numeric
+        overall = next((m for m in canonical.get("metrics", []) or [] if is_code(m)), {})
+        # Reverse map to numeric. A review read from ScholarOne has a code only if its
+        # overall score came from one: the web service gives the recommendation's text alone
         reverse_map = {v: k for k, v in S1_RECOMMENDATION_MAP.items()}
-        if rec in reverse_map:
+        if rec in reverse_map and (overall or not same_source):
             out["overallRecommendation"] = reverse_map[rec]
         # The reader takes the recommendation from the code, and from the label only without
         # one. The label the source gave is kept unless it says another recommendation; without
         # a code it must say this one, or one that does is written
-        overall = next(
-            (
-                m
-                for m in canonical.get("metrics", []) or []
-                if isinstance(m, dict) and m.get("key") == "overall"
-            ),
-            {},
-        )
         label = overall.get("justification")
         says = map_recommendation_from_text(label) if label else None
         if label and (says == rec or ("overallRecommendation" in out and says is None)):
@@ -489,8 +571,8 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
     for m in canonical.get("metrics", []) or []:
         if not isinstance(m, dict):
             continue
-        # Skip overall metric (handled as recommendation)
-        if m.get("key") == "overall":
+        # Skip the overall score the code gave (handled as recommendation)
+        if is_code(m):
             continue
 
         crit: dict[str, Any] = {

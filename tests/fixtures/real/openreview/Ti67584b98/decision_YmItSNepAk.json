@@ -1,0 +1,39 @@
+{
+  "content": {
+    "title": {
+      "value": "Paper Decision"
+    },
+    "decision": {
+      "value": "Accept"
+    },
+    "comment": {
+      "value": "This is a dataset paper, which presents a small set (448 examples) of very challenging multiple-choice questions written by domain experts. The dataset is carefully constructed by hiring domain experts and going through careful validation steps. The difficulty of this dataset will enable studying new research questions such as scalable oversight. Human performance, as well as state-of-the-art model performances on the newly proposed dataset is presented in the paper. I find a lack of analysis of model performances a bit disappointing, and reviewers have a little concern with the size of the dataset. Nonetheless, gathering this type of dataset, even at a smaller scale, is very challenging and it is sufficient to rank LLMs. The resulting dataset is already used in the community and very valuable to evaluate the progress of LLMs."
+    }
+  },
+  "id": "YmItSNepAk",
+  "forum": "Ti67584b98",
+  "replyto": "Ti67584b98",
+  "signatures": [
+    "colmweb.org/COLM/2024/Conference/Program_Chairs"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "colmweb.org/COLM/2024/Conference",
+    "colmweb.org/COLM/2024/Conference/Program_Chairs"
+  ],
+  "number": 1,
+  "invitations": [
+    "colmweb.org/COLM/2024/Conference/Submission498/-/Decision",
+    "colmweb.org/COLM/2024/Conference/-/Edit"
+  ],
+  "domain": "colmweb.org/COLM/2024/Conference",
+  "tcdate": 1720606410131,
+  "cdate": 1720606410131,
+  "tmdate": 1724633733934,
+  "mdate": 1724633733934,
+  "license": "CC BY 4.0",
+  "version": 2
+}

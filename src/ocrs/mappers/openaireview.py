@@ -4,7 +4,9 @@
 
 OpenAIReview writes one entry per review method under `methods`, keyed
 `<method>__<model>`. The mapper reads the merged `progressive` comments, or the
-only method there is. The `progressive_original` entry holds the same comments
+only method there is. A paper.json can hold merged comments from several models,
+one review each: the mapper reads those of the run's `model_id`, and without one,
+the first. The `progressive_original` entry holds the same comments
 before merging and is not kept, nor is `paragraphs`, the paper's own text.
 
 Each comment becomes a weakness: `title`, `explanation` as the text,
@@ -79,8 +81,29 @@ def method_wildcard(method_keys: list[str]) -> Callable[[str], str]:
     return generic
 
 
-def pick_method(methods: dict[str, Method]) -> str:
+def model_method(methods: dict[str, Any], model: str | None) -> str | None:
+    """The merged method OpenAIReview ran with `model`: `progressive__<model>`, or the one
+    whose own `model` says it. A paper.json holds one merged method per model it ran."""
+    if not model:
+        return None
+    for key, method in methods.items():
+        if key.startswith(MERGED_METHOD_PREFIX) and (
+            key == f"{MERGED_METHOD_PREFIX}{model}"
+            or (isinstance(method, dict) and method.get("model") == model)
+        ):
+            return key
+    return None
+
+
+def pick_method(methods: dict[str, Any], model: str | None = None) -> str:
+    """The method to map: the merged one run with the review's model, else the first merged
+    one, else the only one there is."""
     merged = [key for key in methods if key.startswith(MERGED_METHOD_PREFIX)]
+    chosen = model_method(methods, model)
+    if chosen:
+        return chosen
+    if model and len(merged) > 1:
+        raise ValueError(f"No OpenAIReview method ran with model {model}: {sorted(merged)}")
     if merged:
         return merged[0]
     others = [key for key in methods if not key.startswith(UNMERGED_METHOD_PREFIX)]
@@ -113,7 +136,8 @@ def map_openaireview(
 ) -> MappingResult:
     """Fills `review`, the envelope map_with_record built, from the reviewer's output."""
     paper = PaperResult.model_validate(output)
-    key = pick_method(paper.methods)
+    # The review's model, when the caller gave one, says which model's comments to map
+    key = pick_method(output.get("methods") or {}, reviewer_model(review))
     method, prefix = paper.methods[key], f"methods.{key}"
     recorder = Recorder(checks_quotes=blocks is not None)
     if method.overall_feedback:
@@ -245,9 +269,12 @@ def to_openaireview(canonical: dict[str, Any]) -> dict[str, Any]:
     kept = copy.deepcopy(extension(canonical, "openaireview"))
     methods = kept.pop("methods", None) or {}
     model = reviewer_model(canonical) or UNSPECIFIED
-    # The mapper keeps the method it mapped; a merged one wins, as when it picked one
+    # The mapper keeps the method it mapped: the one run with the review's model, else a
+    # merged one, as when it picked one
     merged = [k for k in methods if k.startswith(MERGED_METHOD_PREFIX)]
-    key = next(iter(merged or methods), f"{MERGED_METHOD_PREFIX}{model}")
+    key = model_method(methods, reviewer_model(canonical)) or next(
+        iter(merged or methods), f"{MERGED_METHOD_PREFIX}{model}"
+    )
     method: dict[str, Any] = (
         dict(methods[key])
         if key in methods

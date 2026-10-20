@@ -1,0 +1,39 @@
+{
+  "content": {
+    "title": {
+      "value": "Paper Decision"
+    },
+    "decision": {
+      "value": "Accept (Poster)"
+    },
+    "comment": {
+      "value": ""
+    }
+  },
+  "id": "D7B4Alrbcx",
+  "forum": "45rvZkJbuX",
+  "replyto": "45rvZkJbuX",
+  "signatures": [
+    "ICLR.cc/2025/Conference/Program_Chairs"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2025/Conference",
+    "ICLR.cc/2025/Conference/Program_Chairs"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2025/Conference/Submission4056/-/Decision",
+    "ICLR.cc/2025/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2025/Conference",
+  "tcdate": 1737523617012,
+  "cdate": 1737523617012,
+  "tmdate": 1739259841017,
+  "mdate": 1739259841017,
+  "license": "CC BY 4.0",
+  "version": 2
+}

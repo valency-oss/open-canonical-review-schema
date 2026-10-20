@@ -1,0 +1,79 @@
+{
+  "documentId": "JEXP-D-26-00142R1",
+  "revision": 1,
+  "journalName": "Journal of Examples",
+  "inputIndex": 0,
+  "reviewerPersonId": 4455667,
+  "reviewerSalutation": "Dr.",
+  "reviewerFirstName": "Sam",
+  "reviewerLastName": "Example",
+  "reviewerFullName": "Example, Dr. Sam",
+  "reviewerPrimaryEmailAddress": "sam.example@example.org",
+  "reviewerORCIDId": "0000-0002-1825-0097",
+  "reviewerORCIDIdValidation": true,
+  "scopusId": 57190000001,
+  "reviewerRank": 1,
+  "departments": [
+    {
+      "affiliationOrderNumber": 1,
+      "affiliation": "Example Institute of Technology",
+      "department": "Department of Physics",
+      "institution": "Example Institute of Technology",
+      "country": "Canada"
+    }
+  ],
+  "reviewerAssignmentStatus": "Completed",
+  "reviewerDateInvited": "2026-04-01T10:00:00Z",
+  "reviewerDateAssigned": "2026-04-02T08:30:00Z",
+  "scoreSheetDueDate": "2026-04-23T23:59:00Z",
+  "scoreSheetCompletedDate": "2026-04-21T12:05:00Z",
+  "reviewerRecommendation": "Major Revision",
+  "reviewerRecommendationNumericValue": null,
+  "reviewerAverageMScore": "4",
+  "scoreSheetName": "Original Research Review",
+  "scoreSheetCustomQuestions": [
+    {
+      "answerType": "Integer",
+      "customQuestionId": 31,
+      "questionName": null,
+      "questionStatus": "ACTIVE",
+      "questionText": "Rate the originality of the work (1 = poor, 5 = excellent)",
+      "scoreSheetCustomAnswer": {
+        "answerId": 0,
+        "answerName": null,
+        "answerStatus": "ACTIVE",
+        "answerText": "4",
+        "numericValue": null
+      }
+    },
+    {
+      "answerType": "List",
+      "customQuestionId": 32,
+      "questionName": null,
+      "questionStatus": "ACTIVE",
+      "questionText": "Is the English acceptable?",
+      "scoreSheetCustomAnswer": {
+        "answerId": 0,
+        "answerName": null,
+        "answerStatus": "ACTIVE",
+        "answerText": "Yes",
+        "numericValue": null
+      }
+    },
+    {
+      "answerType": "Notes",
+      "customQuestionId": 33,
+      "questionName": null,
+      "questionStatus": "ACTIVE",
+      "questionText": "Comments on the statistical analysis",
+      "scoreSheetCustomAnswer": {
+        "answerId": 0,
+        "answerName": null,
+        "answerStatus": "ACTIVE",
+        "answerText": "The error bars in Figure 3 need a stated confidence level.",
+        "numericValue": null
+      }
+    }
+  ],
+  "commentsToAuthor": "The measurement is new, but the systematic errors are not quantified.\n\nPlease add the uncertainty budget for the detector."
+}

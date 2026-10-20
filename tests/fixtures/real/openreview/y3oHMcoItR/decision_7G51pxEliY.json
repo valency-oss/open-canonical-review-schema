@@ -1,0 +1,40 @@
+{
+  "content": {
+    "title": {
+      "value": "Paper Decision"
+    },
+    "decision": {
+      "value": "Accept (Oral)"
+    },
+    "comment": {
+      "value": ""
+    }
+  },
+  "id": "7G51pxEliY",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Program_Chairs"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Program_Chairs"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Decision",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1769416495363,
+  "cdate": 1769416495363,
+  "tmdate": 1770355050215,
+  "mdate": 1770355050215,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Decision",
+  "license": "CC BY 4.0",
+  "version": 2
+}

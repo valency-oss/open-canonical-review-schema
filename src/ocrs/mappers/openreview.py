@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import copy
 import re
 import uuid
 from typing import Any
@@ -33,8 +34,79 @@ from ..util import (
     source_work_id,
     split_decision,
 )
+from . import openreview_page as page
+
+# Other names venues give the fields the reader takes: TMLR's `summary_of_contributions`,
+# `strengths_and_weaknesses` and `requested_changes`, the NeurIPS Datasets and Benchmarks
+# track's `summary_and_contributions`, and COLM's `reasons_to_accept`, `reasons_to_reject` and
+# `questions_to_authors`
+SUMMARY_KEYS = ("summary", "paper_summary", "review_summary")
+SUMMARY_ALIASES = ("summary_of_contributions", "summary_and_contributions")
+FINDING_KEYS = {
+    "strengths": ("strengths", "reasons_to_accept"),
+    "weaknesses": ("weaknesses", "reasons_to_reject"),
+    "questions": ("questions", "questions_to_authors"),
+    "changes": ("requested_changes",),
+}
+# Further named parts of the review a form asks for, kept as narrative sections under their
+# field names: a meta-review's account of the discussion (ICLR 2025 and 2026), limitations,
+# ethics and broader impact, TMLR's criteria, and the Datasets and Benchmarks track's questions
+SECTION_FIELDS = (
+    "additional_comments_on_reviewer_discussion",
+    "reviewer_concerns",
+    "reviewer_scores",
+    "claims_and_evidence",
+    "audience",
+    "correctness",
+    "clarity",
+    "relation_to_prior_work",
+    "documentation",
+    "opportunities_for_improvement",
+    "limitations",
+    "broader_impact_concerns",
+    "ethics",
+    "additional_feedback",
+)
+# A form's flag for an ethics review (ICLR's and NeurIPS's list of choices, COLM's Yes or No)
+# and the reviewer's account of the concerns, which are `ethics_and_risk`
+ETHICS_FLAG_FIELDS = ("flag_for_ethics_review", "ethics_flag")
+ETHICS_NOTES_FIELD = "details_of_ethics_concerns"
+# ICLR's choices for its flag, and the kind of concern each names
+ETHICS_CHOICES = {
+    None: "No ethics review needed.",
+    "bias_fairness": "Yes, Discrimination / bias / fairness concerns",
+    "privacy": "Yes, Privacy, security and safety",
+    "security": "Yes, Privacy, security and safety",
+    "dual_use": "Yes, Potentially harmful insights, methodologies and applications",
+    "human_subjects": "Yes, Responsible research practice (e.g., human subjects, data release)",
+    "other": "Yes, Other reasons (please specify below)",
+}
+# The kinds of concern ICLR's flag names, by the words of its choices
+CONCERN_CATEGORIES = (
+    (r"bias|fairness|discrimination", "bias_fairness"),
+    (r"privacy", "privacy"),
+    (r"security|safety", "security"),
+    (r"human subjects|responsible research", "human_subjects"),
+    (r"harmful", "dual_use"),
+)
+# Criteria some forms score and others answer in words ("Yes"): a section only when the
+# answer is not a score
+SCORE_OR_SECTION = {
+    "claims_and_evidence",
+    "audience",
+    "correctness",
+    "clarity",
+    "relation_to_prior_work",
+    "documentation",
+    "ethics",
+}
 
 KNOWN_TEXT_KEYS = {
+    ETHICS_NOTES_FIELD,
+    *SUMMARY_ALIASES,
+    *(key for keys in FINDING_KEYS.values() for key in keys),
+    *(key for key in SECTION_FIELDS if key not in SCORE_OR_SECTION),
+    "strengths_and_weaknesses",
     "summary",
     "metareview",
     "comment",
@@ -70,6 +142,15 @@ def _extract_time(note: dict[str, Any]) -> str:
         if isinstance(v, int):
             return epoch_ms_to_iso(v)
     return now_iso()
+
+
+def _extract_updated(note: dict[str, Any]) -> str | None:
+    """When the note was last changed (`tmdate`, else `mdate`), if it says."""
+    for k in ("tmdate", "mdate"):
+        v = note.get(k)
+        if isinstance(v, int) and not isinstance(v, bool):
+            return epoch_ms_to_iso(v)
+    return None
 
 
 # The kind of note an invitation makes: `…/-/Official_Review`, `…/-/Meta_Review`, `…/-/Decision`
@@ -210,30 +291,109 @@ def _build_target(
 
 
 def _best_text_opinion(content: dict[str, Any]) -> str:
-    for k in ("summary", "paper_summary", "review_summary"):
+    for k in (*SUMMARY_KEYS, *SUMMARY_ALIASES):
         if isinstance(content.get(k), str) and content[k].strip():
             return content[k].strip()
-    for k in ("review", "comments", "main_review", "detailed_review", "metareview", "comment"):
+    for k in (
+        "review",
+        "comments",
+        "main_review",
+        "detailed_review",
+        "strengths_and_weaknesses",
+        "metareview",
+        "comment",
+    ):
         if isinstance(content.get(k), str) and content[k].strip():
             return first_paragraph(content[k].strip(), max_len=500)
     return ""
 
 
+def _finding_field(content: dict[str, Any], kind: str) -> tuple[str, Any] | None:
+    """The field a kind of finding is in, and its value: the first of its names the form fills."""
+    return next(
+        ((name, content[name]) for name in FINDING_KEYS[kind] if content.get(name) is not None),
+        None,
+    )
+
+
+def _points(text: str, kind: str) -> list[dict[str, Any]]:
+    """The points of a finding field written as text, as the forum-page reader reads them.
+
+    A list's items are its points (a lead-in such as "Major concerns:" is not one); text with no
+    list has a point per line. Headings ("Major concerns:", "**Minor**", "## Clarity") are the
+    `group` of the points under them, and a Minor or Typos heading makes its weaknesses minor
+    and its requested changes' priority minor. Text under a References heading is no point.
+    Questions are not split at headings: a bold line there is a question.
+    """
+    if kind == "questions":
+        sections = [(None, None, text.splitlines())]
+    else:
+        sections = page._sections(text)
+    points: list[dict[str, Any]] = []
+    for heading, _level, lines in sections:
+        if heading and page._ENDS_FINDINGS.fullmatch(heading):
+            continue
+        # A list marker alone on its line holds no point
+        lines = [line for line in lines if line.strip() not in ("-", "*", "+", "•")]
+        if any(page._ITEM.match(line) for line in lines):
+            texts = page._items(lines)
+        else:
+            texts = [line.strip() for line in lines if line.strip()]
+        minor = bool(heading and re.search(r"\b(?:minor|typos?)\b", heading, re.IGNORECASE))
+        for text_ in texts:
+            point: dict[str, Any] = {"text": text_}
+            lead = page._BOLD_LEAD.match(text_)
+            if lead:
+                point["title"] = page._squash(lead.group(1)).rstrip(":.")
+            if heading:
+                point["group"] = [heading]
+            if minor and kind in ("weaknesses", "changes"):
+                point["severity" if kind == "weaknesses" else "priority"] = "minor"
+            points.append(point)
+    return points
+
+
 def _collect_findings(content: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for k in ("strengths", "weaknesses", "questions"):
-        v = content.get(k)
+    for k in FINDING_KEYS:
+        _name, v = _finding_field(content, k) or (None, None)
         if isinstance(v, list):
             items = [{"text": str(x)} for x in v if str(x).strip()]
             if items:
                 out[k] = items
         elif isinstance(v, str) and v.strip():
-            # if newline-separated
-            bullets = [b.strip("-* \t") for b in v.splitlines()]
-            bullets = [b for b in bullets if b]
-            if bullets:
-                out[k] = [{"text": b} for b in bullets]
+            points = _points(v.strip(), k)
+            if points:
+                out[k] = points
     return out
+
+
+def _ethics_flag(field: str, value: Any, bounds: dict[str, Any] | None) -> tuple[bool, list[str]]:
+    """Whether a form's ethics flag says the reviewer has ethical concerns, and of which kinds.
+
+    The flag is ICLR's list of choices (`["No ethics review needed."]`, `["Yes, Privacy,
+    security and safety"]`), a choice written with its number (`"2: No, there are no or only
+    very minor ethics concerns"`), or a number whose label on the form says Yes or No (COLM's
+    1, "No"). Raises ValueError when the answer says neither.
+    """
+    words = []
+    for answer in value if isinstance(value, list) else [value]:
+        if isinstance(answer, (int, float)) and not isinstance(answer, bool):
+            words.append(_form_label(field, answer, bounds))
+        elif isinstance(answer, str):
+            number, rest = parse_numeric_prefix(answer)
+            words.append(rest if number is not None else answer)
+    words = [w.strip() for w in words if isinstance(w, str) and w.strip()]
+    yes = [w for w in words if re.match(r"yes\b", w, re.IGNORECASE)]
+    if yes:
+        categories = []
+        for answer in yes:
+            found = [c for words_, c in CONCERN_CATEGORIES if re.search(words_, answer, re.I)]
+            categories += [c for c in found or ["other"] if c not in categories]
+        return True, categories
+    if words and all(re.match(r"no\b", w, re.IGNORECASE) for w in words):
+        return False, []
+    raise ValueError(f"{field} says neither yes nor no: {value!r}")
 
 
 def _metric_key_for_label(
@@ -326,6 +486,11 @@ def from_openreview(
         "review_id": review_id,
         "version": "1.0.0",
         "created_at": created,
+        **(
+            {"updated_at": updated}
+            if (updated := _extract_updated(note)) not in (None, created)
+            else {}
+        ),
         "provenance": {
             "source_system": "openreview",
             "imported_at": now_iso(),
@@ -363,10 +528,12 @@ def from_openreview(
     narrative = {}
     for src, dst in [
         ("summary", "summary"),
+        *((alias, "summary") for alias in SUMMARY_ALIASES),
         ("review", "detailed_review"),
         ("comments", "detailed_review"),
         ("main_review", "detailed_review"),
         ("detailed_review", "detailed_review"),
+        ("strengths_and_weaknesses", "detailed_review"),
         ("metareview", "detailed_review"),
         ("comment", "detailed_review"),
         ("confidential_comments", "confidential_to_editors"),
@@ -378,6 +545,22 @@ def from_openreview(
             # keep the first non-empty for detailed_review fields
             if dst not in narrative:
                 narrative[dst] = v.strip()
+    # A finding field written as text is kept as written, beside the points read from it
+    finding_texts = {
+        found[0]
+        for k in FINDING_KEYS
+        if (found := _finding_field(content, k)) and isinstance(found[1], str) and found[1].strip()
+    }
+    sections = [
+        {"title": k, "content": v.strip()}
+        for k, v in content.items()
+        if (k in SECTION_FIELDS or k in finding_texts)
+        and isinstance(v, str)
+        and v.strip()
+        and not (k in SCORE_OR_SECTION and parse_numeric_prefix(v)[0] is not None)
+    ]
+    if sections:
+        narrative["sections"] = sections
     if narrative:
         out["narrative"] = narrative
 
@@ -388,6 +571,37 @@ def from_openreview(
         if (not out["opinion"].get("summary")) and findings:
             any_text = next(iter(findings.values()))[0]["text"]
             out["opinion"]["summary"] = first_paragraph(any_text, 200)
+
+    # Ethics: the form's flag says whether the reviewer has concerns, and of which kinds; the
+    # flag is kept as the form gave it, so the writer gives it back in the form's encoding
+    ethics: dict[str, Any] = {}
+    flags: dict[str, Any] = {}
+    for field in ETHICS_FLAG_FIELDS:
+        if field not in content:
+            continue
+        try:
+            concerns, categories = _ethics_flag(field, content[field], scale_bounds)
+        except ValueError:
+            continue
+        flags[field] = content[field]
+        ethics["ethical_concerns"] = ethics.get("ethical_concerns", False) or concerns
+        known = ethics.get("concern_categories", [])
+        ethics["concern_categories"] = known + [c for c in categories if c not in known]
+    notes = content.get(ETHICS_NOTES_FIELD)
+    if isinstance(notes, str) and notes.strip():
+        ethics["notes"] = notes.strip()
+    if not ethics.get("concern_categories"):
+        ethics.pop("concern_categories", None)
+    if ethics:
+        out["ethics_and_risk"] = ethics
+    if flags:
+        # What the flags say, so the writer gives them back only while the review says it too
+        # A copy: an edit to the review's categories must not change what the flags said
+        says = copy.deepcopy(
+            {k: ethics[k] for k in ("ethical_concerns", "concern_categories") if k in ethics}
+        )
+        kept = {"fields": flags, "say": says}
+        out.setdefault("extensions", {}).setdefault("openreview", {})["ethics_flags"] = kept
 
     # decision and metrics
     # The first of these the form fills is the recommendation; a null one does not hide the next
@@ -472,7 +686,7 @@ def from_openreview(
     for k, v in content.items():
         # The fields read above; another score field (a numeric `rating` beside a text
         # `recommendation`) is a metric, unless it repeats one already there
-        if k in KNOWN_TEXT_KEYS or k in (rec_key, conf_key):
+        if k in KNOWN_TEXT_KEYS or k in (rec_key, conf_key) or k in flags:
             continue
         if not is_score_field(k):
             continue
@@ -511,8 +725,11 @@ def from_openreview(
                 "value_0_1": float(max(0.0, min(1.0, norm))),
                 "method": "linear_to_unit_interval",
             }
-        if rest:
-            metric["justification"] = rest
+        # The reviewer's label, or the form's for the value, as for the overall score: a note
+        # that gives "3 good" and one that gives 3 on a form where 3 is "good" say the same
+        label = rest or _form_label(k, num, scale_bounds)
+        if label:
+            metric["justification"] = label
         out["metrics"].append(metric)
 
     # Remove null normalized stubs
@@ -551,13 +768,43 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     if "confidential_to_editors" in nar and isinstance(nar["confidential_to_editors"], str):
         content["confidential_comments"] = nar["confidential_to_editors"]
 
-    # Findings
+    # Findings. A kind read from a field's text goes back as that text, while its points are
+    # still the ones the reader takes from it; otherwise each kind is a list under the first
+    # field the reader takes it from
     findings = canonical.get("findings", {}) or {}
-    for k in ("strengths", "weaknesses", "questions"):
-        if isinstance(findings.get(k), list) and findings[k]:
-            content[k] = [
-                f.get("text") for f in findings[k] if isinstance(f, dict) and f.get("text")
-            ]
+    sections = [
+        s
+        for s in nar.get("sections") or []
+        if isinstance(s, dict) and isinstance(s.get("title"), str)
+    ]
+    texts: set[str] = set()
+    for k, names in FINDING_KEYS.items():
+        points = [f for f in findings.get(k) or [] if isinstance(f, dict)]
+        written = next((s for s in sections if s["title"] in names), None)
+        if written and isinstance(written.get("content"), str):
+            if _points(written["content"], k) == points:
+                texts.add(written["title"])
+                continue
+        if points:
+            content[names[0]] = [f.get("text") for f in points if f.get("text")]
+    # The parts of the review kept under their field names, in order
+    for section in sections:
+        if section["title"] in SECTION_FIELDS or section["title"] in texts:
+            content.setdefault(section["title"], section.get("content"))
+
+    # Ethics: the form's flag as it gave it, while the review still says what it said, else
+    # the review's concerns as ICLR's choices; and the reviewer's account of the concerns
+    ethics = canonical.get("ethics_and_risk") or {}
+    kept = ((canonical.get("extensions") or {}).get("openreview") or {}).get("ethics_flags")
+    kept = kept if isinstance(kept, dict) else {}
+    says = {k: ethics[k] for k in ("ethical_concerns", "concern_categories") if k in ethics}
+    if "ethical_concerns" in ethics:
+        if kept.get("say") == says and isinstance(kept.get("fields"), dict):
+            content.update({k: v for k, v in kept["fields"].items() if k in ETHICS_FLAG_FIELDS})
+        else:
+            content["flag_for_ethics_review"] = _ethics_choices(ethics)
+    if isinstance(ethics.get("notes"), str):
+        content[ETHICS_NOTES_FIELD] = ethics["notes"]
 
     # The summary, unless the reader would take the same one from the text or the findings
     summary = nar.get("summary") if isinstance(nar.get("summary"), str) else op.get("summary")
@@ -630,6 +877,9 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     cdate = iso_to_epoch(canonical.get("created_at"), ms=True)
     if cdate is not None:
         note["cdate"] = cdate
+    mdate = iso_to_epoch(canonical.get("updated_at"), ms=True)
+    if mdate is not None:
+        note["mdate"] = mdate
     if kind:
         # An invitation names the venue and the kind of note; the reader needs only the kind
         venueid = ((canonical.get("extensions") or {}).get("openreview") or {}).get("venueid")
@@ -645,6 +895,15 @@ def _recommendation_read_back(
     return map_recommendation_from_text(label or "") or (
         map_recommendation_from_numeric(value, scale) if scale else None
     )
+
+
+def _ethics_choices(ethics: dict[str, Any]) -> list[str]:
+    """A review's ethical concerns as ICLR's choices for its ethics flag."""
+    if not ethics.get("ethical_concerns"):
+        return [ETHICS_CHOICES[None]]
+    categories = ethics.get("concern_categories") or ["other"]
+    choices = [ETHICS_CHOICES.get(c, ETHICS_CHOICES["other"]) for c in categories]
+    return list(dict.fromkeys(choices))
 
 
 def _summary_the_reader_infers(content: dict[str, Any]) -> str:

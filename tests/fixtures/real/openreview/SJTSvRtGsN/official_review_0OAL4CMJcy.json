@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "The authors propose a methodology to enhance the classification capabilities of LLMs on tabular data in a black-box setting using the few-shot paradigm. They show that appending trees as prompts into the LLMs improves the performance, and they also introduce a method to train a decision tree using the feedback from an LLM. The experiment shows superior performance over the LLM or the decision tree. Also, they show the possibilities of interpretation from those trees and the applicability of a federated learning paradigm."
+    },
+    "soundness": {
+      "value": "2 fair"
+    },
+    "presentation": {
+      "value": "4 excellent"
+    },
+    "contribution": {
+      "value": "2 fair"
+    },
+    "strengths": {
+      "value": "Originality: the authors show a creative way to deal with tabular data in the context of LLMs. \nQuality and Clarity: the paper is well-written and easy to follow. The methodology is well explained and capable of being reproduced."
+    },
+    "weaknesses": {
+      "value": "Although the paper proposes a reasonable advance for the field of tabular classification in a few-shot manner, it would be good to have experiments on additional tabular datasets to better support the claims. Experiments related to the impact of the number of features will also be good. The proposed method can be applied to any LLM model, not only black-box ones; I do not see any good motive to focus solely on those. So, experiments using open-access LLMs are a need and will add valuable insights related to the method."
+    },
+    "questions": {
+      "value": "How does the performance and time needed to train change regarding the increase in the number of features used? \nWhy not running experiments on additional datasets?"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": "3: reject, not good enough"
+    },
+    "confidence": {
+      "value": "4: You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work."
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "0OAL4CMJcy",
+  "forum": "SJTSvRtGsN",
+  "replyto": "SJTSvRtGsN",
+  "signatures": [
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_3KZT"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2024/Conference",
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_3KZT"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2024/Conference/Submission770/-/Official_Review",
+    "ICLR.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2024/Conference",
+  "tcdate": 1698786123710,
+  "cdate": 1698786123710,
+  "tmdate": 1699636004528,
+  "mdate": 1699636004528,
+  "license": "CC BY 4.0",
+  "version": 2
+}

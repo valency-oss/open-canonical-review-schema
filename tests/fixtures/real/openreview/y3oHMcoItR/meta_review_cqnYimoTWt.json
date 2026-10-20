@@ -1,0 +1,41 @@
+{
+  "content": {
+    "summary": {
+      "value": "Below is a summary of the major concerns raised from the four reviews:\n\n1) Literature review: The paper should conduct a more thorough literature review to better position itself in the fluid community, particularly on the topic of measuring the sim-to-real gap in fluid experiments.\n\n2) Data generation: The paper needs to provide more detailed documentation to better explain how it generated the data in the benchmark.\n\n3) Sim-to-real gaps: reviewers raised multiple questions regarding this topic. Reviewers suggested more evaluations on how accurately the numerical simulation represents real-world scenarios, questioned the sensor noise models, and expressed concerns that the metrics (frequency or Fourier errors) are not able to capture summary statistics of fluids.\n\n4) Model comparisons: Models should be normalized on certain metrics (e.g., FLOPs or parameter numbers) to ensure a fair comparison. Reviewers also suggested comparing with domain-specific methods, in addition to general ML models.\n\n5) Autoregressive rollouts: Multiple reviewers suggested reporting longer rollouts for the autoregressive evaluation to better understand its performance in more practical settings."
+    },
+    "reviewer_concerns": {
+      "value": "Overall, I think the rebuttal has properly addressed most of the questions.\n\n1) The rebuttal has added and discussed more papers from the fluid community to address this concern. In particular, it distinguished itself from the fluid database (ERCOFTAC) mentioned by the reviewer. I think the response has largely resolved this concern, except that I am unsure whether the reviewer would consider the revised description “the first benchmark for scientific ML that …” acceptable or still think it is a bold claim.\n\n2) The rebuttal clarified that all data were collected through their own experiments and added detailed descriptions in the appendix. I think this response has addressed the concern.\n\n3) The rebuttal reported summary statistics (e.g., mean velocity profile) to demonstrate how accurately the numerical simulation captured real-world scenarios. I think the responses have largely addressed most of the sim-to-real questions. I am just a bit confused about their answer for the sensor noise models.\n\n4) The rebuttal stated the difficulty of aligning the comparisons among different models and introduced a new baseline Dynamic Mode Decomposition (DMD). The new DMD experiment concludes that neural network models outperform DMD, suggesting new opportunities for fluid research. I think this new experiment has partially addressed the concern. Ensuring a fair comparison among different models remains an open issue, given the inclusion of some foundation models. Still, the rebuttal has made some fair points on this.\n\n5) The rebuttal responded with additional statistics from 100-200 steps of output. I think the new statistics help address this concern."
+    },
+    "reviewer_scores": {
+      "value": "Notably, the paper received two 10s before the rebuttal started. I think both reviewers would likely strongly support the paper, given that they did not raise any critical issues that the rebuttal did not address.\n\nAnother reviewer was mildly positive (6) before the rebuttal. I think they would maintain their positive score, given their relatively short statement about the paper’s weaknesses.\n\nFinally, the negative reviewer (4) provided a high-quality review, with many thought-provoking comments on the paper's weaknesses. I think the rebuttal has partially addressed them as summarized above. I guess they would have maintained a borderline score and would have been unlikely to become more negative had they been able to participate in the discussion.\n\nOverall, I think the four reviewers would very likely reach a consensus of accepting this paper."
+    }
+  },
+  "id": "cqnYimoTWt",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Submission2270/Area_Chair_p3zj"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Submission2270/Senior_Area_Chairs",
+    "ICLR.cc/2026/Conference/Submission2270/Area_Chair_p3zj"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Meta_Review",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1767580305961,
+  "cdate": 1767580305961,
+  "tmdate": 1770618855172,
+  "mdate": 1770618855172,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Meta_Review",
+  "license": "CC BY 4.0",
+  "version": 2
+}

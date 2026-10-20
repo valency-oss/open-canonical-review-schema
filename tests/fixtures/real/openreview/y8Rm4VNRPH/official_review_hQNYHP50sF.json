@@ -1,0 +1,68 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper proposes a hardware-efficient algorithm for training linear transformers with a delta update (DeltaNet; SMS21). This architecture has an attention formulation that prevents the direct application of chunk-wise parallel algorithms for computing its output. To address this issue, the authors introduce a re-parameterization of DeltaNet as a matrix-valued RNN whose recurrence is given by a generalized Householder transformation. This enables the use of WY representation which is memory efficient and eliminates the need to materialize the hidden state matrices. Experiments on synthetic benchmarks and language modeling tasks shows competitive performance compared to strong baselines (Mamba, GLA) and faster speed than the original Deltanet implementation."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 4
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "- The paper is well motivated and situated with respect to prior work. It provides sufficient background for linear transformers, demonstrates great scholarship in crediting prior work, and has a clear exposition of the proposed idea. In addition, it presents an informative overview that compares the formulations of recent linear transformers that highlights their differences.  \n- Proposes an efficient algorithm for training linear transformers with the delta update which is a competitive variant. The re-parameterization is non-obvious and leverages WY representation for Householder matrices in a novel way. Previously, this architecture could not be easily scaled to larger models and datasets with a recurrent formulation. In addition, it introduces two competitive hybrid methods based on DeltaNet that leverage local and global full attention. \n - Demonstrates the effectiveness of the proposed approach on two synthetic benchmarks and eleven language modeling and understanding tasks compared to strong baselines such as Mamba and GLA. The results are consistent, have a good coverage, and are important for the researchers working on efficient transformers. \n- The experiments are thorough and have convincing settings, namely all the variants are trained from scratch with the same configurations, there are ablations to justify the design choices, and the experimental reporting is very detailed."
+    },
+    "weaknesses": {
+      "value": "- W1. In terms of scale, the model explores two different architectures of increasing size up to 1.3B parameters. Even though this size is considerable, it is still relatively small compared to the LLMs that are widely used such as Llama, Mistral (7B+ size). There is always the question of whether the quality is maintained with further model increase.\n- W2. The improved results compared to Mamba and GLA make use of additional architectural components: convolution and local/global attention, without them the results are comparable to the other models."
+    },
+    "questions": {
+      "value": "- Q1: What is the effect of chunk size in the chunk-wise parallel algorithm for DeltaNet? Varying the chunk size $C$ and showing its effect in efficiency would be interesting to explore. \n- Q2: The chunk-level hidden states $S_{[t]}$'s are discarded to save memory. From Eq. 7, it seems that their computation depends on the previous hidden states $S_{[t-1]}$'s. Are these kept in memory for the re-computation in the backward pass?  \n- Q3: GLA with convolution performs worse than w/o convolution with the larger model size. Do you expect this to be the case for DeltaNet as well? It would be good to add this result if possible. \n\nMinor:\n- In Table 2, is the L1/L2 norm referring to the normalization of queries and keys? Please specify. \n- In Eq.1, why is this equation showing the state $S_{[t+1]}$ instead of $S_{[t]}$? The latter is used in Eq. 2. Same for Eq. 7.  \n- l172: stable -> stabilize\n- l213-214: we -> we follow\n- l321: vallina -> vanilla"
+    },
+    "limitations": {
+      "value": "Yes, they have."
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 7
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "hQNYHP50sF",
+  "forum": "y8Rm4VNRPH",
+  "replyto": "y8Rm4VNRPH",
+  "signatures": [
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_eUyw"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Conference",
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_eUyw"
+  ],
+  "number": 3,
+  "invitations": [
+    "NeurIPS.cc/2024/Conference/Submission11970/-/Official_Review",
+    "NeurIPS.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Conference",
+  "tcdate": 1720856438167,
+  "cdate": 1720856438167,
+  "tmdate": 1730879511845,
+  "mdate": 1730879511845,
+  "license": "CC BY 4.0",
+  "version": 2
+}

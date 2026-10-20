@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "The paper identifies a vulnerability in current vision-language alignment methods for Large Vision-Language Models (LVLMs), where the safety mechanisms effective for text fail to transfer to visual input, leaving toxic images unchecked. The authors find that misalignment at the specific hidden state layers cause a semantic shift, undermining the safety mechanism for visual input. To address this, they propose a Text-Guided Alignment (TGA) method, which uses related text to guide the projection of visual inputs into hidden states. Experiments demonstrate that TGA successfully transfers text safety mechanisms to vision without additional fine-tuning and maintains overall performance on vision tasks."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 2
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "This paper is well-motivated and provides a thorough analysis of layer activations to explain the safety misalignment between vision and language. The work has potential value across multiple related fields, particularly in the design of vision-language models and their safety challenges.\n\nThe method for identifying the layers where the safety mechanism is activated is both reasonable and straightforward, showing effectiveness with a simple approach.\n\nThe proposed TGA alignment method effectively defends against toxic images, with strong evidence presented in Figure 7 to substantiate this claim."
+    },
+    "weaknesses": {
+      "value": "The paper lacks comparisons with other defense methods. Aside from the comparison with the unlearn-FigS defense, the current experimental results are mainly contrasted with the original model. Including comparisons with existing safety defense methods, such as [1-2], would provide stronger evidence of the proposed approach's superiority.\n\nThe presentation is somewhat redundant. For instance, the content in Figures 2 and 4, as well as Figures 3 and 5, could be combined to avoid repetition. Similarly, the writing in Section 4 could be more concise and streamlined for better clarity and flow.\n\n[1] Tovilag: Your Visual-Language Generative Model is Also an Evildoer. EMNLP2023.\n\n[2] Eyes Closed, Safety On: Protecting Multimodal LLMs via Image-to-Text Transformation. ECCV2024."
+    },
+    "questions": {
+      "value": "Please see weakness.\n\n1. In Figure 1, the presentation is somewhat confusing. Specifically, in Figure 1c, could you clarify whether the blue arrows represent \"safe\" or \"unsafe\"?\n\n2. In Section 4, could you specify which layers you are analyzing? For example, are you focusing on the qkv (query, key, value) layers or the projection layers?\n\n3. Can you include any discussion of failure scenarios or bad cases where the method may not perform as expected?"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 6
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "G8RSJfLah2",
+  "forum": "45rvZkJbuX",
+  "replyto": "45rvZkJbuX",
+  "signatures": [
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_VfZw"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2025/Conference",
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_VfZw"
+  ],
+  "number": 3,
+  "invitations": [
+    "ICLR.cc/2025/Conference/Submission4056/-/Official_Review",
+    "ICLR.cc/2025/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2025/Conference",
+  "tcdate": 1730716450488,
+  "cdate": 1730716450488,
+  "tmdate": 1731428024117,
+  "mdate": 1731428024117,
+  "license": "CC BY 4.0",
+  "version": 2
+}

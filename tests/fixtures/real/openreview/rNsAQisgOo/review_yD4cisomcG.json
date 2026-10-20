@@ -1,0 +1,48 @@
+{
+  "content": {
+    "summary_of_contributions": {
+      "value": "This paper aims to improve Bayesian Deep Convolutional Generative Adversarial Networks (DCGANs) with greater sample diversity. Specifically, the authors applied a mean-field variational inference approximation to calculate the evidence lower bound (ELBO). The authors further examine their method on the MNIST dataset."
+    },
+    "strengths_and_weaknesses": {
+      "value": "Overall, this paper provides a good overview of the Bayesian GANs and improves the problem of mode collapse, which is often seen in GANs. However, the quality of the paper can be further improved (e.g. the figures, experiments), and the reviewer is interested in seeing a better presentation of the improvements (from the traditional GANs). \n\n1. Increasing the diversity of generated images is an interesting research question as the training of GANs is known to be complex. \n\n2. Using the mean-field variational approximation is a practical method to resolve this problem with advantages computationally. \n\nThe weaknesses of this paper are also clear. \n\n1. The paper has very similar plots (with lower quality), derivations and experiments compared to [1]. It is hard for the reviewer to understand whether the contribution is from [1] or from the submitted manuscript. \n\n2. The experimental study of this paper is very weak, lacking an extensive baseline study. The reviewer would wish to see more evidence of the advantages of the proposed method. \n\n3. The training of GANs is complex, making it difficult to pinpoint where the improvement comes from. This affects the reliability of the presented results.\n\nReferences: \n\n[1] Blundell, Charles, et al. \"Weight uncertainty in neural network.\" International conference on machine learning. PMLR, 2015."
+    },
+    "requested_changes": {
+      "value": "1. Please consider demonstrating more differences between the submitted manuscript and [1]. \n\n2. The reviewer will be interested to see a better baseline study on more datasets. \n\n3. Please improve the design of Figure 3 and use an original design for Figure 2.\n\n\n[1] Blundell, Charles, et al. \"Weight uncertainty in neural network.\" International conference on machine learning. PMLR, 2015."
+    },
+    "broader_impact_concerns": {
+      "value": "No."
+    },
+    "claims_and_evidence": {
+      "value": "No"
+    },
+    "audience": {
+      "value": "Yes"
+    }
+  },
+  "id": "yD4cisomcG",
+  "forum": "rNsAQisgOo",
+  "replyto": "rNsAQisgOo",
+  "signatures": [
+    "TMLR/Paper3005/Reviewer_TxLp"
+  ],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "TMLR",
+    "TMLR/Paper3005/Action_Editors",
+    "TMLR/Paper3005/Reviewer_TxLp"
+  ],
+  "number": 3,
+  "invitations": [
+    "TMLR/Paper3005/-/Review",
+    "TMLR/Paper3005/-/Review_Release"
+  ],
+  "domain": "TMLR",
+  "tcdate": 1728765557184,
+  "cdate": 1728765557184,
+  "tmdate": 1728765559313,
+  "mdate": 1728765559313,
+  "license": "CC BY 4.0",
+  "version": 2
+}

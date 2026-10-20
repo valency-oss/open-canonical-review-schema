@@ -1,0 +1,48 @@
+{
+  "content": {
+    "summary": {
+      "value": "The paper introduces a challenging dataset designed to test the abilities of both human experts and AI systems in solving difficult multiple-choice questions across three scientific domains: biology, physics, and chemistry. The dataset consists of 448 questions, which were found to be extremely challenging for experts and non-experts alike, designed to be inaccessible through simple Google searches, thus the term \"Google-proof\". The study highlights significant differences in performance between human experts, non-expert validators, and various AI models, with experts achieving a 65% accuracy, non-experts 34%, and AI models like Claude 3 Opus around 60%."
+    },
+    "reasons_to_accept": {
+      "value": "- Innovative Dataset:   \nThe GPQA dataset fills a critical gap in existing benchmarks by focusing on extremely hard questions that require deep domain expertise and are resistant to simple internet searches.\n- Rigorous Validation Process:   \nThe paper details a thorough validation process for question objectivity and difficulty, involving multiple rounds of expert and non-expert reviews, ensuring the reliability and challenge of the dataset."
+    },
+    "reasons_to_reject": {
+      "value": "- Limited Diversity of Questions:   \nThe dataset, while challenging, consists of only 448 questions due to the high costs and complexity of question generation and validation. This small size might limit the statistical power and generalizability of the findings."
+    },
+    "rating": {
+      "value": 8
+    },
+    "confidence": {
+      "value": 4
+    },
+    "ethics_flag": {
+      "value": 2
+    }
+  },
+  "id": "wAkraRm611",
+  "forum": "Ti67584b98",
+  "replyto": "Ti67584b98",
+  "signatures": [
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_D4AP"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "colmweb.org/COLM/2024/Conference",
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_D4AP"
+  ],
+  "number": 3,
+  "invitations": [
+    "colmweb.org/COLM/2024/Conference/Submission498/-/Official_Review",
+    "colmweb.org/COLM/2024/Conference/-/Edit"
+  ],
+  "domain": "colmweb.org/COLM/2024/Conference",
+  "tcdate": 1715436566924,
+  "cdate": 1715436566924,
+  "tmdate": 1724633690961,
+  "mdate": 1724633690961,
+  "license": "CC BY 4.0",
+  "version": 2
+}

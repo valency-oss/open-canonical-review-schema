@@ -15,6 +15,7 @@ from .mappers.ai import AIReviewMapper, build_review
 from .mappers.cmt import from_cmt, to_cmt
 from .mappers.editorialmanager import from_editorialmanager, to_editorialmanager
 from .mappers.hotcrp import from_hotcrp, to_hotcrp
+from .mappers.jats import from_jats, to_jats
 from .mappers.journal import from_journal_narrative, to_journal_narrative
 from .mappers.openreview import from_openreview, to_openreview
 from .mappers.scholarone import from_scholarone, to_scholarone
@@ -25,6 +26,7 @@ _FROM: dict[str, Callable[..., dict[str, Any]]] = {
     "cmt": from_cmt,
     "editorialmanager": from_editorialmanager,
     "hotcrp": from_hotcrp,
+    "jats": from_jats,
     "journal_narrative": from_journal_narrative,
     "openreview": from_openreview,
     "scholarone": from_scholarone,
@@ -48,6 +50,7 @@ _TO: dict[str, Callable[[dict[str, Any]], dict[str, Any] | str]] = {
     "deepreview": deepreview.to_deepreview,
     "editorialmanager": to_editorialmanager,
     "hotcrp": to_hotcrp,
+    "jats": to_jats,
     "journal_narrative": to_journal_narrative,
     "openaireview": openaireview.to_openaireview,
     "openreview": to_openreview,

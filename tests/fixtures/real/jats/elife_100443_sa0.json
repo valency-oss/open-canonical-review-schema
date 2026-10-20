@@ -1,0 +1,8 @@
+{
+  "sub_article": "<sub-article article-type=\"editor-report\" id=\"sa0\"><front-stub><article-id pub-id-type=\"doi\">10.7554/eLife.100443.2.sa0</article-id><title-group><article-title>eLife Assessment</article-title></title-group><contrib-group><contrib contrib-type=\"author\"><name><surname>Agrawal</surname><given-names>Anurag</given-names></name><role specific-use=\"editor\">Reviewing Editor</role><aff><institution>Ashoka University</institution><country>India</country></aff></contrib></contrib-group><kwd-group kwd-group-type=\"claim-importance\"><kwd>Important</kwd></kwd-group><kwd-group kwd-group-type=\"evidence-strength\"><kwd>Solid</kwd></kwd-group></front-stub><body><p>This is an <bold>important</bold> piece of work that sheds light on our understanding of early lung development. There is <bold>solid</bold> evidence that there is a key new role for Svep1, which may be acting via FGF9. A more precise understanding of the interactions between Svep1 and FGF9, with a possibility of other ECM factors, would add value.</p></body></sub-article>",
+  "article": {
+    "doi": "10.7554/eLife.100443.2",
+    "title": "Svep1 orchestrates distal airway patterning and alveolar differentiation in murine lung development",
+    "journal": "eLife"
+  }
+}

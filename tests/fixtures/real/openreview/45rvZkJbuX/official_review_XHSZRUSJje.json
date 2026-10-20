@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper aims to find why LVLMs suffer from toxic visual content when converting LLMs to LVLMs. They observe and analyze the safety activation mechanism in the transformers and develop specific methods, TGA, to alleviate the issue of LVLMS without any post alignment."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 3
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "- Clear evidence for the safety activation mechanism.\n\n- Straightforward and well-motivated methods. \n\n- TGA performs relatively well without any post-alignment steps."
+    },
+    "weaknesses": {
+      "value": "- 1. The analysis seems only work with the model developed by [1]. If the aligned models change, will the conclusion remain consistent?\n\n- 2. Lack of analysis about the extra cost.\n\n\n[1] Federico Bianchi, Mirac Suzgun, Giuseppe Attanasio, Paul Rottger, Dan Jurafsky, Tatsunori Hashimoto, and James Zou. Safety-tuned LLaMAs: Lessons from improving the safety of large language models that follow instructions. 2024."
+    },
+    "questions": {
+      "value": "- For point 1 in weaknesses, if the alignment method change, or, the key words change, not \"sorry\"/\"apologize\", will the activation layers in  Figure 2 change?\n\n- For point 1 in weaknesses, how about the change of activation layers if we do not fully fine-tune all parameters of the model? For example, use PEFT for the pre-trained LLMs or just frozen the pre-trained LLMs. In such cases, will the trained LVLMs still suffer from toxic visual content?\n    - If so, will the activation layers remain the same?\n    - If not, the reviewer thinks the conclusion only holds for the fully fine-tuning case.\n\n- In Table 2, how about the performance of a safety-aligned LVLMs like that in [1]?\n\n\n- Point 2 in weaknesses, the reviewer thinks analysis about the extra cost is needed.\n\n[1] Federico Bianchi, Mirac Suzgun, Giuseppe Attanasio, Paul Rottger, Dan Jurafsky, Tatsunori Hashimoto, and James Zou. Safety-tuned LLaMAs: Lessons from improving the safety of large language models that follow instructions. 2024."
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 6
+    },
+    "confidence": {
+      "value": 3
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "XHSZRUSJje",
+  "forum": "45rvZkJbuX",
+  "replyto": "45rvZkJbuX",
+  "signatures": [
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_R4pV"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2025/Conference",
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_R4pV"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2025/Conference/Submission4056/-/Official_Review",
+    "ICLR.cc/2025/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2025/Conference",
+  "tcdate": 1730634773751,
+  "cdate": 1730634773751,
+  "tmdate": 1731428024409,
+  "mdate": 1731428024409,
+  "license": "CC BY 4.0",
+  "version": 2
+}

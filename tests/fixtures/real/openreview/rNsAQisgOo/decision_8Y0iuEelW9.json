@@ -1,0 +1,41 @@
+{
+  "content": {
+    "claims_and_evidence": {
+      "value": "This work does not suport the claims made in the paper, as pointed out by reviewers. The paper claims that its approach produces more sample diversity, but the current metric of sample diversity based on the covariance matrix could be skewed by noise.  A reviewer suggests to add experiments with standard metric like FID to support claims on sample diversity, and no such experiment is provided.  In addition, the claim that Bayesian DCGAN reduces generator loss fluctuations is not observed by the presented plots, and a reviewer requests additional experiments or quantitative analysis. Again, there is no response from reviewers on this request. Overall, the claims of the paper are not supported by enough evidence."
+    },
+    "audience": {
+      "value": "The paper is quite similar to Baysian DCGAN. The reviewers asked for clarification on the similarity, and there is no response from the authors.   The similarity with prior work makes it unclear whether some audience would be interested in this paper."
+    },
+    "recommendation": {
+      "value": "Reject"
+    },
+    "comment": {
+      "value": "Reviewers point out a few major issues, such as the lack of clarifications on the difference with a prior work, and insufficient experiments to support the main claims. Reviewers all recommend rejection. The authors did not provide responses to the comments. So I recommend rejection."
+    }
+  },
+  "id": "8Y0iuEelW9",
+  "forum": "rNsAQisgOo",
+  "replyto": "rNsAQisgOo",
+  "signatures": [
+    "TMLR/Paper3005/Action_Editor_ts9C"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "TMLR"
+  ],
+  "number": 1,
+  "invitations": [
+    "TMLR/Paper3005/-/Decision",
+    "TMLR/Paper3005/-/Decision_Release"
+  ],
+  "domain": "TMLR",
+  "tcdate": 1735483310809,
+  "cdate": 1735483310809,
+  "tmdate": 1736182538855,
+  "mdate": 1736182538855,
+  "license": "CC BY 4.0",
+  "version": 2
+}

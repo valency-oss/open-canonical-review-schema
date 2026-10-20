@@ -1,0 +1,204 @@
+# Copyright (c) 2026 Valency Systems Inc.
+# SPDX-License-Identifier: Apache-2.0
+"""JATS sub-articles: what the real ones in tests/fixtures/real/jats/ do not show."""
+
+import xml.etree.ElementTree as ET
+
+from ocrs import map_from, map_to
+
+XLINK = 'xmlns:xlink="http://www.w3.org/1999/xlink"'
+
+
+def payload(front: str = "", body: str = "<p>Fine.</p>", article: dict | None = None, **attrs):
+    attributes = " ".join(f'{k.replace("_", "-")}="{v}"' for k, v in attrs.items())
+    xml = f"<sub-article {XLINK} {attributes}><front-stub>{front}</front-stub>"
+    xml += f"<body>{body}</body></sub-article>"
+    return {"sub_article": xml} | ({"article": article} if article else {})
+
+
+def round_trip(review: dict) -> dict:
+    return map_from("jats", map_to("jats", review))
+
+
+def test_text_after_a_list_in_a_paragraph_is_kept():
+    body = (
+        '<p>Before.<list list-type="order"><list-item><p>One.</p></list-item>'
+        "<list-item><p>Two.</p></list-item></list>After the list.</p>"
+        "<sec><title>Methods</title><p>Clear.</p><p>Sound.</p></sec>"
+    )
+    review = map_from("jats", payload(body=body, article_type="referee-report", id="r1"))
+    assert review["narrative"]["detailed_review"] == (
+        "Before.\n\n1. One.\n2. Two.\n\nAfter the list.\n\nMethods:\n\nClear.\n\nSound."
+    )
+    assert review["narrative"]["sections"] == [{"title": "Methods", "content": "Clear.\n\nSound."}]
+    assert round_trip(review)["narrative"] == review["narrative"]
+
+
+def test_a_review_with_only_sections_is_written_with_a_body():
+    review = map_from("jats", payload(article_type="referee-report", id="r1"))
+    review["narrative"] = {"sections": [{"title": "Strengths", "content": "Clear."}]}
+    review["opinion"] = {}
+    again = round_trip(review)
+    assert again["narrative"]["sections"] == review["narrative"]["sections"]
+
+
+def test_a_date_without_a_type_is_kept():
+    front = "<pub-date><day>3</day><month>2</month><year>2025</year></pub-date>"
+    review = map_from("jats", payload(front=front, article={"doi": "10.1234/j.1"}, id="r1"))
+    assert review["created_at"] == "2025-02-03T00:00:00Z"
+    assert round_trip(review)["created_at"] == "2025-02-03T00:00:00Z"
+
+
+def test_a_corrected_doi_is_written_though_the_article_gave_one():
+    review = map_from("jats", payload(article={"doi": "10.1234/j.1"}, id="r1"))
+    assert review["target"]["work_id"] == "doi:10.1234/j.1"
+    review["target"]["identifiers"]["doi"]["value"] = "10.1234/j.2"
+    review["target"]["work_id"] = "doi:10.1234/j.2"
+    assert round_trip(review)["target"]["work_id"] == "doi:10.1234/j.2"
+
+
+def test_a_recommendation_ocrs_does_not_know_goes_back_as_written():
+    front = (
+        "<custom-meta-group><custom-meta><meta-name>recommendation</meta-name>"
+        "<meta-value>approve-in-part</meta-value></custom-meta></custom-meta-group>"
+    )
+    review = map_from("jats", payload(front=front, id="r1"))
+    assert "decision" not in review
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    assert written.findtext(".//meta-value") == "approve-in-part"
+    # A recommendation the review now makes replaces it
+    review["decision"] = {"recommendation": "reject"}
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    assert written.findtext(".//meta-value") == "reject"
+
+
+def test_a_shared_affiliation_is_written_once():
+    front = (
+        "<contrib-group>"
+        "<contrib><name><surname>A</surname><given-names>Ann</given-names></name>"
+        '<xref ref-type="aff" rid="a1">1</xref></contrib>'
+        "<contrib><name><surname>B</surname><given-names>Bo</given-names></name>"
+        '<xref ref-type="aff" rid="a1">1</xref></contrib>'
+        '<aff id="a1"><label>1</label>Example University</aff></contrib-group>'
+    )
+    review = map_from("jats", payload(front=front, id="r1"))
+    assert [r["human_referee"]["affiliation"] for r in review["referees"]] == [
+        "Example University",
+        "Example University",
+    ]
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    assert [aff.get("id") for aff in written.iter("aff")] == ["a1"]
+    # One whose affiliation changed gets an ID of its own
+    review["referees"][1]["human_referee"]["affiliation"] = "Another University"
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    assert [aff.get("id") for aff in written.iter("aff")] == ["a1", "a1-2"]
+    assert [r["human_referee"]["affiliation"] for r in round_trip(review)["referees"]] == [
+        "Example University",
+        "Another University",
+    ]
+
+
+def test_a_review_with_no_doi_or_id_keeps_its_id():
+    review = map_from("jats", payload())
+    again = round_trip(review)
+    assert again["review_id"] == review["review_id"]
+    assert "source_review_id" not in again["provenance"]
+
+
+def test_a_changed_affiliation_takes_an_id_no_other_has():
+    """Contributor 3's changed affiliation would have taken `a1-3`, which contributor 2's
+    already has: its reference then named the wrong affiliation, and it was not written."""
+    front = (
+        "<contrib-group>"
+        '<contrib><name><surname>A</surname></name><xref ref-type="aff" rid="a1"/></contrib>'
+        '<contrib><name><surname>B</surname></name><xref ref-type="aff" rid="a1-3"/></contrib>'
+        '<contrib><name><surname>C</surname></name><xref ref-type="aff" rid="a1"/></contrib>'
+        '<aff id="a1">Example University</aff><aff id="a1-3">Third University</aff>'
+        "</contrib-group>"
+    )
+    review = map_from("jats", payload(front=front, id="r1"))
+    review["referees"][2]["human_referee"]["affiliation"] = "Another University"
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    ids = [aff.get("id") for aff in written.iter("aff")]
+    assert len(ids) == len(set(ids)) == 3
+    assert [r["human_referee"]["affiliation"] for r in round_trip(review)["referees"]] == [
+        "Example University",
+        "Third University",
+        "Another University",
+    ]
+
+
+def test_a_changed_affiliation_reuses_only_an_id_made_for_it():
+    """`a10` is no ID of the `a1` family: a contributor of `a1` who moves to `a10`'s
+    affiliation gets an ID of its own, not `a10` with `a1`'s label."""
+    front = (
+        "<contrib-group>"
+        '<contrib><name><surname>A</surname></name><xref ref-type="aff" rid="a1">1</xref></contrib>'
+        '<contrib><name><surname>B</surname></name><xref ref-type="aff" rid="a10">10</xref>'
+        "</contrib>"
+        '<contrib><name><surname>C</surname></name><xref ref-type="aff" rid="a1">1</xref></contrib>'
+        '<aff id="a1"><label>1</label>Example University</aff>'
+        '<aff id="a10"><label>10</label>Tenth University</aff>'
+        "</contrib-group>"
+    )
+    review = map_from("jats", payload(front=front, id="r1"))
+    review["referees"][2]["human_referee"]["affiliation"] = "Tenth University"
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    references = [x.get("rid") for x in written.iter("xref")]
+    assert references[1] == "a10" and references[2] not in ("a1", "a10")
+    assert [r["human_referee"]["affiliation"] for r in round_trip(review)["referees"]] == [
+        "Example University",
+        "Tenth University",
+        "Tenth University",
+    ]
+
+
+def test_an_extension_cannot_write_markup():
+    """`extensions.jats` comes with the review, from anyone: an attribute name or a response
+    in it must not put elements of its own into the sub-article."""
+    review = map_from("jats", payload(article={"doi": "10.1234/j.1"}, id="r1"))
+    forged = 'x="1"><contrib><name><surname>Forged</surname></name></contrib><a b'
+    review["target"]["identifiers"]["doi"]["value"] = "10.1234/j.2"
+    review["target"]["work_id"] = "doi:10.1234/j.2"
+    review["extensions"]["jats"]["related_article"] = {forged: "v", "id": "rel1"}
+    review["extensions"]["jats"]["responses"] = ["<contrib><surname>Forged</surname></contrib>"]
+    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    assert not [s for s in written.iter("surname") if s.text == "Forged"]
+    assert written.find("front-stub/related-article").attrib == {
+        "id": "rel1",
+        "{http://www.w3.org/1999/xlink}href": "10.1234/j.2",
+    }
+
+
+def test_every_recommendation_has_a_term():
+    review = map_from("jats", payload(id="r1"))
+    for recommendation in (
+        "strong_accept",
+        "weak_accept",
+        "borderline",
+        "weak_reject",
+        "strong_reject",
+    ):
+        review["decision"] = {"recommendation": recommendation}
+        assert round_trip(review)["decision"] == {"recommendation": recommendation}
+
+
+def test_a_review_of_findings_alone_is_written_with_them():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"], review["opinion"] = {}, {}
+    review["findings"] = {
+        "weaknesses": [{"title": "No ablation", "text": "Table 3 shows the full model only."}]
+    }
+    again = round_trip(review)
+    assert again["narrative"]["sections"] == [
+        {"title": "Weaknesses", "content": "- **No ablation** Table 3 shows the full model only."}
+    ]
+
+
+def test_a_title_or_journal_changed_in_ocrs_is_written():
+    article = {"doi": "10.1234/j.1", "title": "Old title", "journal": "Old Journal"}
+    review = map_from("jats", payload(article=article, id="r1"))
+    review["target"]["title"], review["target"]["venue"] = "New title", "New Journal"
+    again = round_trip(review)
+    assert (again["target"]["title"], again["target"]["venue"]) == ("New title", "New Journal")
+    assert again["target"]["work_id"] == "doi:10.1234/j.1"

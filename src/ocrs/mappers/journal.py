@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -37,6 +38,19 @@ def _build_target_identifiers(payload: dict[str, Any]) -> dict[str, Any]:
         }
 
     return identifiers
+
+
+# A heading on a line of its own, as journals print a review's parts: "Summary:", "Strengths:"
+_HEADING = re.compile(r"^[^\n]{1,60}:$")
+
+
+def _summary(text: str) -> str:
+    """The review's first paragraph, or, when that is a heading ("Summary:"), the paragraph
+    under it."""
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if len(paragraphs) > 1 and _HEADING.match(paragraphs[0]):
+        return first_paragraph(paragraphs[1], max_len=500)
+    return first_paragraph(text, max_len=500)
 
 
 def from_journal_narrative(
@@ -80,9 +94,7 @@ def from_journal_narrative(
             "work_type": "article",
         },
         "metrics": [],
-        "opinion": {"summary": first_paragraph(full_text, max_len=500)}
-        if full_text.strip()
-        else {},
+        "opinion": {"summary": _summary(full_text)} if full_text.strip() else {},
         "narrative": {"detailed_review": full_text.strip()} if full_text.strip() else {},
     }
 
@@ -108,6 +120,9 @@ def to_journal_narrative(canonical: dict[str, Any]) -> dict[str, Any]:
     out["journal"] = canonical.get("target", {}).get("venue")
     out["review_id"] = canonical.get("review_id")
     out["created_at"] = canonical.get("created_at")
+    reviewer_id = (canonical.get("referee") or {}).get("referee_id")
+    if reviewer_id:
+        out["reviewer_id"] = reviewer_id
     # Narrative text
     nar = canonical.get("narrative", {}) or {}
     text = None

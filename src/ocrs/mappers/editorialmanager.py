@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -11,6 +12,7 @@ from ..catalog import alias_map, load_catalog
 from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
 from ..util import (
+    department_affiliation,
     first_paragraph,
     id_as_number,
     iso_date_or_time,
@@ -19,6 +21,8 @@ from ..util import (
     now_iso,
     parse_date_flexible,
     parse_labeled_score,
+    score_sheet_answers,
+    score_sheet_questions,
     source_decision,
     source_work_id,
     split_decision,
@@ -32,6 +36,41 @@ EM_RECOMMENDATION_MAP = {
     4: "reject",
     5: "revise",  # Reject and Encourage Resubmission
 }
+
+
+# Editorial Manager's web service (getReviewerInfoFull) gives one record per reviewer of a
+# submission's revision, in the shape of ScholarOne's: the reviewer as `reviewerPersonId`,
+# `reviewerFullName`, `reviewerORCIDId` and `scopusId`, their `departments`, the
+# recommendation's text as `reviewerRecommendation`, the revision, the time the score sheet was
+# completed, and the score sheet's questions and answers. These are the fields of the names the
+# reader takes elsewhere. The record has no comments to the editor, and its rating-form
+# questions, the editor's rating of the reviewer, are not part of the review.
+API_FIELDS = {
+    "reviewerPersonId": "reviewerId",
+    "reviewerFullName": "reviewerName",
+    "reviewerORCIDId": "reviewerOrcid",
+    "reviewerRecommendation": "recommendation",
+    "scoreSheetCompletedDate": "dateReceived",
+    "revision": "revisionNumber",
+}
+
+
+def _with_known_names(payload: dict[str, Any]) -> dict[str, Any]:
+    """The review with the web service's field names as the names the reader takes, the
+    reviewer's first department as `reviewerAffiliation`, and, since the record has no review
+    ID, one made of the revision's document ID and the reviewer's."""
+    out = dict(payload)
+    for api_name, name in API_FIELDS.items():
+        if api_name in payload and name not in out:
+            out[name] = payload[api_name]
+    affiliation = department_affiliation(payload.get("departments"))
+    if affiliation and "reviewerAffiliation" not in out:
+        out["reviewerAffiliation"] = affiliation
+    document, person = payload.get("documentId"), payload.get("reviewerPersonId")
+    no_id = all(out.get(k) is None for k in ("reviewId", "review_id", "id"))
+    if no_id and document is not None and person is not None:
+        out["reviewId"] = f"{document}_p{person}"
+    return out
 
 
 def _extract_time(payload: dict[str, Any]) -> str:
@@ -104,6 +143,12 @@ def _build_human_referee(payload: dict[str, Any]) -> dict[str, Any]:
     affiliation = payload.get("reviewerAffiliation") or payload.get("affiliation")
     if affiliation and isinstance(affiliation, str):
         human_referee["affiliation"] = affiliation
+
+    # The web service gives the reviewer's Scopus author ID as a number
+    scopus = payload.get("scopusId")
+    if isinstance(scopus, (int, str)) and not isinstance(scopus, bool):
+        if re.fullmatch(r"[1-9]\d{9,11}", str(scopus).strip()):
+            human_referee["scopus_id"] = str(scopus).strip()
 
     return human_referee
 
@@ -239,6 +284,7 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
     catalog = load_catalog()
     amap = alias_map(catalog)
 
+    raw, payload = payload, _with_known_names(payload)
     created = _extract_time(payload)
     identifiers = _build_target_identifiers(payload)
     reviewer_id = _get_reviewer_id(payload)
@@ -280,7 +326,11 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
     }
 
     if keep_raw:
-        out["provenance"]["raw_payload"] = payload
+        out["provenance"]["raw_payload"] = raw
+
+    # The score sheet's answers: those with a number are ratings, those in words parts of the
+    # review's text
+    scored, written = score_sheet_answers(payload.get("scoreSheetCustomQuestions"))
 
     # Map title and venue
     title = payload.get("manuscriptTitle")
@@ -304,6 +354,8 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
         if isinstance(v, str) and v.strip():
             if dst not in narrative:
                 narrative[dst] = v.strip()
+    if written:
+        narrative["sections"] = [{"title": q, "content": text} for q, text in written]
 
     if narrative:
         out["narrative"] = narrative
@@ -321,7 +373,12 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
 
     # Ratings -> metrics
     ratings = payload.get("ratings", [])
-    if isinstance(ratings, list) and ratings:
+    ratings = [*ratings] if isinstance(ratings, list) else []
+    ratings += [
+        {"question": q, "score": value} | ({"label": label} if label else {})
+        for q, value, label in scored
+    ]
+    if ratings:
         out["metrics"] = _map_ratings_to_metrics(ratings, catalog, amap)
 
     return out
@@ -331,8 +388,9 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
     """Convert a canonical review to Editorial Manager format.
 
     A review read from Editorial Manager is given back what its reader took: the reviewer,
-    the date received, the recommendation with its code and each rating with its label, so
-    that reading the result gives the same review.
+    the date received, the recommendation with its code, each rating with its label, and the
+    score sheet's answers in words as its questions, so that reading the result gives the
+    same review.
 
     Args:
         canonical: A canonical review dictionary.
@@ -357,7 +415,9 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
         ("journalName", canonical.get("target", {}).get("venue")),
         ("reviewerId", id_as_number(referee.get("referee_id"))),
         ("reviewerName", human.get("name")),
+        ("reviewerAffiliation", human.get("affiliation")),
         ("reviewerOrcid", human.get("orcid")),
+        ("scopusId", id_as_number(human.get("scopus_id"))),
         ("dateReceived", iso_date_or_time(canonical.get("created_at"))),
     ]:
         if value is not None and value != "":
@@ -378,6 +438,10 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
 
     if nar.get("confidential_to_editors"):
         out["confidentialCommentsToEditor"] = nar["confidential_to_editors"]
+    # Parts of the text, as the score sheet's questions answered in words
+    questions = score_sheet_questions(nar.get("sections"))
+    if questions:
+        out["scoreSheetCustomQuestions"] = questions
 
     # Map recommendation
     dec = source_decision(canonical.get("decision", {}) or {})

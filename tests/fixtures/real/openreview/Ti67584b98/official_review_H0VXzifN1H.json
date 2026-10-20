@@ -1,0 +1,51 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper presents GPQA, a new dataset of challenging multi-choice question-answer pairs. GPQA was created with the help of human experts to be challenging to even experts in the field, as a means of assessing LLM performance on frontier knowledge. The authors selected as annotators people having or pursuing a PhD in the subject matter for each question (physics, chemistry, biology). Each question was created by one expert, double-checked by another expert, and then revised by the first expert. The authors then test non-experts (annotators who worked on other fields) on each question.\n\nThe dataset contains several parts. The \"diamond split\" is a subset of 198 questions where 2/2 experts agree on the answer, and 2/3 non-experts get the answer *wrong*. The \"main set\" is an extension to 448 questions; these may included questions that required revision, and may include questions where only 1/3 non-expert got the answer wrong. Finally, the \"extended set\" includes all 546 questions created. The authors recommend the main set for experiments.\n\nFor the main set, experts achieve 71.9% accuracy, while non-experts (with access to Google) achieve 30.4% accuracy. Language models tend to lie in-between, with the best-performing being Claude-3 Opus at 52.7%."
+    },
+    "reasons_to_accept": {
+      "value": "The dataset provides an interesting testbed for question answering performance on highly difficult problems. With each question requiring two expert annotators, substantial resources went into the creation of this dataset; it will provide a good evaluation benchmark for the community. The finding that LLMs perform better than non-experts, even when equipped with Google, is a good demonstration of their potential."
+    },
+    "reasons_to_reject": {
+      "value": "Despite the effort that went into creating this dataset, it is a small resource. With only 448 examples in the main set, it may be difficult to e.g. estimate 95% confidence intervals for model performance on the dataset."
+    },
+    "questions_to_authors": {
+      "value": "I am a little confused about the framing in the introduction. You argue that this dataset is constructed to evaluated models \"on questions where we cannot produce or verify the truth on our own\". Yet, we (taking the word to mean humanity) *can* answer all the questions on this dataset -- experts have this ability. Why would you expect evaluation techniques for frontier knowledge known by some humans to generalise to frontier knowledge known by no humans? If you do not have this expectation, how does this paper connect to scalable oversight?"
+    },
+    "rating": {
+      "value": 8
+    },
+    "confidence": {
+      "value": 4
+    },
+    "ethics_flag": {
+      "value": 1
+    }
+  },
+  "id": "H0VXzifN1H",
+  "forum": "Ti67584b98",
+  "replyto": "Ti67584b98",
+  "signatures": [
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_iAEH"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "colmweb.org/COLM/2024/Conference",
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_iAEH"
+  ],
+  "number": 1,
+  "invitations": [
+    "colmweb.org/COLM/2024/Conference/Submission498/-/Official_Review",
+    "colmweb.org/COLM/2024/Conference/-/Edit"
+  ],
+  "domain": "colmweb.org/COLM/2024/Conference",
+  "tcdate": 1714489569182,
+  "cdate": 1714489569182,
+  "tmdate": 1724633691186,
+  "mdate": 1724633691186,
+  "license": "CC BY 4.0",
+  "version": 2
+}

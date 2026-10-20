@@ -208,8 +208,9 @@ def map_recommendation_from_numeric(num: int | float, scale: dict[str, Any]) -> 
 
 _ACCEPT = re.compile(r"\baccept(?:s|ed|ance)?\b")
 _REJECT = re.compile(r"\breject(?:s|ed|ion)?\b")
-_SHORT_OF_ACCEPT = re.compile(
-    r"\b(?:below|beneath|under|short\s+of|shy\s+of|not\s+(?:yet\s+)?(?:ready|suitable|fit)\s+for)"
+_RELATIVE_TO_ACCEPT = re.compile(
+    r"\b(?:below|beneath|under|above|over|short\s+of|shy\s+of"
+    r"|not\s+(?:yet\s+)?(?:ready|suitable|fit)\s+for)"
     r"\s+(?:the\s+)?accept\w*(?:\s+(?:threshold|bar|level|standard)s?)?"
 )
 _NEGATED_QUALIFIED_ACCEPT = re.compile(
@@ -230,10 +231,11 @@ def map_recommendation_from_text(s: str) -> str | None:
     # acceptable") is a rejection
     # The rest of the label may still state one: "Weak accept (not a strong accept)"
     x = _NEGATED_QUALIFIED_ACCEPT.sub(" ", x)
-    # Wording that places the work short of acceptance ("below the acceptance threshold")
-    # is no verdict of its own: it is set aside, so a verdict beside it still counts and,
-    # alone, it leaves the score to decide
-    x = _SHORT_OF_ACCEPT.sub(" ", x)
+    # Wording that places the work against the acceptance threshold ("below the acceptance
+    # threshold", ICLR's "marginally above the acceptance threshold") is no verdict of its
+    # own: it is set aside, so a verdict beside it still counts and, alone, it leaves the
+    # score to decide
+    x = _RELATIVE_TO_ACCEPT.sub(" ", x)
     # A double negative ("not unacceptable") is no clear verdict either way
     if _DOUBLE_NEGATIVE.search(x):
         return None
@@ -685,3 +687,78 @@ def iso_date_or_time(iso: Any) -> Any:
     if isinstance(iso, str) and iso.endswith("T00:00:00Z"):
         return iso[:10]
     return iso
+
+
+# ScholarOne's and Editorial Manager's web services give a review's score sheet as
+# `scoreSheetCustomQuestions`: each question (`questionText`, `questionName`, `answerType`)
+# with the reviewer's answer in `scoreSheetCustomAnswer` (`answerText`, `numericValue`)
+_NUMBER = re.compile(r"^\s*[+-]?\d+(?:\.\d+)?\s*$")
+
+
+def score_sheet_answers(
+    questions: Any,
+) -> tuple[list[tuple[str, int | float, str | None]], list[tuple[str, str]]]:
+    """A score sheet's answers: (question, value, the answer's text when it says more than
+    the value) for each answer with a number, and (question, text) for each answered in words.
+
+    An answer has a number when the service gives one (`numericValue`), or when it is an
+    integer question (Editorial Manager's `Integer`, whose `numericValue` is always null)
+    answered with a number. A question without an answer is left out, as the services do.
+    """
+    scored: list[tuple[str, int | float, str | None]] = []
+    written: list[tuple[str, str]] = []
+    for question in questions if isinstance(questions, list) else []:
+        if not isinstance(question, dict):
+            continue
+        name = question.get("questionText") or question.get("questionName")
+        answers = question.get("scoreSheetCustomAnswer")
+        answers = answers if isinstance(answers, list) else [answers]
+        answers = [a for a in answers if isinstance(a, dict)]
+        if not isinstance(name, str) or not name.strip() or not answers:
+            continue
+        name = name.strip()
+        texts = [a["answerText"].strip() for a in answers if isinstance(a.get("answerText"), str)]
+        texts = [t for t in texts if t]
+        value = answers[0].get("numericValue") if len(answers) == 1 else None
+        if isinstance(value, str) and _NUMBER.match(value):
+            value = float(value) if "." in value else int(value)
+        if (
+            not isinstance(value, (int, float))
+            and len(texts) == 1
+            and question.get("answerType") == "Integer"
+            and _NUMBER.match(texts[0])
+        ):
+            value = float(texts[0]) if "." in texts[0] else int(texts[0])
+            texts = []
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            label = texts[0] if len(texts) == 1 and texts[0] != str(value) else None
+            scored.append((name, value, label))
+        elif texts:
+            written.append((name, "\n".join(texts)))
+    return scored, written
+
+
+def score_sheet_questions(sections: Any) -> list[dict[str, Any]]:
+    """Text answers, as `narrative.sections` holds them, as score-sheet questions."""
+    return [
+        {"questionText": s["title"], "scoreSheetCustomAnswer": {"answerText": s["content"]}}
+        for s in (sections if isinstance(sections, list) else [])
+        if isinstance(s, dict)
+        and isinstance(s.get("title"), str)
+        and isinstance(s.get("content"), str)
+    ]
+
+
+def department_affiliation(departments: Any) -> str | None:
+    """The reviewer's first affiliation (by `affiliationOrderNumber`) in the `departments` of
+    ScholarOne's and Editorial Manager's web services: its `affiliation`, or else its
+    department and institution."""
+    listed = [departments] if isinstance(departments, dict) else departments
+    listed = [d for d in listed if isinstance(d, dict)] if isinstance(listed, list) else []
+    if not listed:
+        return None
+    first = min(listed, key=lambda d: d.get("affiliationOrderNumber") or 0)
+    parts = [first.get("affiliation")] if first.get("affiliation") else []
+    parts = parts or [first.get(k) for k in ("department", "institution")]
+    affiliation = ", ".join(p.strip() for p in parts if isinstance(p, str) and p.strip())
+    return affiliation or None

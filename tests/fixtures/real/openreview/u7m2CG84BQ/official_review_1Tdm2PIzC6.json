@@ -1,0 +1,75 @@
+{
+  "content": {
+    "title": {
+      "value": "A comprehensive and scalable benchmark addressing the limitations of current long-context LLM evaluations"
+    },
+    "summary_and_contributions": {
+      "value": "The BABILong benchmark evaluates large language models (LLMs) on their ability to handle and reason across extremely long contexts, addressing gaps in traditional benchmarks. It includes 20 diverse reasoning tasks, such as fact chaining, induction, deduction, and counting, embedded within long texts from the PG19 corpora. Evaluating over 20 recent LLMs, the benchmark reveals that popular models utilize only 10-20% of the context effectively, with performance declining as task complexity increases. Recurrent Memory Transformers showed the highest performance, processing lengths up to 11 million tokens. BABILong is extendable to support the evaluation of new models, with publicly available data and code, providing a comprehensive and scalable evaluation framework for long-context language modeling."
+    },
+    "review": {
+      "value": "Pros:\n- Provides a rigorous assessment of LLMs' long-context processing abilities.\n- Includes 20 varied reasoning tasks, ensuring a thorough evaluation of different reasoning aspects.\n- Capable of evaluating contexts up to 11 million tokens, setting a new standard for long-context benchmarks.\n- Data and evaluation code are publicly available, promoting transparency and further research.\n- Offers valuable insights into the limitations and capabilities of current LLMs, guiding future improvements.\n\nCons:\n- Lacks detailed analysis of why certain models perform better or worse, limiting actionable insights for improvement.\n- Primarily focuses on synthetic and structured tasks, which may not fully represent practical applications in Real-World Application Scenarios."
+    },
+    "strengths": {
+      "value": "- The development of BABILong fills a crucial gap in evaluating LLMs' ability to reason across extremely long contexts, offering a more rigorous and comprehensive assessment compared to traditional benchmarks.\n- By incorporating 20 varied reasoning tasks, the benchmark effectively tests different aspects of reasoning, such as induction, deduction, and counting, enhancing its relevance and applicability to a wide range of NLP research.\n- BABILong's design allows for evaluation on contexts up to 11 million tokens, making it adaptable to future advancements in LLM capabilities and ensuring its long-term utility for the research community."
+    },
+    "rating": {
+      "value": 7
+    },
+    "opportunities_for_improvement": {
+      "value": "- A more detailed examination of why certain models perform better or worse on specific tasks could provide actionable insights for enhancing LLM capabilities. Understanding the underlying mechanisms of model performance would help in fine-tuning and developing more robust models.\n- Introducing additional evaluation metrics that go beyond accuracy, such as efficiency, scalability, and robustness, could offer a more holistic view of model performance. This would help identify areas where models excel or need improvement."
+    },
+    "confidence": {
+      "value": 4
+    },
+    "limitations": {
+      "value": "- The benchmark primarily focuses on synthetic tasks, which may not fully capture the challenges faced in practical applications. Including more real-world scenarios would enhance the relevance and applicability of the benchmark."
+    },
+    "correctness": {
+      "value": "Yes"
+    },
+    "clarity": {
+      "value": "Yes"
+    },
+    "relation_to_prior_work": {
+      "value": "Yes"
+    },
+    "documentation": {
+      "value": "Yes"
+    },
+    "ethics": {
+      "value": "None"
+    },
+    "flag_for_ethics_review": {
+      "value": "2: No, there are no or only very minor ethics concerns"
+    },
+    "additional_feedback": {
+      "value": "None"
+    }
+  },
+  "id": "1Tdm2PIzC6",
+  "forum": "u7m2CG84BQ",
+  "replyto": "u7m2CG84BQ",
+  "signatures": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_ZPx6"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_ZPx6"
+  ],
+  "number": 2,
+  "invitations": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/-/Official_Review",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+  "tcdate": 1721891523024,
+  "cdate": 1721891523024,
+  "tmdate": 1731500828658,
+  "mdate": 1731500828658,
+  "license": "CC BY 4.0",
+  "version": 2
+}

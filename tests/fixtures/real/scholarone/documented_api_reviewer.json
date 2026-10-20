@@ -1,0 +1,96 @@
+{
+  "documentId": 51234567,
+  "submissionId": "JEX-2026-0142.R1",
+  "inputIndex": 0,
+  "reviewerPersonId": 9876543,
+  "reviewerSalutation": "Dr.",
+  "reviewerFirstName": "Riley",
+  "reviewerLastName": "Example",
+  "reviewerFullName": "Example, Dr. Riley",
+  "reviewerPrimaryEmailAddress": "riley.example@example.org",
+  "reviewerORCIDId": "0000-0002-1825-0097",
+  "reviewerORCIDIdValidation": true,
+  "reviewerResearcherId": "A-1234-2020",
+  "departments": [
+    {
+      "affiliationOrderNumber": 1,
+      "department": "Department of Chemistry",
+      "institution": "Example University",
+      "city": "Springfield",
+      "country": "United States",
+      "countryCode": "US"
+    }
+  ],
+  "reviewerAssignmentStatus": "ASSIGNED",
+  "reviewerDateInvited": "2026-03-02T09:00:00Z",
+  "reviewerDateAssigned": "2026-03-03T14:20:00Z",
+  "scoreSheetDueDate": "2026-03-24T23:59:00Z",
+  "scoreSheetCompletedDate": "2026-03-20T16:45:10Z",
+  "numberOfDaysFromReviewAssignmentToCompletion": 17,
+  "reviewerRecommendation": "Minor Revision",
+  "reviewerRecommendationNumericValue": 2.0,
+  "reviewAverageMScore": 3.5,
+  "reviewSumMScore": 7.0,
+  "scoreSheetName": "Example Journal Scoresheet",
+  "scoreSheetCustomQuestions": [
+    {
+      "answerType": "TYPE_RADIO",
+      "customQuestionId": 100001,
+      "questionName": "1-Significance",
+      "questionStatus": "ACTIVE",
+      "questionText": "Does the manuscript contain new and significant information?",
+      "scoreSheetCustomAnswer": {
+        "answerId": 200001,
+        "answerName": "Yes",
+        "answerStatus": "ACTIVE",
+        "answerText": "Yes",
+        "numericValue": 4.0
+      }
+    },
+    {
+      "answerType": "TYPE_RADIO",
+      "customQuestionId": 100002,
+      "questionName": "2-Methods",
+      "questionStatus": "ACTIVE",
+      "questionText": "Are the methods described comprehensively?",
+      "scoreSheetCustomAnswer": {
+        "answerId": 200006,
+        "answerName": "Partly",
+        "answerStatus": "ACTIVE",
+        "answerText": "Partly",
+        "numericValue": 3.0
+      }
+    },
+    {
+      "answerType": "TYPE_TEXTAREA",
+      "customQuestionId": 100003,
+      "questionName": "3-References",
+      "questionStatus": "ACTIVE",
+      "questionText": "Which further references should the authors cite?",
+      "scoreSheetCustomAnswer": {
+        "answerStatus": "ACTIVE",
+        "answerText": "The calibration study the method builds on."
+      }
+    }
+  ],
+  "commentsToAuthor": "The method is sound and the data support the main claim.\n\nPlease report the calibration error for each instrument.",
+  "commentsToEditor": "A minor revision should suffice.",
+  "reviewerRatingFormName": "Reviewer Rating Form",
+  "reviewerRatingCustomQuestions": [
+    {
+      "answerType": "TYPE_RADIO",
+      "customQuestionId": 300001,
+      "questionName": "Timeliness",
+      "questionStatus": "ACTIVE",
+      "questionText": "How timely was the review?",
+      "reviewerRatingCustomAnswer": {
+        "answerId": 400004,
+        "answerName": "4 (good)",
+        "answerStatus": "ACTIVE",
+        "answerText": "4 (good)",
+        "numericValue": 4.0
+      }
+    }
+  ],
+  "reviewRScore": 4.0
+}

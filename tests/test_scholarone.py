@@ -224,8 +224,9 @@ def test_scholarone_to_stub():
         "decision": {"recommendation": "accept"},
         "metrics": [
             {
+                # The overall score the reader makes of the recommendation's code
                 "key": "overall",
-                "label": "Overall",
+                "label": "Overall Recommendation",
                 "aspect": "overall",
                 "value": 1,
                 "scale": {"type": "ordinal", "min": 1, "max": 5},
@@ -536,9 +537,16 @@ def test_scholarone_to_opinion_text_fallback():
 
 def test_scholarone_to_decision_variants():
     """Test revision requirements and unmapped recommendations in to_scholarone."""
+    # A review from ScholarOne without an overall score had no code: its recommendation came
+    # from the label, so the label is written, and reading it gives no score it did not have
     back = map_to("scholarone", _minimal_canonical(decision={"revision_requirement": "minor"}))
+    assert "overallRecommendation" not in back
+    assert back["overallRecommendationLabel"] == "Minor Revision"
+    # From elsewhere the code says it; a label is written only when no code applies
+    other = _minimal_canonical(decision={"revision_requirement": "minor"})
+    other["provenance"] = {**other["provenance"], "source_system": "openreview"}
+    back = map_to("scholarone", other)
     assert back["overallRecommendation"] == 2
-    # The code says it; a label is written only when the review gave one, or no code applies
     assert "overallRecommendationLabel" not in back
 
     back = map_to("scholarone", _minimal_canonical(decision={"recommendation": "weak_accept"}))

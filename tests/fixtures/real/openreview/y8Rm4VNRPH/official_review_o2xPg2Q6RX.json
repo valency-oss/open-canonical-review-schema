@@ -1,0 +1,68 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper introduces a novel algorithm for the efficient training of DeltaNet Linear Transformers. DeltaNet enhances contextual associative recall using a delta rule-like update but was previously limited by inefficient parallelization in its training algorithm. The work described in this paper presents a hardware-efficient algorithm that leverages the memory-efficient WY representation for computing products of Householder matrices, enabling the scaling of DeltaNet similar to other linear Transformer models. The authors trained a 1.3B parameter model on 100B tokens and found that it outperforms strong linear-time baselines such as Mamba and GLA in terms of perplexity and zero-shot performance on downstream tasks."
+    },
+    "soundness": {
+      "value": 4
+    },
+    "presentation": {
+      "value": 3
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "- The paper introduces a novel hardware-efficient algorithm for training DeltaNet Linear Transformers, leveraging the WY representation of Householder matrices, which effectively addresses the parallelization limitations of previous algorithms.\n- Through large-scale experiments, the authors demonstrate that DeltaNet significantly outperforms existing models like Mamba and GLA in terms of perplexity and zero-shot performance on downstream tasks.\n- The new algorithm enables the scaling of DeltaNet to larger datasets and parameter sizes, which is crucial for large language models."
+    },
+    "weaknesses": {
+      "value": "The algorithms presented in this paper are satisfactory in terms of efficiency and performance."
+    },
+    "questions": {
+      "value": "I have no questions for this paper."
+    },
+    "limitations": {
+      "value": "Yes"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 8
+    },
+    "confidence": {
+      "value": 3
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "o2xPg2Q6RX",
+  "forum": "y8Rm4VNRPH",
+  "replyto": "y8Rm4VNRPH",
+  "signatures": [
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_pqA2"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Conference",
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_pqA2"
+  ],
+  "number": 2,
+  "invitations": [
+    "NeurIPS.cc/2024/Conference/Submission11970/-/Official_Review",
+    "NeurIPS.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Conference",
+  "tcdate": 1720852291144,
+  "cdate": 1720852291144,
+  "tmdate": 1730879511993,
+  "mdate": 1730879511993,
+  "license": "CC BY 4.0",
+  "version": 2
+}

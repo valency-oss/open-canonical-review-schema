@@ -1,0 +1,66 @@
+{
+  "content": {
+    "summary": {
+      "value": "The paper introduces RealBench, which evaluates the generalizability of simulated-data trained ML models on real-world measurements. It is well written, and covers an obvious gap in the literature. The authors clearly put significant thought into solving this issue, and it appears that the paper is as close to reproducible as is possible. II see they even posted their code on anonymous github. I looked through their code and it has the same quality/usability as PDEBench, which has set the standard for this kind of release."
+    },
+    "soundness": {
+      "value": 4
+    },
+    "presentation": {
+      "value": 4
+    },
+    "contribution": {
+      "value": 4
+    },
+    "strengths": {
+      "value": "The paper is original, and tackles a difficult challenge of pairing real and simulated data. This a clear gap in the literature, where simulated data was the only solution before. This provides a unique insight into many of the claims made on various architectures aimed at training surrogates for PDEs. It is comprehensive, well written, and thoughtfully formulated (especially the figures). It appears to achieve the maximum possible level of reproducibility through the use of the anonymous github repo."
+    },
+    "weaknesses": {
+      "value": "The only weakness is the obvious one - out of domain regimes are not covered. However, this is probably the biggest area of weakness for this area of study as a whole. The complexity of fluid dynamics makes that a separate challenge entirely (one I dont see being solved any time soon). Surrogates typically cover some precise range of reynolds numbers around a specific geometry. It is the nature of this domain."
+    },
+    "questions": {
+      "value": "I don't have any questions."
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 10
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "MJSr1mbZan",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_1VNT"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_1VNT"
+  ],
+  "number": 2,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Official_Review",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1761905169468,
+  "cdate": 1761905169468,
+  "tmdate": 1762916169235,
+  "mdate": 1762916169235,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Official_Review",
+  "license": "CC BY 4.0",
+  "version": 2
+}

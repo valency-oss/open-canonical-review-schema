@@ -1,0 +1,512 @@
+[
+  {
+    "file": "editorialmanager/documented_api_reviewer.json",
+    "system": "editorialmanager",
+    "kind": "documented",
+    "venue": null,
+    "url": "https://www.ariessys.com/wp-content/uploads/Customer-Instructions-Web-Services-and-Notification-Services.pdf",
+    "retrieved_from": "Aries Systems' Editorial Manager Web Services instructions, getReviewerInfoFull (pp. 71-86), which show XML; the JSON shape of one result is not documented",
+    "license": "Synthetic values written for OCRS in Editorial Manager's documented structure",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "hotcrp/documented_api_review.json",
+    "system": "hotcrp",
+    "kind": "documented",
+    "venue": null,
+    "url": "https://github.com/kohler/hotcrp/blob/3a579b7479790cd523b3cb539002eb996ed1976d/devel/apidoc/reviews.md",
+    "retrieved_from": "HotCRP's API documentation (devel/apidoc/reviews.md, devel/openapi.json) and the field UIDs its tests use (test/t_reviewapi.php, test/t_reviews.php), at commit 3a579b7",
+    "license": "Synthetic values written for OCRS in HotCRP's documented structure",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/elife_100443_sa0.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://elifesciences.org/articles/100443.xml",
+    "retrieved_from": "https://elifesciences.org/articles/100443.xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/elife_100443_sa1.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://elifesciences.org/articles/100443.xml",
+    "retrieved_from": "https://elifesciences.org/articles/100443.xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/elife_100443_sa2.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://elifesciences.org/articles/100443.xml",
+    "retrieved_from": "https://elifesciences.org/articles/100443.xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/elife_100443_sa3.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://elifesciences.org/articles/100443.xml",
+    "retrieved_from": "https://elifesciences.org/articles/100443.xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/f1000_138153_report413354.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://f1000research.com/articles/12-1170/v3/xml",
+    "retrieved_from": "https://f1000research.com/articles/12-1170/v3/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/f1000_154672_report367849.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://f1000research.com/articles/13-970/v2/xml",
+    "retrieved_from": "https://f1000research.com/articles/13-970/v2/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "jats/f1000_176295_report477634.json",
+    "system": "jats",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://f1000research.com/articles/15-562/v1/xml",
+    "retrieved_from": "https://f1000research.com/articles/15-562/v1/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/elife_100443_sa0.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://doi.org/10.7554/eLife.100443.2.sa0",
+    "retrieved_from": "https://api.elifesciences.org/articles/100443",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/elife_100443_sa1.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://doi.org/10.7554/eLife.100443.2.sa1",
+    "retrieved_from": "https://api.elifesciences.org/articles/100443",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/elife_100443_sa2.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://doi.org/10.7554/eLife.100443.2.sa2",
+    "retrieved_from": "https://api.elifesciences.org/articles/100443",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/elife_110030_sa1.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "eLife",
+    "url": "https://doi.org/10.7554/eLife.110030.3.sa1",
+    "retrieved_from": "https://api.elifesciences.org/articles/110030",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/f1000_r367849.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://doi.org/10.5256/f1000research.178206.r367849",
+    "retrieved_from": "https://f1000research.com/articles/13-970/v2/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/f1000_r413354.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://doi.org/10.5256/f1000research.180054.r413354",
+    "retrieved_from": "https://f1000research.com/articles/12-1170/v3/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "journal/f1000_r477634.json",
+    "system": "journal_narrative",
+    "kind": "real",
+    "venue": "F1000Research",
+    "url": "https://doi.org/10.5256/f1000research.194339.r477634",
+    "retrieved_from": "https://f1000research.com/articles/15-562/v1/xml",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openaireview/apep-0001-pdf.json",
+    "system": "openaireview",
+    "kind": "real",
+    "venue": null,
+    "url": "https://raw.githubusercontent.com/ChicagoHAI/OpenAIReview/436a42f0a7222ae87b5008729f0cc5b521d7e160/examples/review_results/apep-0001-pdf.json",
+    "retrieved_from": "https://raw.githubusercontent.com/ChicagoHAI/OpenAIReview/436a42f0a7222ae87b5008729f0cc5b521d7e160/examples/review_results/apep-0001-pdf.json",
+    "license": "MIT (the repository); its quotes of the paper are obscured",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openaireview/smoothing-shifts-pdf.json",
+    "system": "openaireview",
+    "kind": "real",
+    "venue": null,
+    "url": "https://raw.githubusercontent.com/ChicagoHAI/OpenAIReview/436a42f0a7222ae87b5008729f0cc5b521d7e160/examples/review_results/smoothing-shifts-pdf.json",
+    "retrieved_from": "https://raw.githubusercontent.com/ChicagoHAI/OpenAIReview/436a42f0a7222ae87b5008729f0cc5b521d7e160/examples/review_results/smoothing-shifts-pdf.json",
+    "license": "MIT (the repository); its quotes of the paper are obscured",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/decision_D7B4Alrbcx.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=D7B4Alrbcx",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/meta_review_8y3LUsPgFN.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=8y3LUsPgFN",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/official_review_7qTIapO7GL.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=7qTIapO7GL",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/official_review_G8RSJfLah2.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=G8RSJfLah2",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/official_review_Gi0Y2ziQdN.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=Gi0Y2ziQdN",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/45rvZkJbuX/official_review_XHSZRUSJje.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2025 Poster",
+    "url": "https://openreview.net/forum?id=45rvZkJbuX&noteId=XHSZRUSJje",
+    "retrieved_from": "https://web.archive.org/web/20250703023727id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2025%2FConference&forum=45rvZkJbuX&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/SJTSvRtGsN/official_review_0OAL4CMJcy.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2024 Conference Withdrawn Submission",
+    "url": "https://openreview.net/forum?id=SJTSvRtGsN&noteId=0OAL4CMJcy",
+    "retrieved_from": "https://web.archive.org/web/20251014140351id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2024%2FConference&forum=SJTSvRtGsN&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/SJTSvRtGsN/official_review_W0VehSkHDz.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2024 Conference Withdrawn Submission",
+    "url": "https://openreview.net/forum?id=SJTSvRtGsN&noteId=W0VehSkHDz",
+    "retrieved_from": "https://web.archive.org/web/20251014140351id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2024%2FConference&forum=SJTSvRtGsN&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/SJTSvRtGsN/official_review_xZzCQESypD.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2024 Conference Withdrawn Submission",
+    "url": "https://openreview.net/forum?id=SJTSvRtGsN&noteId=xZzCQESypD",
+    "retrieved_from": "https://web.archive.org/web/20251014140351id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=ICLR.cc%2F2024%2FConference&forum=SJTSvRtGsN&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/Ti67584b98/decision_YmItSNepAk.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "COLM",
+    "url": "https://openreview.net/forum?id=Ti67584b98&noteId=YmItSNepAk",
+    "retrieved_from": "https://web.archive.org/web/20241206132449id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=colmweb.org%2FCOLM%2F2024%2FConference&forum=Ti67584b98&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/Ti67584b98/official_review_4hyzSpPXWL.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "COLM",
+    "url": "https://openreview.net/forum?id=Ti67584b98&noteId=4hyzSpPXWL",
+    "retrieved_from": "https://web.archive.org/web/20241206132449id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=colmweb.org%2FCOLM%2F2024%2FConference&forum=Ti67584b98&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/Ti67584b98/official_review_7vPwN4jhBp.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "COLM",
+    "url": "https://openreview.net/forum?id=Ti67584b98&noteId=7vPwN4jhBp",
+    "retrieved_from": "https://web.archive.org/web/20241206132449id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=colmweb.org%2FCOLM%2F2024%2FConference&forum=Ti67584b98&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/Ti67584b98/official_review_H0VXzifN1H.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "COLM",
+    "url": "https://openreview.net/forum?id=Ti67584b98&noteId=H0VXzifN1H",
+    "retrieved_from": "https://web.archive.org/web/20241206132449id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=colmweb.org%2FCOLM%2F2024%2FConference&forum=Ti67584b98&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/Ti67584b98/official_review_wAkraRm611.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "COLM",
+    "url": "https://openreview.net/forum?id=Ti67584b98&noteId=wAkraRm611",
+    "retrieved_from": "https://web.archive.org/web/20241206132449id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=colmweb.org%2FCOLM%2F2024%2FConference&forum=Ti67584b98&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/rNsAQisgOo/decision_8Y0iuEelW9.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "Rejected by TMLR",
+    "url": "https://openreview.net/forum?id=rNsAQisgOo&noteId=8Y0iuEelW9",
+    "retrieved_from": "https://web.archive.org/web/20250113174837id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=TMLR&forum=rNsAQisgOo&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/rNsAQisgOo/review_OXdnDIV02l.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "Rejected by TMLR",
+    "url": "https://openreview.net/forum?id=rNsAQisgOo&noteId=OXdnDIV02l",
+    "retrieved_from": "https://web.archive.org/web/20250113174837id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=TMLR&forum=rNsAQisgOo&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/rNsAQisgOo/review_iXvnhYWkLI.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "Rejected by TMLR",
+    "url": "https://openreview.net/forum?id=rNsAQisgOo&noteId=iXvnhYWkLI",
+    "retrieved_from": "https://web.archive.org/web/20250113174837id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=TMLR&forum=rNsAQisgOo&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/rNsAQisgOo/review_yD4cisomcG.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "Rejected by TMLR",
+    "url": "https://openreview.net/forum?id=rNsAQisgOo&noteId=yD4cisomcG",
+    "retrieved_from": "https://web.archive.org/web/20250113174837id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=TMLR&forum=rNsAQisgOo&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/u7m2CG84BQ/decision_uEYwZQkxHQ.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 Track Datasets and Benchmarks Spotlight",
+    "url": "https://openreview.net/forum?id=u7m2CG84BQ&noteId=uEYwZQkxHQ",
+    "retrieved_from": "https://web.archive.org/web/20250116203208id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FDatasets_and_Benchmarks_Track&forum=u7m2CG84BQ&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/u7m2CG84BQ/official_review_1Tdm2PIzC6.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 Track Datasets and Benchmarks Spotlight",
+    "url": "https://openreview.net/forum?id=u7m2CG84BQ&noteId=1Tdm2PIzC6",
+    "retrieved_from": "https://web.archive.org/web/20250116203208id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FDatasets_and_Benchmarks_Track&forum=u7m2CG84BQ&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/u7m2CG84BQ/official_review_ZfMFUByqxu.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 Track Datasets and Benchmarks Spotlight",
+    "url": "https://openreview.net/forum?id=u7m2CG84BQ&noteId=ZfMFUByqxu",
+    "retrieved_from": "https://web.archive.org/web/20250116203208id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FDatasets_and_Benchmarks_Track&forum=u7m2CG84BQ&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/u7m2CG84BQ/official_review_gNTgwR1yjh.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 Track Datasets and Benchmarks Spotlight",
+    "url": "https://openreview.net/forum?id=u7m2CG84BQ&noteId=gNTgwR1yjh",
+    "retrieved_from": "https://web.archive.org/web/20250116203208id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FDatasets_and_Benchmarks_Track&forum=u7m2CG84BQ&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/decision_7G51pxEliY.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=7G51pxEliY",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/meta_review_cqnYimoTWt.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=cqnYimoTWt",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/official_review_8245mXvN5V.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=8245mXvN5V",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/official_review_F57t6Rab9l.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=F57t6Rab9l",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/official_review_MJSr1mbZan.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=MJSr1mbZan",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y3oHMcoItR/official_review_PZwCwlLtxZ.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "ICLR 2026 Oral",
+    "url": "https://openreview.net/forum?id=y3oHMcoItR&noteId=PZwCwlLtxZ",
+    "retrieved_from": "https://web.archive.org/web/20260419040827id_/https://api2.openreview.net/notes?forum=y3oHMcoItR",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y8Rm4VNRPH/decision_8rnWnEtQSY.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 poster",
+    "url": "https://openreview.net/forum?id=y8Rm4VNRPH&noteId=8rnWnEtQSY",
+    "retrieved_from": "https://web.archive.org/web/20250116203216id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FConference&forum=y8Rm4VNRPH&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y8Rm4VNRPH/official_review_hQNYHP50sF.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 poster",
+    "url": "https://openreview.net/forum?id=y8Rm4VNRPH&noteId=hQNYHP50sF",
+    "retrieved_from": "https://web.archive.org/web/20250116203216id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FConference&forum=y8Rm4VNRPH&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y8Rm4VNRPH/official_review_jq3aXcAGvg.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 poster",
+    "url": "https://openreview.net/forum?id=y8Rm4VNRPH&noteId=jq3aXcAGvg",
+    "retrieved_from": "https://web.archive.org/web/20250116203216id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FConference&forum=y8Rm4VNRPH&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "openreview/y8Rm4VNRPH/official_review_o2xPg2Q6RX.json",
+    "system": "openreview",
+    "kind": "real",
+    "venue": "NeurIPS 2024 poster",
+    "url": "https://openreview.net/forum?id=y8Rm4VNRPH&noteId=o2xPg2Q6RX",
+    "retrieved_from": "https://web.archive.org/web/20250116203216id_/https://api2.openreview.net/notes?details=writable%2Csignatures%2Cinvitation%2Cpresentation%2Ctags&domain=NeurIPS.cc%2F2024%2FConference&forum=y8Rm4VNRPH&limit=1000&trash=true",
+    "license": "CC BY 4.0",
+    "retrieved": "2026-10-20"
+  },
+  {
+    "file": "scholarone/documented_api_reviewer.json",
+    "system": "scholarone",
+    "kind": "documented",
+    "venue": null,
+    "url": "https://developer.scholarone.com/docs/getreviewerinfofull-copy",
+    "retrieved_from": "ScholarOne Manuscripts API documentation for getReviewerInfoFull: its response field table and sample call (https://developer.scholarone.com/docs/getreviewerinfofull-sample-api-call-copy), which show XML; the JSON shape of one result is not documented",
+    "license": "Synthetic values written for OCRS in ScholarOne's documented structure",
+    "retrieved": "2026-10-20"
+  }
+]

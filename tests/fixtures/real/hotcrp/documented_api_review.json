@@ -1,0 +1,19 @@
+{
+  "object": "review",
+  "pid": 18,
+  "rid": 193,
+  "rtype": 2,
+  "round": "R1",
+  "status": "complete",
+  "version": 3,
+  "ordinal": "A",
+  "blind": true,
+  "reviewer": "Pat Example",
+  "reviewer_email": "pat@example.org",
+  "modified_at": 1735689600,
+  "OveMer": 2,
+  "RevExp": 3,
+  "PapSum": "The paper proposes a byte-stuffing scheme with a bounded worst-case overhead.",
+  "ComAut": "The overhead bound is proved, but the evaluation uses one trace only.\n\nPlease add traces from other links.",
+  "ComPC": "Borderline; I could be convinced by the other reviewers."
+}

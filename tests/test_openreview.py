@@ -718,10 +718,16 @@ def test_a_v2_note_maps_like_its_v1_equivalent():
     assert canon["opinion"]["summary"] == (
         "The paper predicts attention sparsity with a small network."
     )
+    # A list's numbers are its formatting: the points are the items, and the field's text,
+    # numbers and all, is kept as it was written
     assert [f["text"] for f in canon["findings"]["strengths"]] == [
-        "1. Novel predictor.",
-        "2. Strong results on all tasks.",
+        "Novel predictor.",
+        "Strong results on all tasks.",
     ]
+    assert {
+        "title": "strengths",
+        "content": "1. Novel predictor.\n2. Strong results on all tasks.",
+    } in (canon["narrative"]["sections"])
     assert len(canon["findings"]["weaknesses"]) == 2
     assert [f["text"] for f in canon["findings"]["questions"]] == [
         "How sensitive is it to the predictor?"

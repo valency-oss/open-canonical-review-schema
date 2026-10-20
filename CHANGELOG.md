@@ -66,6 +66,92 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
   the other way, `tests/test_roundtrip.py` lists the system's own fields that OCRS has no
   place for, such as CMT's `bestPaperNomination` or HotCRP's `rtype`, and the tests fail if a
   review loses more.
+- `map_from("jats", …)` and `map_to("jats", …)` read and write peer-review reports published
+  as JATS `<sub-article>`s, as JATS4R recommends: eLife's, F1000Research's, PeerJ's and
+  others'. A payload is the sub-article's XML with what its article says of itself (version
+  DOI, title, journal), and `ocrs.mappers.jats.sub_articles` splits an article into them. The
+  reader takes the report's type (an editor's report is a meta-review, an author comment an
+  author comment), DOI, referees (named, open; `<anonymous/>`, single blind), competing
+  interests, date, the version it reviews, its recommendation and its text, with bold and
+  italic as Markdown, quotes as `> `, and the parts under headings as narrative sections.
+  The report's title, license, assessment terms, recommendation term, the referees' roles
+  and the responses nested in it are kept in `extensions.jats` and written back. It is
+  tested on 7 real eLife and F1000Research sub-articles, which come back whole but for
+  eLife's structured affiliations, and on each written from OCRS's fields alone.
+- The same round trips run on real reviews, in `tests/fixtures/real/` and
+  `tests/test_real_reviews.py`: 32 OpenReview notes from ICLR 2024 to 2026, NeurIPS 2024 (main
+  and Datasets and Benchmarks), COLM 2024 and TMLR, with each venue's own scales; 7 eLife and
+  F1000Research reports as journal narratives; and both reviews in each of 2 OpenAIReview
+  outputs. HotCRP, ScholarOne and Editorial Manager have samples in the structure their APIs
+  document; no real HotCRP, CMT, Editorial Manager or ScholarOne export is public.
+  `scripts/fetch_real_reviews.py` fetches them again, and `sources.json` records each one's
+  URL, license and retrieval date. They found these bugs, now fixed:
+  - OpenReview: a TMLR review had no content the reader knew, and `map_from` refused it. The
+    reader now takes the names venues give its fields: TMLR's `summary_of_contributions`,
+    `strengths_and_weaknesses` and `requested_changes` (as `findings.changes`), the Datasets
+    and Benchmarks track's `summary_and_contributions`, and COLM's `reasons_to_accept`,
+    `reasons_to_reject` and `questions_to_authors`, which it dropped. Further named parts of a
+    review are kept as `narrative.sections` under their field names and written back under
+    them: the meta-review's account of the discussion (ICLR 2025's
+    `additional_comments_on_reviewer_discussion`, ICLR 2026's `reviewer_concerns` and
+    `reviewer_scores`, which have no `metareview`), `limitations`, TMLR's
+    `claims_and_evidence`, `audience` and `broader_impact_concerns`, and the Datasets and
+    Benchmarks track's questions.
+  - OpenReview: a score given as a number takes the form's label for it, as the overall score
+    and confidence did, so ICLR 2024's `"3 good"` and ICLR 2025's `3` (where 3 is "good") read
+    the same. Before, a review whose scores came with labels lost them on a round trip, since
+    the writer leaves out a label the form gives.
+  - A label that places the work against the acceptance threshold says no verdict: ICLR's 6,
+    "marginally above the acceptance threshold", was an `accept`, and is now what the score
+    says, `weak_accept`, as "below the acceptance threshold" already was.
+  - Journal narratives: the writer drops no `reviewer_id`, which lost the review's referee, and
+    the summary of a review that starts with a heading ("Summary:", as eLife's do) is the
+    paragraph under it, not the heading.
+  - OpenAIReview: a paper.json holds one review for each model it ran. The reader took the
+    first model's, whatever `model_id` said, so a review said it was Gemini's and held
+    Claude's comments. It now reads the method run with `model_id` (named by the method's key
+    or its `model`), raises when `model_id` names none of several, and the writer writes back
+    to that method.
+  - HotCRP: the reader takes the review object HotCRP's API returns: the review's ID as `rid`,
+    which it read as a score (193 on a 1–5 scale), its time as `modified_at`, the reviewer's
+    name and `reviewer_email`, and the default form's fields under their UIDs (`OveMer`,
+    `RevExp`, `PapSum`, `ComAut`, `ComPC`), whose text it dropped.
+  - ScholarOne and Editorial Manager: the readers took only the comments and IDs of the record
+    each system's web service (`getReviewerInfoFull`) returns. They now take the rest of what
+    OCRS has a place for: the recommendation's text (`reviewerRecommendation`), the reviewer
+    (`reviewerPersonId`, `reviewerFullName`, `reviewerORCIDId`, ScholarOne's
+    `reviewerResearcherId` and Editorial Manager's `scopusId`, and the first of their
+    `departments` as the affiliation), when the score sheet was completed, Editorial
+    Manager's `revision` as the round, and the score sheet: an answer with a number is a score,
+    with its text as the label, and an answer in words a narrative section, written back as a
+    score-sheet question. A review's ID is the revision's document ID and the reviewer's, so
+    two reviewers of one revision are two reviews. The services document their responses in
+    XML only, so the samples are one result each and the JSON shape is unverified. Neither
+    reader takes the reviewer rating form, the editor's rating of the reviewer, as part of the
+    review.
+  - OpenReview: a text field was read a point per line, so a heading ("Major concerns:") was a
+    weakness of its own and a reference after a list ("[1] Blundell, Charles, et al.") a
+    requested change. Strengths, weaknesses, questions and requested changes written as text
+    are now read as a saved forum page's are: a list's items are its points, and a heading is
+    the `group` of the points under it, a Minor or Typos heading making them minor. The
+    field's text is kept as written, as a narrative section under its field name, and the
+    writer gives it back unless the findings no longer match it, when it writes them as a
+    list. A list's numbers are not part of its points' text.
+  - OpenReview: an ethics flag was a score ("no concerns" was 1.0) or lost (ICLR's list of
+    choices). ICLR's and NeurIPS's `flag_for_ethics_review`, the Datasets and Benchmarks
+    track's numbered choice and COLM's `ethics_flag` (by the form's labels) now say
+    `ethics_and_risk.ethical_concerns`, with ICLR's kinds of concern as `concern_categories`,
+    and `details_of_ethics_concerns` is its `notes`. The flag is kept in
+    `extensions.openreview.ethics_flags` and written back as the form gave it while the
+    review still says what it said; otherwise the review's concerns are written as ICLR's
+    choices. A number the form does not label says neither, and stays a score.
+  - OpenReview: the note's last change (`tmdate`, else `mdate`) is `updated_at`, written back
+    as `mdate`. Every real note was changed after it was written.
+  - ScholarOne's writer wrote a recommendation code for a review read from ScholarOne whose
+    recommendation came as text, and the reader then took the code for an overall score the
+    review did not have; it now writes the text. It writes a `documentId` that is a number as
+    a number. Editorial Manager's writer, and ScholarOne's, write the reviewer's affiliation,
+    which their readers took and the writers dropped.
 
 ## 0.7.1
 

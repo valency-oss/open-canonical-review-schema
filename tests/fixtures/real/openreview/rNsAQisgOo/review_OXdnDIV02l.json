@@ -1,0 +1,48 @@
+{
+  "content": {
+    "summary_of_contributions": {
+      "value": "This paper employed mean-filed variational inference as the posterior approximation technique for Bayesian convolutional generative adversarial neural network (Bayesian DCGAN) to improve the diversity of generated samples, addressing the mode collapse issue in DCGAN. A numerical comparison between the proposed methods and conventional point-estimate (non-Bayesian) training of DCGAN is conducted on the MNIST dataset, demonstrating an improved generated sample diversity based on the eigenvalues of the sample covariance matrix."
+    },
+    "strengths_and_weaknesses": {
+      "value": "**Strengths**\n\n1. The paper is overall well-written.\n2. The evaluation metric of sample diversity based on eigenvalues is somewhat new.\n\n**Weaknesses**\n1. The idea of leveraging Bayesian deep learning to improve sample diversity of generative models is extensively explored since Saatci & Wilson (2017). In their section 4.2, the DCGAN variant of their Bayesian GAN is even called Bayesian DCGAN, identical to the method proposed in this paper. Thus the reviewer finds the first contribution of this paper over-claiming. \n2. The only difference the reviewer finds between this paper and Saatci & Wilson (2017) is the way to estimate the posterior distribution, where Saatci & Wilson (2017) applied stochastic gradient Hamiltonian Monte Carlo (HMC) while this paper applies mean field variance inference. However, the motivation for this replacement has not been introduced, e.g., why this change is necessary/beneficial.\n3. The numerical experiment is simple. While there are extensive existing methods that also address the mode collapse problem, e.g., Unrolled Generative Adversarial Networks (Metz et. al., 2017) and its many citations, the paper only compares with the vanilla DCGAN, not to mention the lack of comparison with the Bayesian DCGAN in (Saatci & Wilson 2017) and the simplicity and limited variety of the dataset.\n\n----\n\nReferences:\n\nSaatci, Yunus, and Andrew G. Wilson. \"Bayesian gan.\" Advances in neural information processing systems 30. 2017.\n\nMetz, Luke, et al. \"Unrolled Generative Adversarial Networks.\" International Conference on Learning Representations. 2017."
+    },
+    "requested_changes": {
+      "value": "1. Explicitly demonstrate the algorithmic difference between the proposed method and the Bayesian DCGAN in Saatci & Wilson (2017).\n2. Compare the proposed method with the Bayesian DCGAN in Saatci & Wilson (2017) and explain why the modification(s) in 1., e.g., HMC to mean field variational inference is necessary or beneficial.\n3. In this context, state more accurately the contributions of this paper compared to existing methods for improving sample diversity and Bayesian GAN.\n4. Include other methods that either address the mode collapse problem or adopt the Bayesian framework to GAN, and conduct experiments on more challenging datasets, in terms of both sample diversity and model performance.\n5. Explain why the proposed method is limited to DCGAN, or discuss whether it can be extended to general GAN."
+    },
+    "broader_impact_concerns": {
+      "value": "No ethical implications of the work are of concern."
+    },
+    "claims_and_evidence": {
+      "value": "No"
+    },
+    "audience": {
+      "value": "Yes"
+    }
+  },
+  "id": "OXdnDIV02l",
+  "forum": "rNsAQisgOo",
+  "replyto": "rNsAQisgOo",
+  "signatures": [
+    "TMLR/Paper3005/Reviewer_sn9W"
+  ],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "TMLR",
+    "TMLR/Paper3005/Action_Editors",
+    "TMLR/Paper3005/Reviewer_sn9W"
+  ],
+  "number": 1,
+  "invitations": [
+    "TMLR/Paper3005/-/Review",
+    "TMLR/Paper3005/-/Review_Release"
+  ],
+  "domain": "TMLR",
+  "tcdate": 1728503414361,
+  "cdate": 1728503414361,
+  "tmdate": 1728765559310,
+  "mdate": 1728765559310,
+  "license": "CC BY 4.0",
+  "version": 2
+}

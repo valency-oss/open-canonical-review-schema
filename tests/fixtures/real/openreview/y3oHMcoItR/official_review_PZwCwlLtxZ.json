@@ -1,0 +1,66 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper introduces a new dataset featuring paired simulation and experimental data for a variety of systems. The authors then benchmark a variety of state-of-the-art models on this data exploring the impact of simulated data on learning the real-world dynamics."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 4
+    },
+    "contribution": {
+      "value": 4
+    },
+    "strengths": {
+      "value": "This type of dataset is so valuable to the community that I would strongly recommend acceptance even if the paper itself had major issues. Almost all work in this space today uses simulation data exclusively which is a space where learned models can at best offer speed improvements. This work and future datasets like it can offer a chance to explore in which regimes we may be able to achieve improved accuracy over numerical simulation and could great inform research directions over time.\n\nThat said, the paper itself is quite strong. Some particular reasons:\n1. The presentation is excellent. It explains the problem very cleanly and describes prior work and the intended goal of this dataset.\n2. The appendix is quite extensive providing data on the models and data generation process. In general, the division between main text and appendix content feels very well planned. \n3. Experimental fluids data is extremely rare and valuable to the community for developing models that can operate independently of the standard numerical solver framework."
+    },
+    "weaknesses": {
+      "value": "The benchmarking has a few issues, but I'm largely reading this as a dataset paper, so I'm not marking down for them. However, in the interest of improving the paper, I will still list them out here.\n\nMajor:\n1. The major missing component of this submission is an evaluation of how accurately the numerical simulation models the real scenario. If this is possible from the data, providing this information would drastically increase the potential impact of the paper. \n2. The model comparisons aren't very convincing due to the vastly different scales between them. It would improve the submission as a benchmarking effort to apply some form of normalization - FLOPs, parameter count, run time on fixed hardware - but I'm largely treating this as a dataset paper so not marking off for this. \n3. Similarly, one-step prediction is a useful reference for how well the models do what they're trained for, but longer rollout evaluations are more reflective of real tasks. I'd add more details on longer autoregressive rollouts if possible. \n4. Frequency domain error (in space) is generally going to be more informative when normalized. In 4.5 the text notes that a decrease of error in the high frequency is remarkable, but it's actually very much expected when comparing absolute metrics. Most fluid systems follow a polynomial decay law in spatial frequency, so the values being compared should be much smaller. It is actually concerning (for the baselines, not this submission) that this seems to be rare.\n\nMinor notes\n1. 3.1 prediction task - this is all discretized data, so it feels inaccurate to describe the task as a mapping between the continuous spaces. \n2. (paragraph beginning at 155) It would make sense to also include a canonical validation/test set of simulated data to evaluate the level of overfitting to simulation data and the overall sim2real gap. \n3. Table 4 is pretty hard to read. I don't know that this is the best way to demonstrate this data."
+    },
+    "questions": {
+      "value": "1. Often one of the cited limitations of numerical simulation is the difficulty of simulating regimes (Reynolds/schmidt/ect) that occur commonly in real world settings. For CFD, the datasets currently contain mostly DNS data. Have you considered further comparisons between experimental data in regimes where DNS struggles and the more approximate simulations used to model them?\n2. Do any of the models evaluated compare favorably to the numerical simulation for predicting the state of fields? Is the pairing sufficiently close that this is a question it is possible to ask with this data?"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 10
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "PZwCwlLtxZ",
+  "forum": "y3oHMcoItR",
+  "replyto": "y3oHMcoItR",
+  "signatures": [
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_YXXo"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2026/Conference",
+    "ICLR.cc/2026/Conference/Submission2270/Reviewer_YXXo"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2026/Conference/Submission2270/-/Official_Review",
+    "ICLR.cc/2026/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2026/Conference",
+  "tcdate": 1761761156400,
+  "cdate": 1761761156400,
+  "tmdate": 1762916169546,
+  "mdate": 1762916169546,
+  "parentInvitations": "ICLR.cc/2026/Conference/-/Official_Review",
+  "license": "CC BY 4.0",
+  "version": 2
+}

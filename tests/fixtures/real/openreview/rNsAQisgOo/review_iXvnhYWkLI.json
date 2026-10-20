@@ -1,0 +1,48 @@
+{
+  "content": {
+    "summary_of_contributions": {
+      "value": "The paper presents a Bayesian DCGAN framework aimed at addressing mode collapse by introducing a probability distribution over network weights, using the Bayes by Backprop method. The main claim is that Bayesian DCGAN produces higher sample diversity than standard DCGAN."
+    },
+    "strengths_and_weaknesses": {
+      "value": "**Strengths**\n- The topic of mode collapse in GANs is relevant.\n\n**Weaknesses**\nWhile the topic of mode collapse in GANs is relevant, several issues arise in the execution, novelty, and experimental validation of the claims.  The paper lacks rigorous experimental validation to substantiate its claims. It also claims questionable novelty. Significant revisions are required to clarify the contribution, correct the mathematical notations, and provide a more comprehensive experimental analysis. Currently the manuscript is very far from publication standards. Details are listed below. \n\n1. **Insufficient Experimental Validation:**\n    - The claim that the Bayesian DCGAN produces more sample diversity is unconvincing. The current metric of sample diversity, based on the covariance matrix of generated samples, could be skewed by noise, rather than reflecting genuine diversity.\n    - Standard diversity metrics such as FID should be used to provide a rigorous and widely accepted measure of sample diversity.\n    - The study relies solely on MNIST, which is too simple a dataset to robustly test the effectiveness of the method. Additional experiments on more complex datasets like CIFAR-10 or Celeb-A are necessary with standard metrics like FID.\n2. **Questionable Claims of Novelty:**\n    - The application of Bayesian neural networks (BNNs) to GANs is not novel. Prior work such as BayesGAN (Saatchi et al., NeurIPS 2017) has already applied Bayesian methods to GAN architectures. In principle that’s of course okay. But the paper does not clearly articulate how its approach offers advantages over previous work, especially in comparison to MCMC-based methods.\n3. **Convergence and Model Performance:**\n    - While the authors claim that the Bayesian DCGAN reduces generator loss fluctuations, there is no quantitative analysis. From the provided loss function plots I can barely discern the claim. A quantitative analysis is needed to support such a claim.\n    - There is no comparison between Bayesian DCGAN and conventional DCGANs in  section  performance section 4.5 (Impact on model performance). A comparison of models trained on GAN produced datasets would be natural especially given the claim of superior sample diversity. The fact that augmenting the 10% of MNIST with Bayesian DCGAN samples produces 3 % accuracy increase is not surprising. This would also happen with a DCGAN and I suspect it would not be much less of an accuracy gain given that it was not reported.\n4. **Redundancy and Writing:**\n    - The paper contains several instances of redundancy, particularly when explaining the Bayesian framework and the concept of weight distributions.\n    - There are minor issues with the writing, such as phrases like \"it is worth mentioning,\" which detract from the overall clarity and flow of the paper. Everything on a paper is worth mentioning. The writing would benefit from refinement.\n5. **Misinterpretation of Concepts:**\n    - Equation 11 is wrong. The law of large numbers does not imply that the expectation equals the sample average, but rather that the sample average converges to the expectation in the limit.\n    - Some mathematical notations, such as in Equation 12, are incorrect and need to be revised for clarity."
+    },
+    "requested_changes": {
+      "value": "- Clarify the novelty of the Bayesian approach over prior work and whether the proposed mean-field variational inference offers tangible benefits.\n- Expand experiments to include additional datasets and use standard diversity metrics like FID to substantiate claims regarding sample diversity.\n- Provide a quantitative comparison between Bayesian and conventional DCGANs, particularly focusing on performance and sample diversity.\n- Revise the writing to remove redundancy and ensure technical accuracy."
+    },
+    "broader_impact_concerns": {
+      "value": "I have no concerns here."
+    },
+    "claims_and_evidence": {
+      "value": "No"
+    },
+    "audience": {
+      "value": "Yes"
+    }
+  },
+  "id": "iXvnhYWkLI",
+  "forum": "rNsAQisgOo",
+  "replyto": "rNsAQisgOo",
+  "signatures": [
+    "TMLR/Paper3005/Reviewer_ragc"
+  ],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "TMLR",
+    "TMLR/Paper3005/Action_Editors",
+    "TMLR/Paper3005/Reviewer_ragc"
+  ],
+  "number": 2,
+  "invitations": [
+    "TMLR/Paper3005/-/Review",
+    "TMLR/Paper3005/-/Review_Release"
+  ],
+  "domain": "TMLR",
+  "tcdate": 1728639498184,
+  "cdate": 1728639498184,
+  "tmdate": 1728765559314,
+  "mdate": 1728765559314,
+  "license": "CC BY 4.0",
+  "version": 2
+}

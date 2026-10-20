@@ -1,0 +1,75 @@
+{
+  "content": {
+    "title": {
+      "value": "Official Review"
+    },
+    "summary_and_contributions": {
+      "value": "This paper introduces the BABILong benchmark to evaluate model's long context ability, designed to test language models’ ability to reason across facts distributed in extremely long documents. A diverse set of reasoning tasks are involved. Experiments have found that popular LLMs effectively use only 10-20% of the context, with performance declining sharply as length and task complexity increase. RAG methods achieve a modest 60% accuracy in answering single-fact questions, regardless of context length. Among other methods, Mamba and Recurrent Memory Transformers (RMT) show the highest performance, with RMT capable of processing lengths up to 11 million tokens."
+    },
+    "review": {
+      "value": "This paper introduces a very important synthetic benchmark to evaluate long context reasoning ability. Unlike needle-in-the-hack which presents an over-simplified evaluation for model's long context ability, BABILong introduces 20 different reasoning tasks and requires the model to pick up information hidden in the long context to infer the final result. Though a synthetic benchmark, this benchmark attempts to simulate the actual long context usage in real life, thus presenting a more natural and realistic evaluation benchmark. In addition, a diverse range of models are evaluated, and interesting observations can be drawn, leading to useful suggestions for the next generation of long context LLMs."
+    },
+    "strengths": {
+      "value": "1. important benchmark incorporating reasoning in long context ability\n2. a diverse range of reasoning tasks are incorporated\n3. extensive experiments and interesting results"
+    },
+    "rating": {
+      "value": 9
+    },
+    "opportunities_for_improvement": {
+      "value": "good now."
+    },
+    "confidence": {
+      "value": 4
+    },
+    "limitations": {
+      "value": "Yes"
+    },
+    "correctness": {
+      "value": "Yes"
+    },
+    "clarity": {
+      "value": "Yes"
+    },
+    "relation_to_prior_work": {
+      "value": "Yes"
+    },
+    "documentation": {
+      "value": "Yes"
+    },
+    "ethics": {
+      "value": "No"
+    },
+    "flag_for_ethics_review": {
+      "value": "2: No, there are no or only very minor ethics concerns"
+    },
+    "additional_feedback": {
+      "value": "N/A"
+    }
+  },
+  "id": "ZfMFUByqxu",
+  "forum": "u7m2CG84BQ",
+  "replyto": "u7m2CG84BQ",
+  "signatures": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_Fwae"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_Fwae"
+  ],
+  "number": 3,
+  "invitations": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/-/Official_Review",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+  "tcdate": 1722116188480,
+  "cdate": 1722116188480,
+  "tmdate": 1731500828499,
+  "mdate": 1731500828499,
+  "license": "CC BY 4.0",
+  "version": 2
+}

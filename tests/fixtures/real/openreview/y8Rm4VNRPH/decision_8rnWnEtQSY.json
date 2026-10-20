@@ -1,0 +1,39 @@
+{
+  "content": {
+    "title": {
+      "value": "Paper Decision"
+    },
+    "decision": {
+      "value": "Accept (poster)"
+    },
+    "comment": {
+      "value": "It is well-known that standard softmax dense attention has quadratic complexity with respect to sequence length.  In recent years, there has been a great deal of interest in linear transformers, which have O(N) complexity, a fixed-size memory, and a theoretically unlimited context.  In practice, of course, it is not possible to fit an unlimited context into a fixed-size memory, so the \"delta rule\" introduces a mechanism that allows linear transformers to forget.\n\nUnfortunately, the delta rule is not necessarily easy to implement efficiently in practice.  This paper develops an efficient parallel implementation of the delta rule, using the WY representation for computing products of Householder matrices.  The authors validate the effectiveness of the implementation with a variety of experiments, and also introduced new and compelling results on the MAD benchmark during the discussion period.\n\nThe reviewers were unanimous in recommending acceptance, and I concur.\n\nDespite the overall high scores, my personal opinion is that the space of \"alternatives to softmax attention\" is at this point very crowded.  IMO, the primary reason for considering alternatives is to enable long-context.  However, the \"forget\" mechanism is not necessarily well-suited to long-context, and as the authors explain in the discussion, the models they are using (1-3B params) are too small for good long-context experiments.  As a result, although I believe this paper is a solid contribution, I don't recommend it for a spotlight or oral."
+    }
+  },
+  "id": "8rnWnEtQSY",
+  "forum": "y8Rm4VNRPH",
+  "replyto": "y8Rm4VNRPH",
+  "signatures": [
+    "NeurIPS.cc/2024/Conference/Program_Chairs"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Conference",
+    "NeurIPS.cc/2024/Conference/Program_Chairs"
+  ],
+  "number": 1,
+  "invitations": [
+    "NeurIPS.cc/2024/Conference/Submission11970/-/Decision",
+    "NeurIPS.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Conference",
+  "tcdate": 1727277425591,
+  "cdate": 1727277425591,
+  "tmdate": 1730885942779,
+  "mdate": 1730885942779,
+  "license": "CC BY 4.0",
+  "version": 2
+}

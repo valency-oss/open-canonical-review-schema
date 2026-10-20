@@ -1,0 +1,51 @@
+{
+  "content": {
+    "summary": {
+      "value": "Contribution:\n* 448 multiple choice questions in biology, physics, chemistry, written by experts\n* PhD’s in the corresponding domain only get 65% of the questions right, 34% for skilled non experts with Google access\n* Gpt-4 achieves 39% accuracy, Claude 3 Opua 60%\n* GPQA may enable “scalable oversight” because of its high difficulty\n\nGPQA seems to be a very useful benchmark that will benefit the community."
+    },
+    "reasons_to_accept": {
+      "value": "Looking at the examples in Table 1, the examples in this task seem to be of great quality and incredibly difficult for non experts. I'm very impressed with the quality of the data and I'm surprised that the non expert human performance is so low.\n\nThe incentive structure for the data creators is very interesting. It's very useful to know exactly how much the workers were paid and how their compensation was tied to performance."
+    },
+    "reasons_to_reject": {
+      "value": "The fact that the questions in GPQA are multiple choice could be a big limitation of this dataset, mainly because it might make it non realistic. By this I mean that real world researchers will likely never face tricky multiple choice questions in their work. Writing useful questions is much more likely to be a useful research task.\n\nThere is additionally a real risk that expert question writers found ways to game the rules of the data collection to maximize their pay, making the dataset even less realistic.\n\nThis leads me to wonder if the reason that in domain PhDs can't solve this task with a high degree of accuracy may actually mean that the questions are needlessly obscure rather than difficult in a useful way."
+    },
+    "questions_to_authors": {
+      "value": "What accuracy would in domain PhDs have if they had 30 minutes and access to the internet?\n\nIt would be interesting to see some ablations for the data collection choices. For example, how much do performance based financial incentives improve data quality?\n\nIt would be really interesting to measure how useful LLMs can be to experts or non experts that are trying to solve difficult questions like the ones in GPQA. Can the LLM output accurate and comprehensive rationales that are useful to a human's understanding?"
+    },
+    "rating": {
+      "value": 9
+    },
+    "confidence": {
+      "value": 4
+    },
+    "ethics_flag": {
+      "value": 1
+    }
+  },
+  "id": "7vPwN4jhBp",
+  "forum": "Ti67584b98",
+  "replyto": "Ti67584b98",
+  "signatures": [
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_1Knd"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "colmweb.org/COLM/2024/Conference",
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_1Knd"
+  ],
+  "number": 4,
+  "invitations": [
+    "colmweb.org/COLM/2024/Conference/Submission498/-/Official_Review",
+    "colmweb.org/COLM/2024/Conference/-/Edit"
+  ],
+  "domain": "colmweb.org/COLM/2024/Conference",
+  "tcdate": 1715479779860,
+  "cdate": 1715479779860,
+  "tmdate": 1724633690859,
+  "mdate": 1724633690859,
+  "license": "CC BY 4.0",
+  "version": 2
+}

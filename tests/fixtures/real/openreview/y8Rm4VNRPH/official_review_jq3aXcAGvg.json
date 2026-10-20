@@ -1,0 +1,68 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper proposes the Delta Rule method to construct the state updates for Linear Attention. Furthermore, the paper introduces a chunk-wise training approach, allowing the computational cost of training to grow subquadratically with the text length. Experimentally, the paper validates the effectiveness of the model architecture using three synthetic benchmarks: MQAR, MAD, and RegBench. Additionally, the paper uses Common Sense Reasoning and Retrieval tasks in LLM pre-training to verify the model's performance in real-world tasks. The model has been validated at scales ranging from 340M to 1.3B parameters. Furthermore, this paper explores the possibility of combining the Delta Rule with Sliding Window Attention and Global Attention, demonstrating the positive impact of the hybrid architecture on model performance."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 3
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "1. Solid work. The paper provides a good derivation, offering a more general method for state updates in Linear Models.\n2. The experiments are comprehensive and effectively demonstrate the validity of the model architecture."
+    },
+    "weaknesses": {
+      "value": "1. Have you conducted experiments on long context? For example, measuring extrapolation and scenarios akin to \"looking for a needle in a haystack\"? As a linear model, I would like you to further discuss its capability to generalize to long context.\n2. The algorithmic speed of Delta Net increases linearly, but it seems to be slower than GLA. Can you analyze the factors contributing to this?\n3. Could you further explain the insights of the Delta Net updates? I understand there are algorithmic differences compared to GLA operators, but what unique benefits do they bring? Is there any theoretical analysis?"
+    },
+    "questions": {
+      "value": "I would like to discuss the following questions with you:\n\nDo you think linear models can fundamentally bridge the gap with transformers in memory-based tasks?\n\nIs there an inherent conflict between the ability to handle long context and the performance of memory-based tasks?"
+    },
+    "limitations": {
+      "value": "N/A"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 7
+    },
+    "confidence": {
+      "value": 4
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "jq3aXcAGvg",
+  "forum": "y8Rm4VNRPH",
+  "replyto": "y8Rm4VNRPH",
+  "signatures": [
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_dem4"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Conference",
+    "NeurIPS.cc/2024/Conference/Submission11970/Reviewer_dem4"
+  ],
+  "number": 1,
+  "invitations": [
+    "NeurIPS.cc/2024/Conference/Submission11970/-/Official_Review",
+    "NeurIPS.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Conference",
+  "tcdate": 1720701136064,
+  "cdate": 1720701136064,
+  "tmdate": 1730879512128,
+  "mdate": 1730879512128,
+  "license": "CC BY 4.0",
+  "version": 2
+}

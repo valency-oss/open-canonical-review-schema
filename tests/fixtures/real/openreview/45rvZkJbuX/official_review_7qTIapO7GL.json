@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "Brief Summary: The paper proposes an interesting observation that the safety mechanism of LLMs in filtering out inappropriate content while answering questions is lost when transferring to VLMs naively. As a result, the VLM might answer about things given the image context even though the corresponding LLM wouldn't have. \n\nThe authors identify that specific hidden layers in Transformers are responsible for this behavior and propose a method called TGA to transfer this mechanism from LLMs to VLMs. \n\nExperiments on multiple benchmarks (like POPE, MMVet) show that the proposed method maintains performance while filtering our inappropriate content."
+    },
+    "soundness": {
+      "value": 3
+    },
+    "presentation": {
+      "value": 3
+    },
+    "contribution": {
+      "value": 3
+    },
+    "strengths": {
+      "value": "Pros:\n\n1. The paper tackles an interesting problem which (to best of my knowledge) isn't very well known in the community. As such, it highlights a potential gap and suggests how to fix new VLMs. \n\n2. The motivation is a bit subtle and it is important to note is mostly relevant for open-source models. In a closed sourced model, one could simply have a nsfw classifier on the image-input. However, for open-source model, such an additional component can be easily turned off. As such, a method to have open-source models which are safe is very important. In that sense, the problem is very well motivated.\n\n3. As part of the experiments, the authors collect new dataset which is always appreciated. The authors further provide qualitative visualizations in appendix.\n\n4. The idea of aligning the hidden states is quite clever in my opinion. \n\n5. The authors compare against multiple baseilnes."
+    },
+    "weaknesses": {
+      "value": "Cons:\n\n1. One thing that isn't clear to me is if it is possible to reverse the trained safety filter by doing an instruction tuning on a sample of toxic dataset by an end user. In that case, it would be easy to \"jailbreak\" the safe model with relative ease. \n\n2. The authors should include a baseline which works as a direct filter on the image itself to get an upper bound estimate."
+    },
+    "questions": {
+      "value": "Q1. Confused about the number of toxic image-text pairs, in L134 it notes 2031 but in L454, it notes 20531."
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": 8
+    },
+    "confidence": {
+      "value": 3
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "7qTIapO7GL",
+  "forum": "45rvZkJbuX",
+  "replyto": "45rvZkJbuX",
+  "signatures": [
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_CMBn"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2025/Conference",
+    "ICLR.cc/2025/Conference/Submission4056/Reviewer_CMBn"
+  ],
+  "number": 2,
+  "invitations": [
+    "ICLR.cc/2025/Conference/Submission4056/-/Official_Review",
+    "ICLR.cc/2025/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2025/Conference",
+  "tcdate": 1730698392017,
+  "cdate": 1730698392017,
+  "tmdate": 1731428024261,
+  "mdate": 1731428024261,
+  "license": "CC BY 4.0",
+  "version": 2
+}

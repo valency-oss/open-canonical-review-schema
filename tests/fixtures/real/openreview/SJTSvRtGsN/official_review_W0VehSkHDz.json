@@ -1,0 +1,65 @@
+{
+  "content": {
+    "summary": {
+      "value": "In this paper, the authors propose an approach for tabular data representation using LLMs. They propose: (1) embedding feature-label relations for different datasets as a decision tree in addition to the text prompt, (2) training tree-based models in the loop with prompts.\nAuthors find that the use of these prompts improves performance on several standard UCI ML datasets."
+    },
+    "soundness": {
+      "value": "3 good"
+    },
+    "presentation": {
+      "value": "4 excellent"
+    },
+    "contribution": {
+      "value": "3 good"
+    },
+    "strengths": {
+      "value": "1) Paper is clear and well-written and motivation/reasoning to propose the method is clear.\n2) The greedy-tree training with LLMs is an interesting approach, and is generally a creative way to add domain knowledge in some manner to LLM prompting in an efficient manner\n3) Results are interesting, and the authors perform a number of ablation studies including the use of federated learning and different tree structures"
+    },
+    "weaknesses": {
+      "value": "1) It is not clear why a tree specifically was chosen as the interpretable model. E.g., why not a linear classifier with regularization?\n2) The interpretability analysis while interesting is based on a small number of examples, and thus may not be generalizable findings\n3) The authors have proposed a method in some sense to incorporate domain knowledge (if the tree is appropriately trained) into the LLM's prompt: a more detailed literature review of prior work in this space would add to the paper"
+    },
+    "questions": {
+      "value": "1) Can authors clarify why a tree specifically was chosen as the interpretable model. E.g., why not a linear classifier with regularization?\n2) Can authors expand on the interpretability analysis? E.g. note the average depth/max number of leaf nodes in each case"
+    },
+    "flag_for_ethics_review": {
+      "value": [
+        "No ethics review needed."
+      ]
+    },
+    "rating": {
+      "value": "6: marginally above the acceptance threshold"
+    },
+    "confidence": {
+      "value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."
+    },
+    "code_of_conduct": {
+      "value": "Yes"
+    }
+  },
+  "id": "W0VehSkHDz",
+  "forum": "SJTSvRtGsN",
+  "replyto": "SJTSvRtGsN",
+  "signatures": [
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_iRXR"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2024/Conference",
+    "ICLR.cc/2024/Conference/Submission770/Reviewer_iRXR"
+  ],
+  "number": 3,
+  "invitations": [
+    "ICLR.cc/2024/Conference/Submission770/-/Official_Review",
+    "ICLR.cc/2024/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2024/Conference",
+  "tcdate": 1698857610984,
+  "cdate": 1698857610984,
+  "tmdate": 1699636004381,
+  "mdate": 1699636004381,
+  "license": "CC BY 4.0",
+  "version": 2
+}

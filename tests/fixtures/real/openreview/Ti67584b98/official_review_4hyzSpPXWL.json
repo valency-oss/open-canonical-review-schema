@@ -1,0 +1,48 @@
+{
+  "content": {
+    "summary": {
+      "value": "This paper presents GPQA, a highly challenging evaluation dataset of 448 multiple-choice questions in the fields of biology, physics, and chemistry.\nThe questions are designed to be \"Google-proof\", i.e., with 34% accuracy by highly skilled non-experts spending over 30 minutes on average with unrestricted access to the web.\nThe dataset aims to aid the development of scalable oversight methods for supervising AI systems that surpass human capabilities.\nThe proposed dataset construction pipeline involving experts and non-experts ensures the difficulty and objectivity of the questions in GPQA.\nA high-quality subset of the dataset ,GPQA Diamond, is also proposed, where both experts answer correctly and majority of non-experts answer incorrectly.\nThe difficulty and objectivity have also been validated by humans in the follow-up analysis.\nThe accuracies of several LLMs with self-consistency are also reported."
+    },
+    "reasons_to_accept": {
+      "value": "* The proposed evaluation dataset contains difficult and objective questions. The dataset construction process and follow-up analysis ensure the quality of the dataset.\n* The experiments show that the dataset is difficult for even strong LLMs such as GPT-4. The evaluation results of humans and LLMs should inspire future work on \"scalable oversight\"."
+    },
+    "reasons_to_reject": {
+      "value": "* The size of the dataset, 448, is relatively small. Such small evaluation datasets may not be adequate to ensure the statistical significance of model performance.\n* The focus of the dataset is limited to biology, physics, and chemistry, which is narrower compared to broad domains in practical applications of LLMs.\n* This paper seems to lack reference and comparison to existing evaluation datasets, which makes the contribution of this paper unclear."
+    },
+    "rating": {
+      "value": 8
+    },
+    "confidence": {
+      "value": 4
+    },
+    "ethics_flag": {
+      "value": 1
+    }
+  },
+  "id": "4hyzSpPXWL",
+  "forum": "Ti67584b98",
+  "replyto": "Ti67584b98",
+  "signatures": [
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_TwFw"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "colmweb.org/COLM/2024/Conference",
+    "colmweb.org/COLM/2024/Conference/Submission498/Reviewer_TwFw"
+  ],
+  "number": 2,
+  "invitations": [
+    "colmweb.org/COLM/2024/Conference/Submission498/-/Official_Review",
+    "colmweb.org/COLM/2024/Conference/-/Edit"
+  ],
+  "domain": "colmweb.org/COLM/2024/Conference",
+  "tcdate": 1715405218735,
+  "cdate": 1715405218735,
+  "tmdate": 1724633691080,
+  "mdate": 1724633691080,
+  "license": "CC BY 4.0",
+  "version": 2
+}

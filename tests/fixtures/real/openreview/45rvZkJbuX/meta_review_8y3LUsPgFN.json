@@ -1,0 +1,37 @@
+{
+  "content": {
+    "metareview": {
+      "value": "The paper explores to transferring the safety mechanism in existing LLM to vision without additional visual safety fine-tuning. The authors first find that the existing vision-language alignment struggles to work at the hidden states level, which results in misleading the safety mechanism in LLM. They proposed the Text-Guided vision-language Alignment method (TGA) for VLMs, which retrieves the texts related to input vision and uses them to guide the projection of vision into the hidden states space in LLMs. Experiments show that the TGA approach not only successfully transfers the safety mechanism in LLM to vision, but also maintains the general performance on several vision tasks.\n\nThe reviewers raised weaknesses about insufficient experiments and analysis. \nThe rebuttal from the authors well addressed the concerns. \nThe reviewers keep the initial positive scores after rebuttal.\n\nOverall, the paper has a clear motivation, and presents an effective method, advancing the techniques in building safe LVM.\nI recommend to accept."
+    },
+    "additional_comments_on_reviewer_discussion": {
+      "value": "The reviewers initially gave ratings of (6, 6, 8, 6) and maintained the scores after the rebuttal.\n\nThe reviewers raised weaknesses below: \n1) insufficient experiments on caption quality, unsafe compositional inputs, robustness against red-teaming methods, impact of instruction tuning on toxic data,  generalization on varied aligned models such as PEFT for pretrained LLM.\n2) insufficient analysis and details on extra cost, comparisons with other defense models, upper bound estimate via a direct filter on the image itself.\n\nThe authors provide additional experiments and report the numbers of different ablations, showing the effectiveness of the proposed TGA approach in broader settings."
+    }
+  },
+  "id": "8y3LUsPgFN",
+  "forum": "45rvZkJbuX",
+  "replyto": "45rvZkJbuX",
+  "signatures": [
+    "ICLR.cc/2025/Conference/Submission4056/Area_Chair_YarE"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "ICLR.cc/2025/Conference",
+    "ICLR.cc/2025/Conference/Submission4056/Senior_Area_Chairs",
+    "ICLR.cc/2025/Conference/Submission4056/Area_Chair_YarE"
+  ],
+  "number": 1,
+  "invitations": [
+    "ICLR.cc/2025/Conference/Submission4056/-/Meta_Review",
+    "ICLR.cc/2025/Conference/-/Edit"
+  ],
+  "domain": "ICLR.cc/2025/Conference",
+  "tcdate": 1734750218883,
+  "cdate": 1734750218883,
+  "tmdate": 1738732615613,
+  "mdate": 1738732615613,
+  "license": "CC BY 4.0",
+  "version": 2
+}

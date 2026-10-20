@@ -1,0 +1,75 @@
+{
+  "content": {
+    "title": {
+      "value": "BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack"
+    },
+    "summary_and_contributions": {
+      "value": "The paper \"BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack\" introduces the BABILong benchmark, designed to evaluate the ability of large language models (LLMs) to reason across facts distributed in extremely long documents. The benchmark includes a diverse set of 20 reasoning tasks and evaluates various models' performance on these tasks, highlighting significant challenges and limitations in current LLM capabilities."
+    },
+    "review": {
+      "value": "The paper \"BABILong: Testing the Limits of LLMs with Long Context Reasoning-in-a-Haystack\" introduces the BABILong benchmark, aimed at evaluating large language models' (LLMs) ability to reason across facts distributed in very long documents. This benchmark includes 20 diverse reasoning tasks such as fact chaining, induction, deduction, counting, and handling lists/sets. The paper highlights that popular LLMs effectively utilize only 10-20% of the context and struggle significantly with increased reasoning complexity. Despite its innovative design and comprehensive evaluation of over 20 recent LLMs, the paper has some limitations. These include a lack of comparison with other benchmarks like LongBench or RULER, inefficiencies in context utilization, and significant performance degradation as task complexity increases. Retrieval-Augmented Generation (RAG) methods show modest performance, and recurrent memory transformers (RMT) face computational and memory constraints, though they handle sequences up to 11 million tokens. To enhance the benchmark, the paper could benefit from comparisons with other benchmarks, improved context utilization methods, mitigation of performance degradation, enhanced RAG methods, optimized RMT computational requirements, and expanded task diversity. Addressing these areas would make BABILong a more valuable tool for evaluating and advancing LLM capabilities in long-context reasoning tasks."
+    },
+    "strengths": {
+      "value": "1. BABILong is designed to test the ability of LLMs to handle extremely long contexts, which is crucial as model context sizes continue to increase. The benchmark includes a diverse set of 20 tasks, such as fact chaining, simple induction, deduction, counting, and handling lists/sets, making it comprehensive and challenging.\n\n2. The paper evaluates over 20 recent long-input language models with various sizes and architectures on the BABILong benchmark.\nIt demonstrates that popular LLMs effectively utilize only 10-20% of the context, with performance declining sharply as reasoning complexity increases.\n\n3. The evaluation reveals that current models, including state-of-the-art ones, struggle significantly with long context reasoning, especially when the facts required for reasoning are distributed across a long document. The paper provides insights into the performance of Retrieval-Augmented Generation (RAG) methods and recurrent memory transformers, showcasing their capabilities and limitations.\n\n4. BABILong is scalable and can be extended to any length, supporting the evaluation of new, more powerful models with increased capabilities. The benchmark's design allows for the construction of tasks of almost arbitrary length, making it adaptable to future advancements in LLMs.\n\n5. The BABILong benchmark data and code for evaluation are publicly available, promoting transparency and facilitating further research and development."
+    },
+    "rating": {
+      "value": 8
+    },
+    "opportunities_for_improvement": {
+      "value": "1. The paper does not provide a comprehensive comparison with other benchmarks specifically designed for long context reasoning, such as LongBench or RULER. This limits the understanding of how BABILong performs relative to existing benchmarks.\n\n2. Popular LLMs are shown to utilize only a small fraction of the available context (10-20%), indicating inefficiencies in processing and leveraging long contexts. Do you have any observation why is this happening?\n\n3. RAG methods achieve only modest accuracy (60%) on single-fact question answering, regardless of context length, and perform poorly on more complex tasks requiring multiple supporting facts. Did you experiment with Graph RAG?\nRecurrent Memory Transformer Constraints:\n\n4. While recurrent memory transformers (RMT) show promise in handling very long sequences (up to 11 million tokens), they are constrained by computational and memory limitations, affecting their practicality for widespread use. Do you have any observation on which architecture future LLM community should focus more?\n\n5. Although the benchmark includes 20 tasks, the focus remains on relatively simplistic reasoning tasks. Expanding the diversity and complexity of tasks could provide a more comprehensive evaluation of model capabilities."
+    },
+    "confidence": {
+      "value": 4
+    },
+    "limitations": {
+      "value": "1. Include a comprehensive comparison with other benchmarks designed for long-context reasoning to better position BABILong within the landscape of existing evaluation frameworks.\n\n2. Develop methods to improve the efficiency of context utilization by LLMs, ensuring that models can leverage the full extent of the provided context.\n\n3. Investigate and develop strategies to mitigate performance degradation as reasoning complexity increases, possibly through advanced training techniques or architectural innovations.\n\n4, Enhance RAG methods to better handle tasks requiring multiple supporting facts and improve their overall accuracy and robustness across different context lengths.\n\n5.Expand the diversity and complexity of tasks included in the BABILong benchmark to provide a more comprehensive evaluation of LLM capabilities, including more real-world scenarios and complex reasoning tasks."
+    },
+    "correctness": {
+      "value": "Yes"
+    },
+    "clarity": {
+      "value": "Everything is clear"
+    },
+    "relation_to_prior_work": {
+      "value": "Yes it is. However additional comparison should be added regarding other benchmarks"
+    },
+    "documentation": {
+      "value": "NA"
+    },
+    "ethics": {
+      "value": "No ethical issues."
+    },
+    "flag_for_ethics_review": {
+      "value": "2: No, there are no or only very minor ethics concerns"
+    },
+    "additional_feedback": {
+      "value": "No additional feedback"
+    }
+  },
+  "id": "gNTgwR1yjh",
+  "forum": "u7m2CG84BQ",
+  "replyto": "u7m2CG84BQ",
+  "signatures": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_rWqi"
+  ],
+  "nonreaders": [],
+  "readers": [
+    "everyone"
+  ],
+  "writers": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/Reviewer_rWqi"
+  ],
+  "number": 1,
+  "invitations": [
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/Submission2465/-/Official_Review",
+    "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track/-/Edit"
+  ],
+  "domain": "NeurIPS.cc/2024/Datasets_and_Benchmarks_Track",
+  "tcdate": 1721889761587,
+  "cdate": 1721889761587,
+  "tmdate": 1731500828804,
+  "mdate": 1731500828804,
+  "license": "CC BY 4.0",
+  "version": 2
+}
