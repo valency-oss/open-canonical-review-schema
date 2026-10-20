@@ -593,3 +593,11 @@ def test_every_part_that_is_the_review_goes_in_the_comments():
         {"role": "review", "audience": "public", "content": "Second report."},
     ]
     assert to_cmt(canon)["commentsToAuthors"] == "First report.\n\nSecond report."
+
+
+def test_blank_comments_to_the_authors_give_way_to_the_review_text():
+    canon = from_cmt(
+        {"reviewId": "r1", "paperId": 1, "commentsToAuthors": "  ", "reviewText": "Sound."}
+    )
+    assert narrative_text(canon, "review") == "Sound."
+    assert canon["opinion"]["summary"] == "Sound."

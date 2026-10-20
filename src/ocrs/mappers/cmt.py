@@ -161,7 +161,15 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
     if isinstance(summary, str) and summary.strip():
         narrative.append(section(summary.strip(), title="summary", role="summary"))
         out["opinion"]["summary"] = summary.strip()
-    review_field = "commentsToAuthors" if payload.get("commentsToAuthors") else "reviewText"
+    # The first of the fields with text, not the first filled with blanks
+    review_field = next(
+        (
+            f
+            for f in ("commentsToAuthors", "reviewText")
+            if isinstance(payload.get(f), str) and payload[f].strip()
+        ),
+        "reviewText",
+    )
     review_text = payload.get(review_field)
     if isinstance(review_text, str) and review_text.strip():
         narrative.append(
