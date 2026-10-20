@@ -290,7 +290,7 @@
           "type": "string"
         },
         "source_label": {
-          "description": "The recommendation in the source's own words, verbatim (e.g., 'Accept (Oral)', F1000's 'Approved with Reservations'). `recommendation` and `revision_requirement` are OCRS's reading of it",
+          "description": "The recommendation in the source's own words, verbatim, when the source gives it in words (e.g., 'Accept (Oral)', F1000's 'Approved with Reservations'). A recommendation given as a score keeps its label on that score's metric instead. `recommendation` and `revision_requirement` are OCRS's reading of it",
           "type": "string",
           "minLength": 1
         }
