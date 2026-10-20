@@ -657,7 +657,8 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
             # The fields the reader takes the recommendation and the expertise from are theirs
             if field not in _DECISION_FIELDS:
                 out.setdefault(field, score_with_label(m, ". "))
-    if rec and rec_label and "overall_merit" not in out:
+    # A recommendation OCRS cannot name goes too, in its words, which the reader keeps
+    if rec_label and "overall_merit" not in out:
         out["overall_merit"] = rec_label
 
     # Add round if present

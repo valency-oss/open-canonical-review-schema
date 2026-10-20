@@ -586,6 +586,11 @@ def to_scholarone(canonical: dict[str, Any]) -> dict[str, Any]:
             out["overallRecommendationLabel"] = label
         elif "overallRecommendation" not in out:
             out["overallRecommendationLabel"] = recommendation_label(canonical)
+        elif (words := recommendation_label(canonical)) != recommendation_label(
+            canonical, own=False
+        ):
+            # Beside the code, the source's own words for its recommendation ("Accept (Oral)")
+            out["overallRecommendationLabel"] = words
     elif label := recommendation_label(canonical):
         # A recommendation OCRS cannot name, in the source's words, as the reader takes it
         out["overallRecommendationLabel"] = label

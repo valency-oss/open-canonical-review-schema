@@ -623,3 +623,40 @@ def test_a_score_carries_a_recommendation_its_number_would_not_read_as(source):
     }
     again = map_from(source, map_to(source, review))
     assert again["decision"]["recommendation"] == "borderline"
+
+
+@pytest.mark.parametrize(
+    "target", ["openreview", "cmt", "hotcrp", "editorialmanager", "scholarone"]
+)
+def test_a_recommendation_ocrs_cannot_name_keeps_its_words_in_every_form(target):
+    """A JATS term OCRS cannot name is written in its words. Readers that take such words as
+    borderline add that, and keep the words."""
+    review = map_from(
+        "jats",
+        {
+            "sub_article": (
+                '<sub-article id="r1"><front-stub><custom-meta-group><custom-meta><meta-name>'
+                "recommendation</meta-name><meta-value>approve-in-part</meta-value></custom-meta>"
+                "</custom-meta-group></front-stub><body><p>Fine.</p></body></sub-article>"
+            )
+        },
+    )
+    assert review["decision"] == {"source_label": "approve-in-part"}
+    again = map_from(target, map_to(target, review))
+    assert again["decision"]["source_label"] == "approve-in-part"
+    assert again["decision"].get("recommendation") in (None, "borderline")
+
+
+def test_scholarone_writes_the_words_beside_the_code_it_makes():
+    note = {"id": "r1", "forum": "f1", "content": {"summary": "S.", "decision": "Accept (Oral)"}}
+    review = map_from("openreview", note)
+    written = map_to("scholarone", review)
+    assert (written["overallRecommendation"], written["overallRecommendationLabel"]) == (
+        1,
+        "Accept (Oral)",
+    )
+    again = map_from("scholarone", written)
+    assert again["decision"] == {"recommendation": "accept"}
+    assert [m.get("justification") for m in again["metrics"] if m["key"] == "overall"] == [
+        "Accept (Oral)"
+    ]

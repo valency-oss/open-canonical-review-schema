@@ -386,6 +386,7 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
             # The fields the reader takes the recommendation and the confidence from are theirs
             if field not in _DECISION_FIELDS:
                 out.setdefault(field, score_with_label(m))
-    if rec and "overallEvaluation" not in out:
-        out["recommendation"] = recommendation_label(canonical)
+    # A recommendation OCRS cannot name goes too, in its words, which the reader keeps
+    if "overallEvaluation" not in out and (label := recommendation_label(canonical)):
+        out["recommendation"] = label
     return out

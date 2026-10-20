@@ -120,8 +120,12 @@ reviews one edit away from them) migrates to a valid 0.8 review.
     and its license was later changed. The report's body is every part that is the review,
     then the questions for the authors and the other parts they may read. Without a part
     that is the review, it is the other parts, with or without a title.
-  - **Editorial Manager and ScholarOne:** a recommendation OCRS cannot name ("Needs
-    discussion") is kept as `decision.source_label` alone, and written back in its words.
+  - **A recommendation OCRS cannot name** ("Needs discussion", JATS's `approve-in-part`)
+    is kept as `decision.source_label` alone, and every writer writes it in its words.
+    Editorial Manager and ScholarOne read it back as it was; OpenReview, CMT and HotCRP
+    read it as `borderline`, as they read any such words, and keep them.
+  - **ScholarOne:** beside a recommendation code it writes for a review from elsewhere, it
+    writes the source's words for the recommendation (`Accept (Oral)`) as the label.
   - **HotCRP:** reviewer expertise, which was a `confidence` metric, is an `expertise`
     metric and the referee's expertise. A form's separate confidence is still a
     `confidence` metric, and it sets `decision.credence`.
