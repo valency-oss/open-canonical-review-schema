@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.7.2
+
+The schema says the same thing in fewer words. Every review valid under 0.7.1 is valid under
+0.7.2, every invalid one is still invalid, and no value changes meaning.
+
+### Schema
+
+- Shapes the schema spelled out several times are defined once, in `$defs`, and referred to
+  where they are used. The file is 2,849 lines, from 3,268.
+  - `nonBlank` and `hasTitleOrText` say when text counts as review content. The
+    `reviewContent` rule repeated them in each of its branches.
+  - `workIdentifiers.content_hash` refers to `contentHash`, which it copied.
+  - `probability` and `credence`, which findings, claim assessments and metric uncertainty
+    share, and `expertise`, which `review_context` and `human_referee` share.
+  - `aiReferee`'s two forms no longer repeat its properties: full provenance has `system` and
+    `execution` and no `reference`, and a reference is `reference` alone.
+- A program that takes the `reviewContent` rule out of the schema, to check it alone, must
+  bring the schema's `$defs` with it, since the rule now refers to them.
+
+### Python package
+
+- `ocrs.schema.has_content` checks the content rule together with the schema's `$defs`.
+- A test checks that the published 0.7.1 and 0.7.2 schemas accept and reject the same
+  reviews: the examples, the README and CONTRIBUTING blocks, each mapper's output for its
+  fixtures, and every review one edit away from small reviews that use the restated parts,
+  about 4,500 in all.
+
 ## 0.7.1
 
 The addition is optional, so every 0.7.0 review is valid under 0.7.1.

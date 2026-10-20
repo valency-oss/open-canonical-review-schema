@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.1/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -16,7 +16,7 @@
   ],
   "properties": {
     "$schema": {
-      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.1/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
+      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
       "type": "string",
       "format": "uri"
     },
@@ -221,30 +221,7 @@
           "type": "number",
           "minimum": 0
         },
-        "expertise": {
-          "description": "The reviewer's expertise in the work's subject",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "self_reported_level": {
-              "description": "How familiar the reviewer says they are with the subject",
-              "type": "string",
-              "enum": [
-                "expert",
-                "knowledgeable",
-                "somewhat_familiar",
-                "not_familiar"
-              ]
-            },
-            "domain_tags": {
-              "description": "Subject areas the reviewer is expert in",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        }
+        "expertise": {"$ref": "#/$defs/expertise"}
       }
     },
     "metric_catalog_ref": {
@@ -516,289 +493,41 @@
       "description": "A review says something about the work. It has at least one of: an opinion summary, text, stance, reason or contribution; a finding; a recommendation, revision requirement or decision rationale; a metric, claim assessment, artifact assessment or check; an ethical concern, its notes, categories or mitigations; narrative text; or a written report. Text counts only when it has a character other than whitespace",
       "anyOf": [
         {
-          "required": [
-            "opinion"
-          ],
+          "required": ["opinion"],
           "properties": {
             "opinion": {
               "anyOf": [
-                {
-                  "required": [
-                    "summary"
-                  ],
-                  "properties": {
-                    "summary": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "text"
-                  ],
-                  "properties": {
-                    "text": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "stance"
-                  ]
-                },
-                {
-                  "required": [
-                    "high_level_reasons"
-                  ],
-                  "properties": {
-                    "high_level_reasons": {
-                      "contains": {
-                        "pattern": "\\S"
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "contributions"
-                  ],
-                  "properties": {
-                    "contributions": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
+                {"required": ["summary"], "properties": {"summary": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["stance"]},
+                {"required": ["high_level_reasons"], "properties": {"high_level_reasons": {"contains": {"$ref": "#/$defs/nonBlank"}}}},
+                {"required": ["contributions"], "properties": {"contributions": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
               ]
             }
           }
         },
         {
-          "required": [
-            "findings"
-          ],
+          "required": ["findings"],
           "properties": {
             "findings": {
               "anyOf": [
-                {
-                  "required": [
-                    "strengths"
-                  ],
-                  "properties": {
-                    "strengths": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "weaknesses"
-                  ],
-                  "properties": {
-                    "weaknesses": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "questions"
-                  ],
-                  "properties": {
-                    "questions": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "comments"
-                  ],
-                  "properties": {
-                    "comments": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "changes"
-                  ],
-                  "properties": {
-                    "changes": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
+                {"required": ["strengths"], "properties": {"strengths": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["weaknesses"], "properties": {"weaknesses": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["questions"], "properties": {"questions": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["comments"], "properties": {"comments": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["changes"], "properties": {"changes": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
               ]
             }
           }
         },
         {
-          "required": [
-            "decision"
-          ],
+          "required": ["decision"],
           "properties": {
             "decision": {
               "anyOf": [
-                {
-                  "required": [
-                    "recommendation"
-                  ]
-                },
-                {
-                  "required": [
-                    "revision_requirement"
-                  ]
-                },
-                {
-                  "required": [
-                    "summary_rationale"
-                  ],
-                  "properties": {
-                    "summary_rationale": {
-                      "pattern": "\\S"
-                    }
-                  }
-                }
+                {"required": ["recommendation"]},
+                {"required": ["revision_requirement"]},
+                {"required": ["summary_rationale"], "properties": {"summary_rationale": {"$ref": "#/$defs/nonBlank"}}}
               ]
             }
           }
@@ -808,149 +537,28 @@
         {"required": ["artifact_assessments"], "properties": {"artifact_assessments": {"minItems": 1}}},
         {"required": ["checks"], "properties": {"checks": {"minItems": 1}}},
         {
-          "required": [
-            "ethics_and_risk"
-          ],
+          "required": ["ethics_and_risk"],
           "properties": {
             "ethics_and_risk": {
               "anyOf": [
-                {
-                  "required": [
-                    "ethical_concerns"
-                  ],
-                  "properties": {
-                    "ethical_concerns": {
-                      "const": true
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "notes"
-                  ],
-                  "properties": {
-                    "notes": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "concern_categories"
-                  ],
-                  "properties": {
-                    "concern_categories": {
-                      "minItems": 1
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "required_mitigations"
-                  ],
-                  "properties": {
-                    "required_mitigations": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "title"
-                            ],
-                            "properties": {
-                              "title": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          },
-                          {
-                            "required": [
-                              "text"
-                            ],
-                            "properties": {
-                              "text": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
+                {"required": ["ethical_concerns"], "properties": {"ethical_concerns": {"const": true}}},
+                {"required": ["notes"], "properties": {"notes": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["concern_categories"], "properties": {"concern_categories": {"minItems": 1}}},
+                {"required": ["required_mitigations"], "properties": {"required_mitigations": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
               ]
             }
           }
         },
         {
-          "required": [
-            "narrative"
-          ],
+          "required": ["narrative"],
           "properties": {
             "narrative": {
               "anyOf": [
-                {
-                  "required": [
-                    "summary"
-                  ],
-                  "properties": {
-                    "summary": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "detailed_review"
-                  ],
-                  "properties": {
-                    "detailed_review": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "author_questions"
-                  ],
-                  "properties": {
-                    "author_questions": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "confidential_to_editors"
-                  ],
-                  "properties": {
-                    "confidential_to_editors": {
-                      "pattern": "\\S"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "sections"
-                  ],
-                  "properties": {
-                    "sections": {
-                      "contains": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "content"
-                            ],
-                            "properties": {
-                              "content": {
-                                "pattern": "\\S"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
+                {"required": ["summary"], "properties": {"summary": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["detailed_review"], "properties": {"detailed_review": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["author_questions"], "properties": {"author_questions": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["confidential_to_editors"], "properties": {"confidential_to_editors": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["sections"], "properties": {"sections": {"contains": {"required": ["content"], "properties": {"content": {"$ref": "#/$defs/nonBlank"}}}}}}
               ]
             }
           }
@@ -960,6 +568,17 @@
     }
   ],
   "$defs": {
+    "nonBlank": {
+      "description": "Text that has a character other than whitespace. The review content rule counts only such text",
+      "pattern": "\\S"
+    },
+    "hasTitleOrText": {
+      "description": "A point, contribution or action item whose title or text is not blank. The review content rule counts only such items",
+      "anyOf": [
+        {"required": ["title"], "properties": {"title": {"$ref": "#/$defs/nonBlank"}}},
+        {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}}
+      ]
+    },
     "identifierWithLink": {
       "type": "object",
       "additionalProperties": false,
@@ -1306,22 +925,8 @@
           "description": "System-specific internal identifier"
         },
         "content_hash": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Content-addressed identifier for integrity verification",
-          "required": ["algorithm", "value"],
-          "properties": {
-            "algorithm": {
-              "description": "Hash algorithm",
-              "type": "string",
-              "enum": ["sha256", "sha512"]
-            },
-            "value": {
-              "description": "Hex-encoded hash of the work's file",
-              "type": "string",
-              "minLength": 1
-            }
-          }
+          "$ref": "#/$defs/contentHash",
+          "description": "Hash of the work's file: a content-addressed identifier, for checking that a file is the work reviewed"
         }
       }
     },
@@ -1565,30 +1170,7 @@
           "type": "string",
           "description": "Institutional affiliation"
         },
-        "expertise": {
-          "description": "The reviewer's expertise in the work's subject",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "self_reported_level": {
-              "description": "How familiar the reviewer says they are with the subject",
-              "type": "string",
-              "enum": [
-                "expert",
-                "knowledgeable",
-                "somewhat_familiar",
-                "not_familiar"
-              ]
-            },
-            "domain_tags": {
-              "description": "Subject areas the reviewer is expert in",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        },
+        "expertise": {"$ref": "#/$defs/expertise"},
         "affiliation_redacted": {
           "description": "Whether the affiliation was removed to keep the reviewer anonymous",
           "type": "boolean"
@@ -1596,6 +1178,30 @@
         "notes": {
           "description": "Anything else about the reviewer",
           "type": "string"
+        }
+      }
+    },
+    "expertise": {
+      "description": "The reviewer's expertise in the work's subject",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "self_reported_level": {
+          "description": "How familiar the reviewer says they are with the subject",
+          "type": "string",
+          "enum": [
+            "expert",
+            "knowledgeable",
+            "somewhat_familiar",
+            "not_familiar"
+          ]
+        },
+        "domain_tags": {
+          "description": "Subject areas the reviewer is expert in",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -1742,35 +1348,14 @@
       },
       "oneOf": [
         {
-          "additionalProperties": false,
+          "description": "Full provenance: the system and the run, optionally with inputs, outputs and safety, and no reference",
           "required": ["system", "execution"],
-          "properties": {
-            "system": {
-              "$ref": "#/$defs/aiSystemProvenance"
-            },
-            "execution": {
-              "$ref": "#/$defs/aiExecutionProvenance"
-            },
-            "inputs": {
-              "$ref": "#/$defs/aiInputsProvenance"
-            },
-            "outputs": {
-              "$ref": "#/$defs/aiOutputsProvenance"
-            },
-            "safety": {
-              "$ref": "#/$defs/aiSafetyProvenance"
-            }
-          }
+          "not": {"required": ["reference"]}
         },
         {
-          "additionalProperties": false,
+          "description": "A lightweight reference alone",
           "required": ["reference"],
-          "properties": {
-            "reference": {
-              "$ref": "#/$defs/aiRefereeReference",
-              "description": "Lightweight reference to a third-party AI system"
-            }
-          }
+          "maxProperties": 1
         }
       ]
     },
@@ -2370,10 +1955,8 @@
           "additionalProperties": false,
           "properties": {
             "credence": {
-              "description": "Overall confidence in the score given from 0 to 1, with 0 being not at all confident, and 1 being certain",
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1
+              "$ref": "#/$defs/credence",
+              "description": "Overall confidence in the score given from 0 to 1, with 0 being not at all confident, and 1 being certain"
             },
             "interval": {
               "description": "Range the score could fall in",
@@ -2521,6 +2104,18 @@
         }
       ]
     },
+    "probability": {
+      "description": "How likely the reviewer thinks a statement holds, from 0 (certainly not) to 1 (certainly)",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "credence": {
+      "description": "How confident the reviewer is in their probability, from 0 (a guess) to 1 (certain of it). Credence is about the estimate, not the statement: a reviewer can think something very likely (probability 0.9) and hold that view loosely (credence 0.3). Optional, but we strongly encourage it alongside probability, which it needs: it helps readers tell a firm judgement from a tentative one",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
     "finding": {
       "description": "One point the reviewer makes",
       "type": "object",
@@ -2575,17 +2170,10 @@
           }
         },
         "probability": {
-          "description": "How likely the reviewer thinks the point holds (for a weakness, that the problem is real), from 0 (certainly not) to 1 (certainly). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
+          "$ref": "#/$defs/probability",
+          "description": "How likely the reviewer thinks the point holds (for a weakness, that the problem is real), from 0 (certainly not) to 1 (certainly). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
         },
-        "credence": {
-          "description": "How confident the reviewer is in their probability, from 0 (a guess) to 1 (certain of it). Credence is about the estimate, not the statement: a reviewer can think something very likely (probability 0.9) and hold that view loosely (credence 0.3). Optional, but we strongly encourage it alongside probability, which it needs: it helps readers tell a firm judgement from a tentative one",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
+        "credence": {"$ref": "#/$defs/credence"},
         "group": {
           "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
           "type": "array",
@@ -3084,17 +2672,10 @@
           }
         },
         "probability": {
-          "description": "How likely the reviewer thinks the claim is true, from 0 (certainly false) to 1 (certainly true). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
+          "$ref": "#/$defs/probability",
+          "description": "How likely the reviewer thinks the claim is true, from 0 (certainly false) to 1 (certainly true). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
         },
-        "credence": {
-          "description": "How confident the reviewer is in their probability, from 0 (a guess) to 1 (certain of it). Credence is about the estimate, not the statement: a reviewer can think something very likely (probability 0.9) and hold that view loosely (credence 0.3). Optional, but we strongly encourage it alongside probability, which it needs: it helps readers tell a firm judgement from a tentative one",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        }
+        "credence": {"$ref": "#/$defs/credence"}
       },
       "dependentRequired": {
         "credence": [

@@ -1,0 +1,2849 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
+  "title": "Open Canonical Review Schema",
+  "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "review_id",
+    "version",
+    "created_at",
+    "provenance",
+    "target",
+    "opinion"
+  ],
+  "properties": {
+    "$schema": {
+      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
+      "type": "string",
+      "format": "uri"
+    },
+    "review_id": {
+      "description": "Identifier of this review, unique within the system that produced the OCRS record",
+      "type": "string"
+    },
+    "version": {
+      "description": "Version of this review record (e.g., '1.0.0')",
+      "type": "string"
+    },
+    "created_at": {
+      "description": "When the review was written; for AI reviews, when the run ended",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "description": "When the review was last changed",
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenance": {
+      "description": "Where this record came from: the source system, its own identifiers, and how it was mapped to OCRS",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_system"
+      ],
+      "properties": {
+        "source_system": {
+          "description": "The system the review was taken from (e.g., 'hotcrp', 'scholarone', 'openreview', 'openaireview', 'deepreview')",
+          "type": "string"
+        },
+        "source_review_id": {
+          "description": "The review's identifier in the source system",
+          "type": "string"
+        },
+        "source_url": {
+          "description": "Link to the review in the source system",
+          "type": "string"
+        },
+        "review_doi": {
+          "description": "DOI registered for the review itself (e.g., a Crossref peer review DOI), without a resolver prefix. Not the DOI of the work under review, which goes in target.identifiers.doi",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^10\\.\\d{4,9}/[^\\s]+$"
+        },
+        "imported_at": {
+          "description": "When the review was mapped to OCRS",
+          "type": "string",
+          "format": "date-time"
+        },
+        "raw_payload": {
+          "description": "The source system's review exactly as received, kept when the mapper is asked to keep it",
+          "type": "object"
+        },
+        "mapping": {
+          "description": "How the source review was converted to OCRS",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mapping_spec_id": {
+              "description": "Identifier of the mapping specification the mapper follows (e.g., 'canonical-review.mapping.v1')",
+              "type": "string"
+            },
+            "mapping_spec_version": {
+              "description": "Version of that mapping specification",
+              "type": "string"
+            },
+            "mapper_version": {
+              "description": "Version of the mapper code that produced this record",
+              "type": "string"
+            },
+            "lossiness_notes": {
+              "description": "What the mapping lost or changed: source fields with no OCRS field, values coerced to allowed values",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "referee": {
+      "$ref": "#/$defs/referee"
+    },
+    "referees": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Array of referees for panel reviews or collaborative reviews. Use this instead of 'referee' when multiple reviewers are involved.",
+      "items": {
+        "$ref": "#/$defs/referee"
+      }
+    },
+    "target": {
+      "description": "The work under review: the exact version the reviewer read. Other versions and forms of it go in relations",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "work_id",
+        "work_type"
+      ],
+      "properties": {
+        "work_id": {
+          "type": "string",
+          "description": "The work's primary identifier, as '<type>:<value>', where <type> is its key in identifiers (e.g., 'doi:10.7554/eLife.112155.1'). An internal ID also names its field: 'internal_id:<field_name>:<value>' (e.g., 'internal_id:openreview_forum:2dnO3LLiJ1'). It is the identifier that comes first in the resolution priority of identifiers, or 'unknown' if the source names none",
+          "pattern": "^(unknown|(doi|arxiv_id|s2cid|pubmed_id|pmcid|openalex_id|valency_id|handle|ark|isbn|ecli|accession|purl|permalink|uuid):\\S.*|internal_id:[^:\\s]+:\\S.*)$"
+        },
+        "title": {
+          "description": "Title of the work, as the review gives it",
+          "type": "string",
+          "minLength": 1
+        },
+        "identifiers": {
+          "$ref": "#/$defs/workIdentifiers",
+          "description": "Structured identifiers of the reviewed version, with validation and resolution metadata"
+        },
+        "work_type": {
+          "description": "Kind of work under review",
+          "type": "string",
+          "enum": [
+            "article",
+            "proceedings_article",
+            "preprint",
+            "dataset",
+            "software",
+            "registered_report",
+            "proposal",
+            "other"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the paper/work being reviewed (e.g., v1, v2)"
+        },
+        "relations": {
+          "description": "Other versions and forms of the reviewed work, each with how it relates to the reviewed version (e.g., the reviewed version is_new_version_of an earlier one, or is_version_of a preprint)",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workRelation"
+          }
+        },
+        "venue": {
+          "description": "Journal, conference or platform the work was submitted to",
+          "type": "string"
+        },
+        "track": {
+          "description": "Track, section or category within the venue (e.g., 'main', 'datasets and benchmarks')",
+          "type": "string"
+        },
+        "revision_of": {
+          "description": "Deprecated: use relations with type 'is_new_version_of'. Identifier of the earlier version this work revises",
+          "type": "string",
+          "deprecated": true
+        },
+        "language": {
+          "description": "Language of the work (e.g., 'en')",
+          "type": "string"
+        }
+      }
+    },
+    "review_context": {
+      "description": "The circumstances of the review: its kind, stage, round, who asked for it and the reviewer's expertise",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "review_type": {
+          "description": "Kind of review: feedback the authors asked for before submission, a referee's first review, review of a revision, response to a rebuttal, meta-review or editor's report, shepherding, review of a replication, a citation review (one of only the work's references, such as whether each exists and says what it is cited for), an author's comment or response, a community comment, an aggregate of several reviews, or an editor's or recommender's recommendation. Whether it came before or after publication goes in stage",
+          "type": "string",
+          "enum": [
+            "pre_submission",
+            "initial",
+            "revision",
+            "rebuttal_response",
+            "meta_review",
+            "shepherding",
+            "replication",
+            "citation_review",
+            "author_comment",
+            "community_comment",
+            "aggregate",
+            "recommendation"
+          ]
+        },
+        "stage": {
+          "description": "Whether the review was written before the work was published (pre_publication) or after (post_publication)",
+          "type": "string",
+          "enum": [
+            "pre_publication",
+            "post_publication"
+          ]
+        },
+        "round": {
+          "description": "Review round, starting at 1",
+          "type": "integer",
+          "minimum": 1
+        },
+        "requested_by": {
+          "description": "Who asked for the review: an editor, a program committee chair, or a person or service requesting an AI review",
+          "type": "string"
+        },
+        "time_spent_hours": {
+          "description": "Hours the reviewer spent on the review",
+          "type": "number",
+          "minimum": 0
+        },
+        "expertise": {"$ref": "#/$defs/expertise"}
+      }
+    },
+    "metric_catalog_ref": {
+      "description": "Identifier of the metric catalog that defines the metric keys used here (e.g., 'metric-catalog.core.v1')",
+      "type": "string"
+    },
+    "metrics": {
+      "description": "Scores the reviewer gave, each on its own scale (e.g., soundness 3 of 4, overall 6 of 10)",
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/metricAssessment"
+      }
+    },
+    "decision": {
+      "description": "The reviewer's recommendation to the editor or committee",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recommendation": {
+          "description": "Recommended acceptance outcome, independent of any required revision",
+          "type": "string",
+          "enum": [
+            "strong_accept",
+            "accept",
+            "weak_accept",
+            "borderline",
+            "weak_reject",
+            "reject",
+            "strong_reject"
+          ]
+        },
+        "revision_requirement": {
+          "description": "Revision required independently of the acceptance recommendation: none, minor, major, or unspecified when revision is requested without its extent. Omit when unknown or not provided",
+          "type": "string",
+          "enum": ["none", "minor", "major", "unspecified"]
+        },
+        "confidence": {
+          "description": "How sure the reviewer is of the recommendation, from 0 (not at all) to 1 (certain)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "summary_rationale": {
+          "description": "Why the reviewer recommends this, in brief",
+          "type": "string"
+        }
+      }
+    },
+    "opinion": {
+      "$ref": "#/$defs/opinion"
+    },
+    "findings": {
+      "description": "The review's specific points, grouped by kind",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strengths": {
+          "description": "What the work does well",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "weaknesses": {
+          "description": "Problems in the work: errors, gaps, unsupported claims",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "questions": {
+          "description": "Questions for the authors",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "comments": {
+          "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "changes": {
+          "description": "Changes the reviewer asks for, each with a priority that says how serious the problem is",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actionItem"
+          }
+        }
+      }
+    },
+    "claim_assessments": {
+      "description": "The work's claims, one by one, each with whether the evidence supports it",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claimAssessment"
+      }
+    },
+    "artifact_assessments": {
+      "description": "Assessments of the work's code, data, models and other materials",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifactAssessment"
+      }
+    },
+    "ethics_and_risk": {
+      "description": "Ethical concerns the reviewer raises",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ethical_concerns": {
+          "description": "Whether the reviewer has any ethical concern",
+          "type": "boolean"
+        },
+        "concern_categories": {
+          "description": "Kinds of ethical concern raised",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "human_subjects",
+              "privacy",
+              "bias_fairness",
+              "dual_use",
+              "security",
+              "environmental",
+              "misinformation",
+              "other"
+            ]
+          }
+        },
+        "notes": {
+          "description": "The reviewer's ethical concerns, in their own words",
+          "type": "string"
+        },
+        "required_mitigations": {
+          "description": "What the authors must do to address the ethical concerns",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actionItem"
+          }
+        }
+      }
+    },
+    "narrative": {
+      "description": "The review's free text, for systems that collect it as named text fields",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "description": "The reviewer's summary of the work",
+          "type": "string"
+        },
+        "detailed_review": {
+          "description": "The main text of the review",
+          "type": "string"
+        },
+        "author_questions": {
+          "description": "Questions for the authors, as one text",
+          "type": "string"
+        },
+        "confidential_to_editors": {
+          "description": "Comments for the editors or committee only, never shown to the authors",
+          "type": "string"
+        },
+        "sections": {
+          "description": "Further named parts of the review text, in order",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        }
+      }
+    },
+    "calibration": {
+      "description": "Information for comparing this reviewer's scores with other reviewers'",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reviewer_leniency_z": {
+          "description": "How lenient the reviewer is compared with other reviewers, as a z-score (positive means more lenient)",
+          "type": "number"
+        },
+        "historical_accept_rate": {
+          "description": "Share of works this reviewer has recommended accepting in the past, from 0 to 1",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "notes": {
+          "description": "How the calibration values were computed",
+          "type": "string"
+        }
+      }
+    },
+    "signatures": {
+      "description": "Cryptographic signatures over this review, so readers can check who wrote it and that it was not changed",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "value"
+        ],
+        "properties": {
+          "type": {
+            "description": "Signature scheme",
+            "type": "string",
+            "enum": [
+              "pgp",
+              "did",
+              "x509",
+              "other"
+            ]
+          },
+          "value": {
+            "description": "The signature, encoded as the scheme expects",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checks": {
+      "description": "Systematic checks run on the work, such as reference verification or AI-text detection, including those that found nothing",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "text_format": {
+      "description": "How to read the review's free text (opinion, findings, action items, narrative). When absent, the format is unknown",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "markup": {
+          "description": "Markup in the text: none (plain), Markdown or HTML",
+          "type": "string",
+          "enum": ["plain", "markdown", "html"]
+        },
+        "math": {
+          "description": "How the text writes mathematics: not at all, or as TeX (e.g., '$\\tau$')",
+          "type": "string",
+          "enum": ["none", "tex"]
+        }
+      }
+    },
+    "extensions": {
+      "description": "Data with no OCRS field, kept under one key per source format (e.g., extensions.openaireview)",
+      "type": "object"
+    },
+    "written_report": {
+      "$ref": "#/$defs/writtenReport"
+    }
+  },
+  "allOf": [
+    {
+      "anyOf": [
+        { "required": ["referee"] },
+        { "required": ["referees"] }
+      ]
+    },
+    {
+      "$anchor": "reviewContent",
+      "description": "A review says something about the work. It has at least one of: an opinion summary, text, stance, reason or contribution; a finding; a recommendation, revision requirement or decision rationale; a metric, claim assessment, artifact assessment or check; an ethical concern, its notes, categories or mitigations; narrative text; or a written report. Text counts only when it has a character other than whitespace",
+      "anyOf": [
+        {
+          "required": ["opinion"],
+          "properties": {
+            "opinion": {
+              "anyOf": [
+                {"required": ["summary"], "properties": {"summary": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["stance"]},
+                {"required": ["high_level_reasons"], "properties": {"high_level_reasons": {"contains": {"$ref": "#/$defs/nonBlank"}}}},
+                {"required": ["contributions"], "properties": {"contributions": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
+              ]
+            }
+          }
+        },
+        {
+          "required": ["findings"],
+          "properties": {
+            "findings": {
+              "anyOf": [
+                {"required": ["strengths"], "properties": {"strengths": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["weaknesses"], "properties": {"weaknesses": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["questions"], "properties": {"questions": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["comments"], "properties": {"comments": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}},
+                {"required": ["changes"], "properties": {"changes": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
+              ]
+            }
+          }
+        },
+        {
+          "required": ["decision"],
+          "properties": {
+            "decision": {
+              "anyOf": [
+                {"required": ["recommendation"]},
+                {"required": ["revision_requirement"]},
+                {"required": ["summary_rationale"], "properties": {"summary_rationale": {"$ref": "#/$defs/nonBlank"}}}
+              ]
+            }
+          }
+        },
+        {"required": ["metrics"], "properties": {"metrics": {"minItems": 1}}},
+        {"required": ["claim_assessments"], "properties": {"claim_assessments": {"minItems": 1}}},
+        {"required": ["artifact_assessments"], "properties": {"artifact_assessments": {"minItems": 1}}},
+        {"required": ["checks"], "properties": {"checks": {"minItems": 1}}},
+        {
+          "required": ["ethics_and_risk"],
+          "properties": {
+            "ethics_and_risk": {
+              "anyOf": [
+                {"required": ["ethical_concerns"], "properties": {"ethical_concerns": {"const": true}}},
+                {"required": ["notes"], "properties": {"notes": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["concern_categories"], "properties": {"concern_categories": {"minItems": 1}}},
+                {"required": ["required_mitigations"], "properties": {"required_mitigations": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
+              ]
+            }
+          }
+        },
+        {
+          "required": ["narrative"],
+          "properties": {
+            "narrative": {
+              "anyOf": [
+                {"required": ["summary"], "properties": {"summary": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["detailed_review"], "properties": {"detailed_review": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["author_questions"], "properties": {"author_questions": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["confidential_to_editors"], "properties": {"confidential_to_editors": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["sections"], "properties": {"sections": {"contains": {"required": ["content"], "properties": {"content": {"$ref": "#/$defs/nonBlank"}}}}}}
+              ]
+            }
+          }
+        },
+        {"required": ["written_report"]}
+      ]
+    }
+  ],
+  "$defs": {
+    "nonBlank": {
+      "description": "Text that has a character other than whitespace. The review content rule counts only such text",
+      "pattern": "\\S"
+    },
+    "hasTitleOrText": {
+      "description": "A point, contribution or action item whose title or text is not blank. The review content rule counts only such items",
+      "anyOf": [
+        {"required": ["title"], "properties": {"title": {"$ref": "#/$defs/nonBlank"}}},
+        {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}}
+      ]
+    },
+    "identifierWithLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "An identifier value with optional hyperlink for resolution",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "description": "The identifier itself",
+          "type": "string",
+          "minLength": 1
+        },
+        "hyperlink": {
+          "description": "URL that resolves the identifier",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "internalIdentifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "System-specific internal identifier with field name context",
+      "required": ["field_name", "value"],
+      "properties": {
+        "field_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the identifier field in the source system (e.g., 'DocumentID', 'hotcrp_pid', 'openreview_forum')"
+        },
+        "value": {
+          "description": "The identifier's value in the source system",
+          "type": "string",
+          "minLength": 1
+        },
+        "hyperlink": {
+          "description": "URL of the work in the source system",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "workRelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Another version or form of the reviewed work, and how it relates to the reviewed version",
+      "required": ["type", "identifiers"],
+      "properties": {
+        "type": {
+          "description": "How the reviewed version relates to this one, read as '<reviewed version> <type> <this work>'. Crossref's intra-work relation types (relations.xsd), plus DataCite's IsNewVersionOf and IsPreviousVersionOf, in snake_case",
+          "type": "string",
+          "enum": [
+            "is_new_version_of",
+            "is_previous_version_of",
+            "is_version_of",
+            "has_version",
+            "is_preprint_of",
+            "has_preprint",
+            "is_manuscript_of",
+            "has_manuscript",
+            "replaces",
+            "is_replaced_by",
+            "is_same_as",
+            "is_identical_to",
+            "is_translation_of",
+            "has_translation",
+            "is_variant_form_of",
+            "is_original_form_of",
+            "is_format_of",
+            "has_format",
+            "is_expression_of",
+            "has_expression",
+            "is_manifestation_of",
+            "has_manifestation"
+          ]
+        },
+        "identifiers": {
+          "$ref": "#/$defs/workIdentifiers",
+          "description": "Identifiers of this version or form",
+          "minProperties": 1
+        },
+        "version": {
+          "description": "Its version label (e.g., v1)",
+          "type": "string"
+        }
+      }
+    },
+    "workIdentifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional structured identifiers for the work. They cover Crossref's identifier types (doi, arxiv, pmid, pmcid, handle, ark, isbn, issn, ecli, accession, purl, uri as permalink, uuid, other as internal_id), plus S2CID, OpenAlex and Valency. Resolution priority: DOI > arXiv > S2CID > PubMed ID > PMCID > OpenAlex > Valency > Handle > ARK > ISBN > ECLI > accession > PURL > permalink > UUID > internal_id. ISSN identifies the journal or series, not the work, so it is never the primary identifier",
+      "properties": {
+        "doi": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Digital Object Identifier (e.g., 10.1000/xyz-123)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The DOI, without a resolver prefix",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^10\\.\\d{4,9}/[^\\s]+$"
+            },
+            "hyperlink": {
+              "description": "The DOI's resolver URL (https://doi.org/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "arxiv_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "arXiv identifier (e.g., 2401.12345 or 2401.12345v2 or hep-th/9901001)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The arXiv identifier",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(\\d{4}\\.\\d{4,5}(v\\d+)?|[a-z\\-]+/\\d{7})$"
+            },
+            "hyperlink": {
+              "description": "The arXiv abstract page (https://arxiv.org/abs/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "s2cid": {
+          "$ref": "#/$defs/identifierWithLink",
+          "description": "Semantic Scholar Corpus ID"
+        },
+        "pubmed_id": {
+          "$ref": "#/$defs/identifierWithLink",
+          "description": "PubMed ID (PMID)"
+        },
+        "pmcid": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "PubMed Central ID (e.g., PMC5555555)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The PMCID, including the PMC prefix",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^PMC\\d+$"
+            },
+            "hyperlink": {
+              "description": "The PubMed Central article page",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "openalex_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "OpenAlex Work ID (e.g., W2741809807)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The OpenAlex Work ID",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^W\\d+$"
+            },
+            "hyperlink": {
+              "description": "The OpenAlex page (https://openalex.org/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "valency_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Valency Hub work ID (e.g., W_6r533gdt), or the ID of one version of the work (e.g., W_6r533gdt_v2)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The Valency work ID: 'W_' and at least 8 characters from a-z and 2-9, without i, l and o. A version's ID adds '_v' and the version number",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^W_[a-hjkmnp-z2-9]{8,}(_v[1-9]\\d*)?$"
+            },
+            "hyperlink": {
+              "description": "The work's Valency Hub page (https://hub.valency.io/works/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "handle": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Handle (e.g., 20.500.12345/abc or 1721.1/12345). DOIs are also handles; give them in doi",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The handle, without a resolver prefix",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^\\d+(\\.\\d+)*/\\S+$"
+            },
+            "hyperlink": {
+              "description": "The handle's resolver URL (https://hdl.handle.net/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "ark": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Archival Resource Key (e.g., ark:/13030/tf5p30086k)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The ARK, including the 'ark:' label, without a resolver prefix",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^ark:/?[0-9A-Za-z]+/\\S+$"
+            },
+            "hyperlink": {
+              "description": "A resolver URL for the ARK (e.g., https://n2t.net/ark:/13030/tf5p30086k)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "isbn": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "ISBN of a book or chapter (e.g., 9780262035613)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The ISBN-10 or ISBN-13, digits only, without hyphens or spaces; an ISBN-10 may end in X",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(\\d{9}[\\dX]|97[89]\\d{10})$"
+            },
+            "hyperlink": {
+              "description": "URL of a page for the book",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "issn": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "ISSN of the journal or series the work appears in (e.g., 2050-084X). It identifies the serial, not the work, so give it alongside an identifier of the work",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The ISSN, with its hyphen",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{3}[\\dX]$"
+            },
+            "hyperlink": {
+              "description": "The ISSN Portal record (https://portal.issn.org/resource/ISSN/...)",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "ecli": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "European Case Law Identifier, for a court decision (e.g., ECLI:EU:C:2014:317)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The ECLI: country, court, year and number",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^ECLI:[A-Z]{2}:[A-Z0-9.]{1,7}:\\d{4}:[A-Z0-9.]{1,25}$"
+            },
+            "hyperlink": {
+              "description": "URL of the decision",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "accession": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Accession number in a data repository, for a dataset or other deposited record (e.g., MN908947 in GenBank)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The accession number",
+              "type": "string",
+              "minLength": 1
+            },
+            "database": {
+              "description": "The repository that issued the accession number (e.g., 'GenBank', 'PDB', 'ENA')",
+              "type": "string",
+              "minLength": 1
+            },
+            "hyperlink": {
+              "description": "URL of the record in the repository",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "purl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Persistent URL (PURL) for the work (e.g., https://purl.org/...)"
+        },
+        "permalink": {
+          "type": "string",
+          "format": "uri",
+          "description": "Stable URL for the work"
+        },
+        "uuid": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "UUID assigned to the work (e.g., 123e4567-e89b-12d3-a456-426614174000)",
+          "required": ["value"],
+          "properties": {
+            "value": {
+              "description": "The UUID in its hyphenated form",
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            },
+            "hyperlink": {
+              "description": "URL that resolves the UUID",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "internal_id": {
+          "$ref": "#/$defs/internalIdentifier",
+          "description": "System-specific internal identifier"
+        },
+        "content_hash": {
+          "$ref": "#/$defs/contentHash",
+          "description": "Hash of the work's file: a content-addressed identifier, for checking that a file is the work reviewed"
+        }
+      }
+    },
+    "thirdPartyIdentifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Generic third-party identifier with namespace",
+      "required": ["key", "value"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Namespace/type (e.g., 'scopus', 'researcherid', 'publons')"
+        },
+        "value": {
+          "description": "The identifier's value",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "aiRefereeReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lightweight reference to a third-party AI referee system when full provenance is not available",
+      "required": ["third_party_id"],
+      "properties": {
+        "third_party_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique identifier from the third-party AI review system (e.g., 'newco-ai-ref-2sd4f6a')"
+        },
+        "reference_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for more information about the AI reviewer"
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable name for the AI system"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the AI reviewer (defaults to v1)"
+        }
+      }
+    },
+    "opinion": {
+      "description": "The reviewer's overall view of the work",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "description": "The reviewer's view in brief, usually a summary of the work and its main contribution",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The reviewer's full overall assessment",
+          "type": "string",
+          "minLength": 1
+        },
+        "stance": {
+          "description": "Whether the overall view is positive, mixed, negative or unclear",
+          "type": "string",
+          "enum": [
+            "positive",
+            "mixed",
+            "negative",
+            "unclear"
+          ]
+        },
+        "high_level_reasons": {
+          "description": "The main reasons for the reviewer's view, one per item",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contributions": {
+          "description": "What the work contributes, as the reviewer reads it. Neutral: neither strengths nor assessed claims",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contribution"
+          }
+        }
+      }
+    },
+    "contribution": {
+      "description": "One contribution of the work, as the reviewer reads it",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "title": {
+          "description": "Short headline for the contribution, as the reviewer wrote it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The contribution, as the reviewer wrote it",
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_id": {
+          "description": "The claim this contribution corresponds to, by claim_id in claim_assessments, when the reviewer also assesses it",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "referee": {
+      "description": "Who wrote the review: a person, an AI system or both",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "referee_type",
+        "identity_mode"
+      ],
+      "properties": {
+        "referee_type": {
+          "description": "Whether a person, an AI system or both wrote the review",
+          "type": "string",
+          "enum": [
+            "human",
+            "ai",
+            "hybrid"
+          ]
+        },
+        "identity_mode": {
+          "description": "How the reviewer's and authors' identities are disclosed: double blind (hidden both ways), single blind (reviewer hidden), open, pseudonymous, or confidential (known only to the editors)",
+          "type": "string",
+          "enum": [
+            "double_blind",
+            "single_blind",
+            "open",
+            "pseudonymous",
+            "confidential"
+          ]
+        },
+        "referee_id": {
+          "description": "The reviewer's identifier in the source system, possibly pseudonymous",
+          "type": "string"
+        },
+        "competing_interests_declared": {
+          "description": "Whether the reviewer declared a competing interest",
+          "type": "boolean"
+        },
+        "competing_interests_statement": {
+          "description": "The reviewer's statement of competing interests",
+          "type": "string"
+        },
+        "human_referee": {
+          "description": "The human reviewer's identity and expertise. Optional: a fully anonymous review can leave it out",
+          "$ref": "#/$defs/humanReferee"
+        },
+        "ai_referee": {
+          "description": "The AI reviewer's system, run, inputs, outputs and safety",
+          "$ref": "#/$defs/aiReferee"
+        },
+        "hybrid_workflow": {
+          "description": "How people and AI shared the work, for hybrid reviews",
+          "$ref": "#/$defs/hybridWorkflow"
+        },
+        "reproducibility": {
+          "description": "What is needed to run the review again and get the same result",
+          "$ref": "#/$defs/refereeReproducibility"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "referee_type": {
+                "const": "ai"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ai_referee"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "referee_type": {
+                "const": "hybrid"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ai_referee",
+              "hybrid_workflow"
+            ]
+          }
+        }
+      ]
+    },
+    "humanReferee": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Human referee identity and expertise information",
+      "properties": {
+        "orcid": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$",
+          "description": "ORCID identifier (format: 0000-0000-0000-000X)"
+        },
+        "scopus_id": {
+          "type": "string",
+          "pattern": "^[1-9]\\d{9,11}$",
+          "description": "Scopus Author ID (10-12 digits, no leading zero)"
+        },
+        "openalex_id": {
+          "type": "string",
+          "pattern": "^A\\d+$",
+          "description": "OpenAlex Author ID (e.g., A5023888391)"
+        },
+        "valency_id": {
+          "type": "string",
+          "pattern": "^A_[a-hjkmnp-z2-9]{8,}$",
+          "description": "Valency Hub author ID (e.g., A_7zdytxzb): 'A_' and at least 8 characters from a-z and 2-9, without i, l and o. The author's page is https://hub.valency.io/authors/<id>"
+        },
+        "google_scholar_id": {
+          "type": "string",
+          "pattern": "^[-_0-9A-Za-z]{12}$",
+          "description": "Google Scholar profile ID (12 alphanumeric characters)"
+        },
+        "third_party_id": {
+          "$ref": "#/$defs/thirdPartyIdentifier",
+          "description": "Other identifier (publons, researcherid, etc.)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the reviewer (may be redacted)"
+        },
+        "affiliation": {
+          "type": "string",
+          "description": "Institutional affiliation"
+        },
+        "expertise": {"$ref": "#/$defs/expertise"},
+        "affiliation_redacted": {
+          "description": "Whether the affiliation was removed to keep the reviewer anonymous",
+          "type": "boolean"
+        },
+        "notes": {
+          "description": "Anything else about the reviewer",
+          "type": "string"
+        }
+      }
+    },
+    "expertise": {
+      "description": "The reviewer's expertise in the work's subject",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "self_reported_level": {
+          "description": "How familiar the reviewer says they are with the subject",
+          "type": "string",
+          "enum": [
+            "expert",
+            "knowledgeable",
+            "somewhat_familiar",
+            "not_familiar"
+          ]
+        },
+        "domain_tags": {
+          "description": "Subject areas the reviewer is expert in",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "refereeReproducibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "description": "Random seed for reproducing the review process, not the reviewed work; used for stages without an explicit stage seed",
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "seeds": {
+          "description": "Explicit seeds for review stages (e.g., retrieval or generation), overriding the whole-review seed for those stages",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "stage",
+              "seed"
+            ],
+            "properties": {
+              "stage": {
+                "description": "The stage this seed is for (e.g., 'retrieval', 'generation')",
+                "type": "string"
+              },
+              "seed": {
+                "description": "Random seed for the stage",
+                "oneOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "determinism": {
+          "description": "Whether running again should give the same review",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "intended_deterministic": {
+              "description": "Whether the review is meant to come out the same on every run",
+              "type": "boolean"
+            },
+            "notes": {
+              "description": "What can still vary between runs, and why",
+              "type": "string"
+            }
+          }
+        },
+        "run_replay": {
+          "description": "How to run this review again",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "description": "Identifier of the run to replay",
+              "type": "string"
+            },
+            "replay_command": {
+              "description": "Command that runs the review again",
+              "type": "string"
+            },
+            "config_ref": {
+              "description": "Where the run's configuration is stored",
+              "type": "string"
+            },
+            "bundle_ref": {
+              "description": "Where the bundle of everything the run needs is stored",
+              "type": "string"
+            },
+            "bundle_hash": {
+              "description": "Hash of that bundle, to check it is unchanged",
+              "type": "string"
+            }
+          }
+        },
+        "environment_snapshot": {
+          "description": "The environment the review ran in",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "os": {
+              "description": "Operating system",
+              "type": "string"
+            },
+            "runtime": {
+              "description": "Language runtime and version (e.g., 'python 3.12')",
+              "type": "string"
+            },
+            "container_image": {
+              "description": "Container image, ideally by digest",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Anything else about the environment",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "aiReferee": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "AI referee information - either full provenance or lightweight reference",
+      "properties": {
+        "system": {
+          "description": "The AI system: its framework, provider, models, tools and policies",
+          "$ref": "#/$defs/aiSystemProvenance"
+        },
+        "execution": {
+          "description": "The run: when it ran, how long, on what, and at what cost",
+          "$ref": "#/$defs/aiExecutionProvenance"
+        },
+        "inputs": {
+          "description": "What the AI system read: materials, retrieval and prompts",
+          "$ref": "#/$defs/aiInputsProvenance"
+        },
+        "outputs": {
+          "description": "What the AI system wrote, and the tokens it used",
+          "$ref": "#/$defs/aiOutputsProvenance"
+        },
+        "safety": {
+          "description": "Guardrails and handling of personal data during the run",
+          "$ref": "#/$defs/aiSafetyProvenance"
+        },
+        "reference": {
+          "$ref": "#/$defs/aiRefereeReference",
+          "description": "Lightweight reference to a third-party AI system"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "Full provenance: the system and the run, optionally with inputs, outputs and safety, and no reference",
+          "required": ["system", "execution"],
+          "not": {"required": ["reference"]}
+        },
+        {
+          "description": "A lightweight reference alone",
+          "required": ["reference"],
+          "maxProperties": 1
+        }
+      ]
+    },
+    "aiSystemProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critic_framework",
+        "models"
+      ],
+      "properties": {
+        "critic_framework": {
+          "description": "The review software that ran the models (e.g., OpenAIReview)",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "description": "Name of the review software",
+              "type": "string"
+            },
+            "version": {
+              "description": "Its version: a release, or a short commit",
+              "type": "string"
+            },
+            "commit": {
+              "description": "Source commit it was built from",
+              "type": "string"
+            },
+            "build_id": {
+              "description": "Identifier of the build or container image",
+              "type": "string"
+            }
+          }
+        },
+        "provider": {
+          "description": "Who operated the AI system",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "organization": {
+              "description": "Organization that ran the review",
+              "type": "string"
+            },
+            "platform": {
+              "description": "Platform the models were called through (e.g., 'aws-bedrock')",
+              "type": "string"
+            }
+          }
+        },
+        "models": {
+          "description": "Models the system used, each with its role",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/aiModelSpec"
+          }
+        },
+        "tools": {
+          "description": "Tools the system called, such as search or code execution",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/aiToolSpec"
+          }
+        },
+        "policies": {
+          "description": "The review policy the system followed",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "policy_name": {
+              "description": "Name of the policy",
+              "type": "string"
+            },
+            "policy_version": {
+              "description": "Version of the policy",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Anything else about the policy",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "aiModelSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "model_id"
+      ],
+      "properties": {
+        "role": {
+          "description": "What the model did in the review",
+          "type": "string",
+          "enum": [
+            "reviewer",
+            "critic",
+            "verifier",
+            "retriever",
+            "ranker",
+            "planner",
+            "summarizer",
+            "other"
+          ]
+        },
+        "model_id": {
+          "description": "Model identifier as the provider names it (e.g., 'us.anthropic.claude-opus-5-5')",
+          "type": "string"
+        },
+        "model_version": {
+          "description": "Model version or snapshot date, when the identifier does not include it",
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Generation settings, such as temperature or maximum tokens",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "weights_hash": {
+          "description": "Hash of the model weights, for self-hosted models",
+          "type": "string"
+        }
+      }
+    },
+    "aiToolSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "description": "Tool name",
+          "type": "string"
+        },
+        "version": {
+          "description": "Tool version",
+          "type": "string"
+        },
+        "config": {
+          "description": "Tool settings",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "invocations": {
+          "description": "How many times the tool was called",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "aiExecutionProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at"
+      ],
+      "properties": {
+        "started_at": {
+          "description": "When the run started",
+          "type": "string",
+          "format": "date-time"
+        },
+        "ended_at": {
+          "description": "When the run ended",
+          "type": "string",
+          "format": "date-time"
+        },
+        "wall_time_seconds": {
+          "description": "Elapsed time of the run, in seconds",
+          "type": "number",
+          "minimum": 0
+        },
+        "cpu_seconds": {
+          "description": "CPU time used, in seconds",
+          "type": "number",
+          "minimum": 0
+        },
+        "gpu_seconds": {
+          "description": "GPU time used, in seconds",
+          "type": "number",
+          "minimum": 0
+        },
+        "compute_environment": {
+          "description": "Where the run executed",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "region": {
+              "description": "Cloud region",
+              "type": "string"
+            },
+            "instance_type": {
+              "description": "Machine type",
+              "type": "string"
+            },
+            "accelerator": {
+              "description": "GPU or other accelerator, if any",
+              "type": "string"
+            },
+            "notes": {
+              "description": "Anything else about the compute environment",
+              "type": "string"
+            }
+          }
+        },
+        "cost": {
+          "description": "What the run cost",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "currency": {
+              "description": "Currency of the amounts, as an ISO 4217 code (e.g., 'USD')",
+              "type": "string",
+              "default": "USD"
+            },
+            "estimated_total": {
+              "description": "Total cost of the run",
+              "type": "number",
+              "minimum": 0
+            },
+            "line_items": {
+              "description": "The total broken down by kind of cost",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "amount"
+                ],
+                "properties": {
+                  "type": {
+                    "description": "Kind of cost",
+                    "type": "string",
+                    "enum": [
+                      "api_usage",
+                      "compute",
+                      "storage",
+                      "tooling",
+                      "other"
+                    ]
+                  },
+                  "amount": {
+                    "description": "Amount, in the cost's currency",
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "notes": {
+                    "description": "What the amount covers",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "estimation_method": {
+              "description": "How the cost was measured or estimated (e.g., 'LLM gateway spend')",
+              "type": "string"
+            }
+          }
+        },
+        "run_id": {
+          "description": "Identifier of the run",
+          "type": "string"
+        },
+        "logs_ref": {
+          "description": "Where the run's logs are stored",
+          "type": "string"
+        }
+      }
+    },
+    "aiInputsProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "materials_reviewed": {
+          "description": "Files the AI system read",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "ref"
+            ],
+            "properties": {
+              "type": {
+                "description": "Kind of material",
+                "type": "string",
+                "enum": [
+                  "pdf",
+                  "tex",
+                  "html",
+                  "supplement",
+                  "code_repo",
+                  "dataset",
+                  "other"
+                ]
+              },
+              "ref": {
+                "description": "Where the material is, or its name",
+                "type": "string"
+              },
+              "content_hash": {
+                "description": "Hash of the material, to check it is the same file",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "retrieval": {
+          "description": "Searches the system made beyond the work itself, such as related literature",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "used": {
+              "description": "Whether the system searched anything",
+              "type": "boolean"
+            },
+            "corpus": {
+              "description": "What it searched (e.g., a literature index)",
+              "type": "string"
+            },
+            "top_k": {
+              "description": "How many results it took per search",
+              "type": "integer",
+              "minimum": 0
+            },
+            "queries_hash": {
+              "description": "Hash of the search queries",
+              "type": "string"
+            },
+            "results_ref": {
+              "description": "Where the search results are stored",
+              "type": "string"
+            }
+          }
+        },
+        "prompts": {
+          "description": "Prompts given to the models",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "prompt_hash"
+            ],
+            "properties": {
+              "role": {
+                "description": "What the prompt is for (e.g., 'system', 'reviewer')",
+                "type": "string"
+              },
+              "prompt_hash": {
+                "description": "Hash of the prompt text",
+                "type": "string"
+              },
+              "prompt_ref": {
+                "description": "Where the prompt text is stored",
+                "type": "string"
+              },
+              "redaction_applied": {
+                "description": "Whether parts of the stored prompt were removed",
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "aiOutputsProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generated_artifacts": {
+          "description": "Files the run wrote besides this record",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "ref"
+            ],
+            "properties": {
+              "type": {
+                "description": "Kind of file",
+                "type": "string",
+                "enum": [
+                  "review_json",
+                  "review_text",
+                  "claim_graph",
+                  "checks_report",
+                  "other"
+                ]
+              },
+              "ref": {
+                "description": "Where the file is stored",
+                "type": "string"
+              },
+              "content_hash": {
+                "description": "Hash of the file",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "token_usage": {
+          "description": "Tokens used across all model calls",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "input_tokens": {
+              "description": "Tokens sent to the models",
+              "type": "integer",
+              "minimum": 0
+            },
+            "output_tokens": {
+              "description": "Tokens the models generated",
+              "type": "integer",
+              "minimum": 0
+            },
+            "total_tokens": {
+              "description": "Input and output tokens together",
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "aiSafetyProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guardrails_triggered": {
+          "description": "Whether any safety guardrail stopped or changed model output",
+          "type": "boolean"
+        },
+        "guardrails_notes": {
+          "description": "Which guardrails triggered, and what they did",
+          "type": "string"
+        },
+        "pii_handling": {
+          "description": "How personal data in the inputs was handled",
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "redacted",
+            "not_retained",
+            "retained_with_consent",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "hybridWorkflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "human_contributions"
+      ],
+      "properties": {
+        "human_contributions": {
+          "description": "What people did in the review, one item per contribution",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/humanContribution"
+          }
+        },
+        "attribution": {
+          "description": "How much of the review came from AI and how much from people",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ai_fraction_estimate": {
+              "description": "Estimated share of the review from AI, from 0 to 1",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "human_fraction_estimate": {
+              "description": "Estimated share of the review from people, from 0 to 1",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "method": {
+              "description": "How the shares were estimated",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "humanContribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "description": "Kind of contribution",
+          "type": "string",
+          "enum": [
+            "prompt_engineering",
+            "scoping",
+            "fact_checking",
+            "technical_verification",
+            "editing",
+            "score_adjustment",
+            "final_approval",
+            "conflict_of_interest_screening",
+            "other"
+          ]
+        },
+        "contributor_id": {
+          "description": "Who made the contribution",
+          "type": "string"
+        },
+        "time_spent_minutes": {
+          "description": "Minutes spent on it",
+          "type": "number",
+          "minimum": 0
+        },
+        "notes": {
+          "description": "What the person did",
+          "type": "string"
+        },
+        "diff_ref": {
+          "description": "Where the person's changes to the AI output are stored",
+          "type": "string"
+        }
+      }
+    },
+    "metricAssessment": {
+      "description": "One score the reviewer gave, with its scale",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "scale",
+        "value"
+      ],
+      "properties": {
+        "key": {
+          "description": "Metric key from the metric catalog (e.g., 'correctness', 'overall')",
+          "type": "string"
+        },
+        "label": {
+          "description": "The metric's name as the source system shows it (e.g., 'Soundness')",
+          "type": "string"
+        },
+        "aspect": {
+          "description": "What quality of the work the metric measures",
+          "type": "string",
+          "enum": [
+            "correctness",
+            "rigor",
+            "clarity",
+            "readability",
+            "novelty",
+            "significance",
+            "impact",
+            "reproducibility",
+            "methodology",
+            "evaluation",
+            "writing",
+            "presentation",
+            "ethics",
+            "overall",
+            "confidence",
+            "other"
+          ]
+        },
+        "scale": {
+          "description": "The scale the value is on",
+          "$ref": "#/$defs/scale"
+        },
+        "value": {
+          "description": "The score, as given on its scale",
+          "$ref": "#/$defs/metricValue"
+        },
+        "uncertainty": {
+          "description": "How sure the reviewer is of the score",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "credence": {
+              "$ref": "#/$defs/credence",
+              "description": "Overall confidence in the score given from 0 to 1, with 0 being not at all confident, and 1 being certain"
+            },
+            "interval": {
+              "description": "Range the score could fall in",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "low": {
+                  "description": "Lowest likely value",
+                  "type": "number"
+                },
+                "high": {
+                  "description": "Highest likely value",
+                  "type": "number"
+                }
+              }
+            },
+            "rationale": {
+              "description": "Why the reviewer is unsure",
+              "type": "string"
+            }
+          }
+        },
+        "justification": {
+          "description": "Why the reviewer gave this score",
+          "type": "string"
+        },
+        "evidence_links": {
+          "description": "Places in the work that support the score",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "normalized": {
+          "description": "The score converted to a common 0 to 1 scale, so scores from different scales compare",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value_0_1": {
+              "description": "The score on a 0 to 1 scale, where 0 is worst and 1 is best",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "method": {
+              "description": "How the score was converted (e.g., 'linear_to_unit_interval')",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "scale": {
+      "description": "The scale a score is on",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "description": "Kind of scale: ordered levels, numbers, yes/no, unordered categories or text",
+          "type": "string",
+          "enum": [
+            "ordinal",
+            "interval",
+            "ratio",
+            "binary",
+            "categorical",
+            "textual"
+          ]
+        },
+        "min": {
+          "description": "Lowest value",
+          "type": "number"
+        },
+        "max": {
+          "description": "Highest value",
+          "type": "number"
+        },
+        "step": {
+          "description": "Distance between allowed values (e.g., 1 for whole numbers)",
+          "type": "number"
+        },
+        "anchors": {
+          "description": "Labels for particular values (e.g., 1 = 'poor', 4 = 'excellent')",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "label"
+            ],
+            "properties": {
+              "value": {
+                "description": "The value",
+                "type": [
+                  "number",
+                  "string",
+                  "boolean"
+                ]
+              },
+              "label": {
+                "description": "What the value means",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "units": {
+          "description": "Unit of the values, if any",
+          "type": "string"
+        },
+        "description": {
+          "description": "What the scale measures, as the source system explains it",
+          "type": "string"
+        }
+      }
+    },
+    "metricValue": {
+      "description": "A score: a number, yes/no, a label, or a list of them",
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        }
+      ]
+    },
+    "probability": {
+      "description": "How likely the reviewer thinks a statement holds, from 0 (certainly not) to 1 (certainly)",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "credence": {
+      "description": "How confident the reviewer is in their probability, from 0 (a guess) to 1 (certain of it). Credence is about the estimate, not the statement: a reviewer can think something very likely (probability 0.9) and hold that view loosely (credence 0.3). Optional, but we strongly encourage it alongside probability, which it needs: it helps readers tell a firm judgement from a tentative one",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "finding": {
+      "description": "One point the reviewer makes",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's findings, action items and checks, so other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the finding, as the reviewer wrote it"
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "severity": {
+          "description": "How serious the point is, from info to critical",
+          "type": "string",
+          "enum": [
+            "info",
+            "minor",
+            "major",
+            "critical"
+          ]
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "suggested_edits": {
+          "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/suggestedEdit"
+          }
+        },
+        "probability": {
+          "$ref": "#/$defs/probability",
+          "description": "How likely the reviewer thinks the point holds (for a weakness, that the problem is real), from 0 (certainly not) to 1 (certainly). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
+        },
+        "credence": {"$ref": "#/$defs/credence"},
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summarizes": {
+          "description": "Ids of the findings this point restates in brief. A point that summarizes others is an overview: leave it out when counting points. An empty list marks an overview whose source does not say which points it covers",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "dependentRequired": {
+        "credence": [
+          "probability"
+        ]
+      }
+    },
+    "actionItem": {
+      "description": "One change the reviewer asks for",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's findings, action items and checks, so other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the change, as the reviewer wrote it"
+        },
+        "text": {
+          "description": "The change, as the reviewer wrote it",
+          "type": "string"
+        },
+        "priority": {
+          "description": "How serious the problem the change fixes is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording",
+          "type": "string",
+          "enum": [
+            "critical",
+            "major",
+            "minor",
+            "trivial"
+          ]
+        },
+        "scope": {
+          "description": "Kind of change",
+          "type": "string",
+          "enum": [
+            "typo",
+            "clarification",
+            "analysis",
+            "experiment",
+            "theory",
+            "writing",
+            "figure",
+            "references",
+            "artifact",
+            "ethics",
+            "other"
+          ]
+        },
+        "applies_to": {
+          "description": "Part of the work the change applies to",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "section": {
+              "description": "Section of the work",
+              "type": "string"
+            },
+            "figure": {
+              "description": "Figure of the work",
+              "type": "string"
+            },
+            "table": {
+              "description": "Table of the work",
+              "type": "string"
+            },
+            "claim_id": {
+              "description": "Claim it applies to, by claim_id in claim_assessments",
+              "type": "string"
+            },
+            "finding_id": {
+              "description": "Finding it addresses, by id in findings",
+              "type": "string"
+            }
+          }
+        },
+        "evidence_links": {
+          "description": "Places in the work the change applies to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "suggested_edits": {
+          "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/suggestedEdit"
+          }
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "check": {
+      "description": "One systematic check run on the work, and what it found. Record an outcome only when the source states one",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "anyOf": [
+        { "required": ["outcome"] },
+        { "required": ["summary"] },
+        { "required": ["measurements"] },
+        { "required": ["items"] }
+      ],
+      "properties": {
+        "id": {
+          "description": "Identifier of this check, unique among the review's checks, findings and action items",
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "description": "What the check looks for: text written by AI, references that cannot be verified, fatal flaws, text similar to other works, manipulated images, statistical errors, retracted citations, or something else",
+          "type": "string",
+          "enum": [
+            "ai_text_detection",
+            "reference_verification",
+            "fatal_flaw_screen",
+            "similarity",
+            "image_integrity",
+            "statistics",
+            "retraction",
+            "other"
+          ]
+        },
+        "label": {
+          "description": "The check's name as the source shows it (e.g., 'Reference Check')",
+          "type": "string",
+          "minLength": 1
+        },
+        "performed_by": {
+          "description": "The tool or service that ran the check. When absent, the referee ran it",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "description": "Name of the tool or service (e.g., 'Pangram')",
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "description": "Its version",
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "description": "Where to learn about it",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "outcome": {
+          "description": "The check's verdict, as the source states it: no issues, issues found, inconclusive, or not run. Leave out when the source gives only results",
+          "type": "string",
+          "enum": ["no_issues", "issues_found", "inconclusive", "not_run"]
+        },
+        "summary": {
+          "description": "The result, as the source wrote it",
+          "type": "string",
+          "minLength": 1
+        },
+        "measurements": {
+          "description": "Numbers or values the check reports (e.g., references checked, share of text detected as AI-written)",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/checkMeasurement"
+          }
+        },
+        "items": {
+          "description": "Results for the individual things checked that the source lists, such as each reference it could not verify",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/checkItem"
+          }
+        },
+        "finding_ids": {
+          "description": "Findings that report this check's problems as points, by id",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "checkMeasurement": {
+      "description": "One value a check reports. A proportion is a fraction from 0 to 1 with unit 'fraction' (33% is 0.33); a count is an integer",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "value"],
+      "properties": {
+        "key": {
+          "description": "What is measured (e.g., 'checked', 'not_found', 'ai_generated')",
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "description": "The measurement's name as the source shows it",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "The value",
+          "type": ["number", "string", "boolean"]
+        },
+        "unit": {
+          "description": "Unit of the value: 'fraction' for a proportion from 0 to 1, otherwise as the source gives it",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "if": {
+        "properties": { "unit": { "const": "fraction" } },
+        "required": ["unit"]
+      },
+      "then": {
+        "properties": { "value": { "type": "number", "minimum": 0, "maximum": 1 } }
+      }
+    },
+    "checkItem": {
+      "description": "A check's result for one thing it checked",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "status"],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/evidenceLink",
+          "description": "What was checked (e.g., a bibliography entry)"
+        },
+        "status": {
+          "description": "The result, in the source's own words (e.g., 'Not Found')",
+          "type": "string",
+          "minLength": 1
+        },
+        "flagged": {
+          "description": "Whether the source presents this result as a failure. A flagged reference is one the check could not verify, not necessarily one that is wrong",
+          "type": "boolean"
+        },
+        "notes": {
+          "description": "Anything else the source says about this result",
+          "type": "string"
+        }
+      }
+    },
+    "suggestedEdit": {
+      "description": "A rewrite the reviewer proposes for a passage of the work",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "replacement"
+      ],
+      "properties": {
+        "original": {
+          "description": "The exact text to replace, when the reviewer states it. When absent, the reviewer gave only the new text, and the point's evidence links show the passage it concerns",
+          "type": "string",
+          "minLength": 1
+        },
+        "replacement": {
+          "description": "The text the reviewer proposes instead",
+          "type": "string"
+        }
+      }
+    },
+    "section": {
+      "description": "One named part of the review text",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "content"
+      ],
+      "properties": {
+        "title": {
+          "description": "Heading of the part",
+          "type": "string"
+        },
+        "content": {
+          "description": "Text of the part",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Labels for the part",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidenceLink": {
+      "description": "A place in the work, or elsewhere, that a point refers to",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "ref"
+      ],
+      "properties": {
+        "type": {
+          "description": "Kind of place",
+          "type": "string",
+          "enum": [
+            "paper_section",
+            "figure",
+            "table",
+            "equation",
+            "appendix",
+            "supplement",
+            "code",
+            "data",
+            "bibliography",
+            "external"
+          ]
+        },
+        "ref": {
+          "description": "Where it is, in the reviewer's words (e.g., 'p.10, Table 6')",
+          "type": "string"
+        },
+        "quote": {
+          "description": "Text quoted from that place",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/evidenceLocation",
+          "description": "Structured location in a specific version of the referenced work or artifact"
+        },
+        "work": {
+          "description": "The work the place refers to when it is another work, such as a citation the reviewer says is missing",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "title": {
+              "description": "Title of the work",
+              "type": "string",
+              "minLength": 1
+            },
+            "authors": {
+              "description": "Authors, as the reviewer names them",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "year": {
+              "description": "Year of publication",
+              "type": "integer"
+            },
+            "citation": {
+              "description": "The reference as printed, copied verbatim (e.g., an entry in the work's bibliography)",
+              "type": "string",
+              "minLength": 1
+            },
+            "identifiers": {
+              "$ref": "#/$defs/workIdentifiers"
+            }
+          }
+        }
+      }
+    },
+    "evidenceLocation": {
+      "description": "A section, page, or exact text anchor in the referenced document; page numbers start at 1",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "section": {
+          "description": "Section identifier or heading (e.g., '3.2 Methods')",
+          "type": "string",
+          "minLength": 1
+        },
+        "page": {
+          "description": "One-based page number in the referenced document",
+          "type": "integer",
+          "minimum": 1
+        },
+        "page_end": {
+          "description": "Last page, for a passage spanning several pages; at least page",
+          "type": "integer",
+          "minimum": 1
+        },
+        "version": {
+          "description": "Version of the referenced work or artifact to which the location applies",
+          "type": "string",
+          "minLength": 1
+        },
+        "text_anchor": {
+          "description": "Exact text with optional immediately surrounding text to distinguish repeated passages",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exact"],
+          "properties": {
+            "exact": {
+              "description": "Exact sentence or passage being referenced",
+              "type": "string",
+              "minLength": 1
+            },
+            "prefix": {
+              "description": "Text immediately before the exact passage",
+              "type": "string"
+            },
+            "suffix": {
+              "description": "Text immediately after the exact passage",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "dependentRequired": {
+        "page_end": [
+          "page"
+        ]
+      }
+    },
+    "claimAssessment": {
+      "description": "One claim the work makes, and whether its evidence supports it",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "claim_text",
+        "status"
+      ],
+      "properties": {
+        "claim_id": {
+          "description": "Identifier of the claim within this review",
+          "type": "string"
+        },
+        "claim_text": {
+          "description": "The claim, as stated in the work",
+          "type": "string"
+        },
+        "status": {
+          "description": "Whether the work's evidence supports the claim",
+          "type": "string",
+          "enum": [
+            "supported",
+            "partially_supported",
+            "unclear",
+            "unsupported",
+            "not_evaluated"
+          ]
+        },
+        "metrics": {
+          "description": "Scores for the claim",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metricAssessment"
+          }
+        },
+        "notes": {
+          "description": "The reviewer's view of the claim",
+          "type": "string"
+        },
+        "evidence_links": {
+          "description": "Places in the work the assessment refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "probability": {
+          "$ref": "#/$defs/probability",
+          "description": "How likely the reviewer thinks the claim is true, from 0 (certainly false) to 1 (certainly true). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
+        },
+        "credence": {"$ref": "#/$defs/credence"}
+      },
+      "dependentRequired": {
+        "credence": [
+          "probability"
+        ]
+      }
+    },
+    "artifactAssessment": {
+      "description": "Assessment of one of the work's materials: code, data, models and so on",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "availability",
+        "assessment"
+      ],
+      "properties": {
+        "artifact_type": {
+          "description": "Kind of material",
+          "type": "string",
+          "enum": [
+            "code",
+            "data",
+            "models",
+            "appendix",
+            "protocol",
+            "other"
+          ]
+        },
+        "availability": {
+          "description": "Whether readers can get the material",
+          "type": "string",
+          "enum": [
+            "public",
+            "restricted",
+            "available_on_request",
+            "not_available",
+            "unknown"
+          ]
+        },
+        "ref": {
+          "description": "Where the material is",
+          "type": "string"
+        },
+        "assessment": {
+          "description": "The reviewer's overall judgment of the material",
+          "type": "string",
+          "enum": [
+            "excellent",
+            "good",
+            "adequate",
+            "poor",
+            "not_applicable",
+            "not_evaluated"
+          ]
+        },
+        "evidence_links": {
+          "description": "Places in the work or artifact the assessment refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "reproducibility_notes": {
+          "description": "What the reviewer found when trying to reproduce results with it",
+          "type": "string"
+        },
+        "checks": {
+          "description": "Specific checks the reviewer made",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "status"
+            ],
+            "properties": {
+              "key": {
+                "description": "Which check",
+                "type": "string",
+                "enum": [
+                  "builds",
+                  "runs",
+                  "tests_pass",
+                  "data_complete",
+                  "instructions_clear",
+                  "licenses_present",
+                  "deterministic",
+                  "computational_cost_reported"
+                ]
+              },
+              "status": {
+                "description": "Result of the check",
+                "type": "string",
+                "enum": [
+                  "pass",
+                  "fail",
+                  "partial",
+                  "unknown"
+                ]
+              },
+              "notes": {
+                "description": "Details of the result",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "writtenReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional written report document submitted alongside the structured review",
+      "required": ["content_type"],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Original filename of the uploaded report"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": ["pdf", "docx", "markdown", "txt"],
+          "description": "Format of the written report (PDF, Word document, Markdown, or plain text)"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL or reference to the uploaded file"
+        },
+        "content_hash": {
+          "$ref": "#/$defs/contentHash",
+          "description": "SHA-256/512 hash for integrity verification"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File size in bytes"
+        },
+        "uploaded_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the report was uploaded"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the report contents"
+        }
+      }
+    },
+    "contentHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Content-addressed hash for integrity verification",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {
+          "description": "Hash algorithm",
+          "type": "string",
+          "enum": ["sha256", "sha512"]
+        },
+        "value": {
+          "description": "Hex-encoded hash",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -66,8 +66,10 @@ def has_content(review: dict[str, Any]) -> bool:
     rule: an opinion, a finding, a decision, a metric, a claim or artifact assessment, a
     check, an ethical concern, narrative text or a written report. Text counts only when
     it has a character other than whitespace."""
-    [rule] = [r for r in ocrs_schema()["allOf"] if r.get("$anchor") == "reviewContent"]
-    return Draft202012Validator(rule).is_valid(review)
+    schema = ocrs_schema()
+    [rule] = [r for r in schema["allOf"] if r.get("$anchor") == "reviewContent"]
+    # The rule refers to definitions in $defs, so it is checked alongside them
+    return Draft202012Validator({**rule, "$defs": schema["$defs"]}).is_valid(review)
 
 
 def require_content(review: dict[str, Any], source: str) -> None:

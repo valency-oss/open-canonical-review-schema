@@ -161,9 +161,9 @@ class TestAiRefereeRejected:
         """The lightweight reference form cannot carry provenance keys.
 
         These combinations satisfy only the reference branch, so they slip past
-        the mutual-exclusion check unless each oneOf branch closes itself with
-        its own `additionalProperties: false`. The parent block alone is not
-        enough: it makes all six keys legal everywhere.
+        the mutual-exclusion check unless that branch admits no other key
+        (`maxProperties: 1`). The parent block alone is not enough: it makes
+        all six keys legal everywhere.
         """
         with pytest.raises(ValidationError):
             validate_canonical(
