@@ -279,6 +279,9 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
     return out
 
 
+_DECISION_FIELDS = {"overallEvaluation", "recommendation", "confidence"}
+
+
 def _recommendation_read_back(value: int | float, label: str | None) -> str:
     """The recommendation from_cmt takes from an overall score with this label."""
     return (
@@ -350,7 +353,10 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
         elif key:
             label = m.get("label")
             named = (same_source or key == "other") and isinstance(label, str) and label.strip()
-            out.setdefault(field_name(label) if named else key, score_with_label(m))
+            field = field_name(label) if named else key
+            # The fields the reader takes the recommendation and the confidence from are theirs
+            if field not in _DECISION_FIELDS:
+                out.setdefault(field, score_with_label(m))
     if rec and "overallEvaluation" not in out:
         out["recommendation"] = rec
     return out

@@ -474,6 +474,19 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
     return out
 
 
+# The fields from_hotcrp takes the recommendation, the expertise and the confidence from
+_DECISION_FIELDS = {
+    "overall_merit",
+    "overall",
+    "recommendation",
+    "rating",
+    "score",
+    "reviewer_expertise",
+    "expertise",
+    "confidence",
+}
+
+
 def _recommendation_read_back(value: int | float, label: str | None) -> str:
     """The recommendation from_hotcrp takes from overall_merit with this label."""
     return (
@@ -581,7 +594,10 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
             )
         elif key:
             named = (same_source or key == "other") and isinstance(label, str) and label.strip()
-            out.setdefault(field_name(label) if named else key, score_with_label(m, ". "))
+            field = field_name(label) if named else key
+            # The fields the reader takes the recommendation and the expertise from are theirs
+            if field not in _DECISION_FIELDS:
+                out.setdefault(field, score_with_label(m, ". "))
     if rec_label and "overall_merit" not in out:
         out["overall_merit"] = rec_label
 

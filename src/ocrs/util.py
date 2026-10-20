@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
+from decimal import Decimal
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -19,7 +20,8 @@ from .scales import (
 # Pattern to match numeric prefix with optional separator (: . -)
 # For "4. Accept", "3: Weak Accept", "6 - Borderline"
 # Note: The (?:\.\s+) ensures we don't match decimal numbers like "3.5"
-_num_prefix = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:\.\s+)|[:\-]\s*)?\s*(.*)$")
+# The label may run over several lines
+_num_prefix = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:\.\s+)|[:\-]\s*)?\s*(.*)$", re.DOTALL)
 _bullet_pattern = re.compile(r"^\s*(?:[-*•]|\d+[.)\]])\s*", re.MULTILINE)
 
 
@@ -636,7 +638,13 @@ def score_with_label(
         return value
     if form_gives_labels and form_labels.get(value) == label:
         return value
-    return f"{value}{separator}{label}"
+    return f"{plain_number(value)}{separator}{label}"
+
+
+def plain_number(value: int | float) -> str:
+    """A number as the readers parse it: digits, with no exponent (1e-06 is 0.000001)."""
+    text = str(value)
+    return format(Decimal(text), "f") if "e" in text.lower() else text
 
 
 def is_number(value: Any) -> bool:

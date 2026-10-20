@@ -572,6 +572,8 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
     rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
     rec_label = rec.replace("_", " ").title() if rec else None
     overall_written = False
+    # Whether the overall score was written to a field the reader takes the recommendation from
+    overall_says_recommendation = False
     for m in canonical.get("metrics", []) or []:
         if not isinstance(m, dict):
             continue
@@ -581,13 +583,19 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             continue
         name = field_name(m["label"]) if same_source and isinstance(m.get("label"), str) else ""
         if key == "overall":
-            # Every field for the overall score is one the reader takes a recommendation from,
-            # and it reads only a number there: any other value would hide the review's
-            # recommendation, or make one up, so it is left out
+            # The reader takes a recommendation from the overall score's field and reads only a
+            # number there: any other value would hide the review's recommendation, or make one
+            # up, so it is left out
             if overall_written or not is_number(val):
                 continue
             overall_written = True
-            field = name if name in RECOMMENDATION_KEYS else "rating"
+            # A score read from OpenReview goes back to its own field: on a field the reader
+            # takes no recommendation from (`overall_score`), it says none
+            field = name or "rating"
+            if field not in RECOMMENDATION_KEYS:
+                content[field] = score_with_label(m, form_gives_labels=True)
+                continue
+            overall_says_recommendation = True
             # The score's label says the recommendation, read first; a label that would
             # read back as another gives way to the decision's
             label = m.get("justification") if same_source else None
@@ -602,10 +610,13 @@ def to_openreview(canonical: dict[str, Any]) -> dict[str, Any]:
             content.setdefault(field, written)
         else:
             written = score_with_label(m, form_gives_labels=True) if same_source else val
-            content.setdefault(name or key, written)
+            field = name or key
+            # The fields the reader takes the recommendation and the confidence from are theirs
+            if field not in RECOMMENDATION_KEYS and field not in CONFIDENCE_KEYS:
+                content.setdefault(field, written)
 
     # Without a score to carry it, the recommendation has its own field
-    if rec and not overall_written:
+    if rec and not overall_says_recommendation:
         content[_RECOMMENDATION_FIELD.get(kind, "recommendation")] = rec_label
 
     note: dict[str, Any] = {

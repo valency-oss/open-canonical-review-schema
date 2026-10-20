@@ -509,3 +509,55 @@ def test_a_score_that_is_not_a_number_is_written_as_it_is(writer, value):
     review = written_review(writer, metrics=[{**metric, "value": value, "justification": "Why"}])
     written = map_to(writer, review)
     assert (written.get("content") or written)["topics"] == value
+
+
+@pytest.mark.parametrize(
+    ("writer", "name"),
+    [("cmt", "overallEvaluation"), ("hotcrp", "overall merit"), ("openreview", "rating")],
+)
+def test_another_score_does_not_take_the_recommendations_field(writer, name):
+    """A score that is not the overall one, named after the field the reader takes the
+    recommendation from, is not written there ahead of the overall score."""
+    scale = {"type": "ordinal", "min": 1, "max": 5}
+    review = written_review(
+        writer,
+        decision={"recommendation": "reject"},
+        metrics=[
+            {"key": "other", "label": name, "scale": scale, "value": 5},
+            {
+                "key": "overall",
+                "label": "Overall",
+                "scale": scale,
+                "value": 1,
+                "justification": "Reject",
+            },
+        ],
+    )
+    assert map_from(writer, map_to(writer, review))["decision"]["recommendation"] == "reject"
+
+
+@pytest.mark.parametrize("content", [{"recommendation": "Weak Reject"}, {}])
+def test_an_overall_score_on_a_field_without_a_recommendation_stays_there(content):
+    """`overall_score` is no recommendation field: the score goes back to it, with the form's
+    bounds, and a review without a recommendation gets none."""
+    bounds = {"overall_score": {"min": 1, "max": 10}}
+    note = {"id": "n1", "forum": "f1", "content": {"summary": "S.", "overall_score": 6, **content}}
+    review = map_from("openreview", note, scale_bounds=bounds)
+    written = map_to("openreview", review)
+    assert written["content"]["overall_score"] == 6
+    assert "rating" not in written["content"]
+    again = map_from("openreview", written, scale_bounds=bounds)
+    assert again.get("decision") == review.get("decision")
+    assert again["metrics"] == review["metrics"]
+
+
+@pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
+@pytest.mark.parametrize(
+    ("value", "label"), [(1e-06, "Tiny"), (6, "Weak accept,\nwith reservations")]
+)
+def test_a_labelled_score_reads_back_the_same(writer, value, label):
+    """A score is written without an exponent, and a label may run over several lines."""
+    metric = {"key": "other", "label": "novelty", "scale": {"type": "interval"}, "value": value}
+    review = written_review(writer, metrics=[{**metric, "justification": label}])
+    [again] = map_from(writer, map_to(writer, review))["metrics"]
+    assert (again["value"], again["justification"]) == (value, label)

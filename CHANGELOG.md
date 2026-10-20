@@ -59,7 +59,8 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
   the review's date from `reviewDate` as well as `createdAt`; Editorial Manager and ScholarOne
   take the title from `manuscriptTitle`; HotCRP keeps both `questions` and
   `questions_for_authors` when a form has both, where the questions for the authors replaced
-  the others.
+  the others; and a score's label may run over several lines (`"6: Weak accept,\nwith
+  reservations"`), where such a score was not read at all.
 - Tests write each fixture back in its source's format and read it again, both ways. Every
   review OCRS reads from a system comes back unchanged through that system's format; going
   the other way, `tests/test_roundtrip.py` lists the system's own fields that OCRS has no
