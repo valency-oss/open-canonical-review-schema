@@ -588,3 +588,38 @@ def test_a_recommendation_in_words_that_name_none_keeps_them(source, payload):
     review = map_from(source, payload)
     assert review["decision"] == {"recommendation": "borderline", "source_label": "Not sure"}
     assert map_from(source, map_to(source, review))["decision"] == review["decision"]
+
+
+def test_words_beside_a_score_that_would_read_as_another_recommendation_keep_their_field():
+    """'Not sure' beside an 8 would read back as the 8's accept, so it stays in its own field,
+    which the reader takes the recommendation from first."""
+    note = {"id": "r1", "forum": "f1", "content": {"summary": "S.", "recommendation": "Not sure"}}
+    note["content"]["rating"] = 8
+    review = map_from("openreview", note)
+    written = map_to("openreview", review)
+    assert written["content"] == note["content"]
+    assert map_from("openreview", written)["decision"] == review["decision"]
+
+
+@pytest.mark.parametrize("source", ["cmt", "hotcrp"])
+def test_a_score_carries_a_recommendation_its_number_would_not_read_as(source):
+    review = {
+        "review_id": "r1",
+        "version": "1.0.0",
+        "created_at": "2026-10-06T12:00:00Z",
+        "provenance": {"source_system": "example-journal"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
+        "target": {"work_id": "internal_id:manuscript_id:p1", "work_type": "article"},
+        "opinion": {"summary": "S."},
+        "decision": {"recommendation": "borderline", "source_label": "Not sure"},
+        "metrics": [
+            {
+                "key": "overall",
+                "label": "Overall",
+                "value": 4,
+                "scale": {"type": "ordinal", "min": 1, "max": 5},
+            }
+        ],
+    }
+    again = map_from(source, map_to(source, review))
+    assert again["decision"]["recommendation"] == "borderline"

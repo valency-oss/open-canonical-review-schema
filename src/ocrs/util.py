@@ -742,12 +742,13 @@ def score_sheet_answers(
 
 def score_sheet_questions(sections: Any) -> list[dict[str, Any]]:
     """Text answers, as the narrative holds them (a part titled with its question, with no
-    role), as score-sheet questions. A part the authors may not read is not one."""
+    role or the role `other`), as score-sheet questions. A part the authors may not read is
+    not one."""
     return [
         {"questionText": s["title"], "scoreSheetCustomAnswer": {"answerText": s["content"]}}
         for s in (sections if isinstance(sections, list) else [])
         if isinstance(s, dict)
-        and "role" not in s
+        and s.get("role") in (None, "other")
         and for_authors(s)
         and isinstance(s.get("title"), str)
         and isinstance(s.get("content"), str)
@@ -854,20 +855,22 @@ def narrative_parts(canonical: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def recommendation_label(canonical: dict[str, Any]) -> str | None:
+def recommendation_label(canonical: dict[str, Any], *, own: bool = True) -> str | None:
     """The review's recommendation as a source writes it: in the source's own words
     (`decision.source_label`) when they say this recommendation, else in OCRS's words
     ("Major Revision"). A recommendation OCRS cannot name is the source's words alone, and so
-    is a `borderline` read from words that name none ("Not sure"), as the readers take them."""
+    is a `borderline` read from words that name none ("Not sure"), as the readers take them.
+    With `own=False`, OCRS's words, for a field where the source's would read back as another
+    recommendation (beside a score, whose number a reader takes for words that name none)."""
     decision = source_decision(canonical.get("decision") or {})
     rec = decision.get("recommendation")
-    own = decision.get("source_label")
-    own = (own.strip() or None) if isinstance(own, str) else None
+    words = decision.get("source_label") if own else None
+    words = (words.strip() or None) if isinstance(words, str) else None
     if not isinstance(rec, str):
-        return own
-    says = map_recommendation_from_text(own) if own else None
-    if own and (says == rec or (says is None and rec == "borderline")):
-        return own
+        return words
+    says = map_recommendation_from_text(words) if words else None
+    if words and (says == rec or (says is None and rec == "borderline")):
+        return words
     return rec.replace("_", " ").title()
 
 

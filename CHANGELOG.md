@@ -35,7 +35,8 @@ reviews one edit away from them) migrates to a valid 0.8 review.
   - For a contribution, `claim_id` becomes `claim_ids: [id]`.
 - `ethics_and_risk.required_mitigations` is gone. A change that ethics calls for is a
   requested change like any other. Migration: move each mitigation to `findings.changes`
-  with `scope: "ethics"`, and drop an `ethics_and_risk` that is left empty.
+  with `scope: "ethics"`, or, when it has another scope, keep that scope and tag it
+  `ethics`. Drop an `ethics_and_risk` that is left empty.
 - `narrative` is a list of parts in the order the source gives them, each a `$defs/section`:
   `content` (required), `title`, `role` and `audience`. It replaces the fixed `summary`,
   `detailed_review`, `author_questions` and `confidential_to_editors` fields and the
@@ -54,6 +55,9 @@ reviews one edit away from them) migrates to a valid 0.8 review.
   to `expertise`, and a `metric_catalog_ref` of `metric-catalog.core.v1` to
   `metric-catalog.core.v1.1`.
 - A narrative part's `title`, when given, may not be empty.
+- A review read from JATS has its license in `provenance.license`, where 0.7 kept it only in
+  `extensions.jats.permissions`. Migration: set `provenance.license` to the first license's
+  `url`, else its text as `name`.
 - `validate_canonical` checks the new references as it checked the old ones. A point's
   `summarizes` and `addresses` must name findings in the review, and its `claim_ids` must
   name claim assessments. Ids must be unique across the findings, the contributions (which
@@ -103,10 +107,14 @@ reviews one edit away from them) migrates to a valid 0.8 review.
     longer comes back as `Accept`. This holds for OpenReview, CMT, HotCRP, Editorial
     Manager, ScholarOne and JATS. Words that name no recommendation (`Not sure`), which
     the OpenReview, CMT and HotCRP readers take as `borderline`, go back as written too.
+    Beside a score, whose number a reader takes for words that name none, they go in
+    OpenReview's `recommendation` field, which is read first. CMT and HotCRP give the
+    score OCRS's words.
   - **OpenReview:** the reader takes the note's `license` as `provenance.license`.
     `replyto`, when it is not the forum, becomes a `responds_to` related review. A form
     bound's `values` becomes `scale.values`. The writer gives the license and the reply
-    back to a note read from OpenReview.
+    back to a note read from OpenReview. A review from elsewhere that has no text of its
+    own is written with its other parts as the review, so that it can be read again.
   - **JATS:** the reader takes the report's license as `provenance.license`. The writer
     writes the license `provenance.license` holds, even when the review was read from JATS
     and its license was later changed. The report's body is every part that is the review,

@@ -934,3 +934,15 @@ def test_keep_raw_keeps_the_v2_note_as_received():
     v2 = load_v2("review.json")
 
     assert map_from("openreview", v2, keep_raw=True)["provenance"]["raw_payload"] == v2
+
+
+def test_a_review_from_elsewhere_with_only_other_parts_is_written_as_its_text():
+    from ocrs import map_to
+
+    canon = map_from("openreview", note({"summary": "S."}))
+    canon["provenance"]["source_system"] = "example-journal"
+    canon["opinion"] = {}
+    canon["narrative"] = [{"role": "other", "title": "Data", "content": "Shared."}]
+    written = map_to("openreview", canon)
+    assert written["content"]["review"] == "Data:\n\nShared."
+    assert narrative_text(map_from("openreview", written), "review") == "Data:\n\nShared."

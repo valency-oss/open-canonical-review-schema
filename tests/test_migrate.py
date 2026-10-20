@@ -150,3 +150,31 @@ def test_a_hotcrp_expertise_scored_as_a_confidence_is_an_expertise():
     written = map_to("hotcrp", migrated)
     assert written["reviewer_expertise"] == 3
     assert written["confidence"] == 3
+
+
+def test_a_mitigation_with_another_scope_is_still_an_ethics_change():
+    review = {
+        **REVIEW_07,
+        "ethics_and_risk": {
+            "required_mitigations": [{"text": "Rerun with consent.", "scope": "experiment"}]
+        },
+    }
+    [_, mitigation] = migrate(review)["findings"]["changes"]
+    assert mitigation == {"text": "Rerun with consent.", "scope": "experiment", "tags": ["ethics"]}
+
+
+def test_a_jats_review_keeps_its_license():
+    from ocrs import map_to
+
+    license_ = {"url": "https://creativecommons.org/licenses/by/4.0/", "text": "CC BY"}
+    review = {
+        **REVIEW_07,
+        "provenance": {"source_system": "jats"},
+        "extensions": {"jats": {"permissions": {"licenses": [license_]}}},
+    }
+    migrated = migrate(review)
+    assert migrated["provenance"]["license"] == {"url": license_["url"]}
+    assert (
+        'href="https://creativecommons.org/licenses/by/4.0/"'
+        in map_to("jats", migrated)["sub_article"]
+    )
