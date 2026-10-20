@@ -382,7 +382,10 @@ def _ethics_flag(field: str, value: Any, bounds: dict[str, Any] | None) -> tuple
             words.append(_form_label(field, answer, bounds))
         elif isinstance(answer, str):
             number, rest = parse_numeric_prefix(answer)
-            words.append(rest if number is not None else answer)
+            if number is None:
+                words.append(answer)
+            else:  # "2: No, …", or a number alone ("1"), which the form's label says
+                words.append(rest or _form_label(field, number, bounds))
     words = [w.strip() for w in words if isinstance(w, str) and w.strip()]
     yes = [w for w in words if re.match(r"yes\b", w, re.IGNORECASE)]
     if yes:

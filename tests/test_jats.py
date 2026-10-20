@@ -202,3 +202,34 @@ def test_a_title_or_journal_changed_in_ocrs_is_written():
     again = round_trip(review)
     assert (again["target"]["title"], again["target"]["venue"]) == ("New title", "New Journal")
     assert again["target"]["work_id"] == "doi:10.1234/j.1"
+
+
+def test_a_list_nested_in_a_list_item_is_kept():
+    body = (
+        '<list list-type="bullet"><list-item><p>Methods:</p><list list-type="bullet">'
+        "<list-item><p>No ablation.</p></list-item><list-item><p>One dataset.</p></list-item>"
+        "</list></list-item><list-item><p>Clear writing.</p></list-item></list>"
+    )
+    review = map_from("jats", payload(body=body, id="r1"))
+    assert review["narrative"]["detailed_review"] == (
+        "- Methods: No ablation.; One dataset.\n- Clear writing."
+    )
+    assert round_trip(review)["narrative"] == review["narrative"]
+
+
+def test_findings_no_section_holds_are_written_after_the_sections():
+    review = map_from("jats", payload(id="r1"))
+    review["narrative"] = {"sections": [{"title": "strengths", "content": "- Clear."}]}
+    review["opinion"] = {}
+    review["findings"] = {"strengths": [{"text": "Clear."}], "weaknesses": [{"text": "Small."}]}
+    sections = round_trip(review)["narrative"]["sections"]
+    assert sections == [
+        {"title": "strengths", "content": "- Clear."},
+        {"title": "Weaknesses", "content": "- Small."},
+    ]
+
+
+def test_a_doi_in_the_work_id_alone_is_written():
+    review = map_from("jats", payload(id="r1"))
+    review["target"] = {"work_id": "doi:10.1234/j.9", "work_type": "article"}
+    assert round_trip(review)["target"]["work_id"] == "doi:10.1234/j.9"

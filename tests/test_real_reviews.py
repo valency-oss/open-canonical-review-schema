@@ -980,3 +980,13 @@ def test_a_review_of_findings_and_a_summary_taken_from_them_keeps_them_all():
     assert again["narrative"]["sections"] == [
         {"title": "Weaknesses", "content": "- No ablation.\n- One dataset."}
     ]
+
+
+def test_an_ethics_flag_given_as_a_number_in_text_reads_by_the_forms_label():
+    from ocrs.mappers.openreview import from_openreview
+
+    note = {"id": "r", "forum": "f", "content": {"summary": "S.", "ethics_flag": "1"}}
+    bounds = {"ethics_flag": {"min": 1, "max": 2, "labels": {"1": "No", "2": "Yes"}}}
+    review = from_openreview(note, scale_bounds=bounds)
+    assert review["ethics_and_risk"] == {"ethical_concerns": False}
+    assert not review["metrics"]

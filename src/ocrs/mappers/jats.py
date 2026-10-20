@@ -26,7 +26,12 @@ import uuid
 import xml.etree.ElementTree as ET
 from typing import Any
 
-from ..identifiers import DOI_PATTERN, generate_canonical_work_id, normalize_orcid
+from ..identifiers import (
+    DOI_PATTERN,
+    generate_canonical_work_id,
+    normalize_orcid,
+    parse_canonical_work_id,
+)
 from ..schema import schema_id
 from ..util import first_paragraph, now_iso, source_decision, split_decision
 
@@ -88,6 +93,14 @@ TERMS = {
     "weak_reject": "weak-reject",
     "strong_reject": "strong-reject",
 }
+# The section titles that hold a kind of finding's text, as readers name them
+FINDING_SECTIONS = {
+    "strengths": {"strengths", "reasons to accept"},
+    "weaknesses": {"weaknesses", "reasons to reject"},
+    "questions": {"questions", "questions to authors"},
+    "changes": {"requested changes"},
+    "comments": {"comments"},
+}
 # Headings for findings, when they are all a review's text
 FINDING_HEADINGS = {
     "strengths": "Strengths",
@@ -124,11 +137,26 @@ def _inline(element: ET.Element) -> str:
     return "".join(parts)
 
 
+def _item_text(item: ET.Element) -> str:
+    """A list item as one line: its paragraphs, and the items of a list nested in it, joined
+    with "; " (a line holds no nested list)."""
+    if not len(item):
+        return _squash(_inline(item))
+    parts = [_squash(item.text or "")]
+    for child in item:
+        if child.tag == "list":
+            parts.append("; ".join(_item_text(i) for i in child.findall("list-item")))
+        else:
+            parts.append(_squash(_inline(child)))
+        parts.append(_squash(child.tail or ""))
+    return " ".join(part for part in parts if part)
+
+
 def _list_text(element: ET.Element) -> str:
     ordered = element.get("list-type") == "order"
     lines = []
     for number, item in enumerate(element.findall("list-item"), 1):
-        text = _squash(" ".join(_inline(p) for p in item.findall("p")) or _inline(item))
+        text = _item_text(item)
         lines.append(f"{number}. {text}" if ordered else f"- {text}")
     return "\n".join(lines)
 
@@ -540,11 +568,13 @@ def _write_contributor(
             _add(contrib, "aff", human["affiliation"])
 
 
-def _findings_text(findings: dict[str, Any]) -> str:
+def _findings_text(findings: dict[str, Any], skip: set[str] = frozenset()) -> str:
     """Findings as text, for a review that has no other: each kind under its heading, a point
-    to a line, with its title in bold."""
+    to a line, with its title in bold. `skip` holds the kinds the text already has."""
     blocks = []
     for kind, heading in FINDING_HEADINGS.items():
+        if kind in skip:
+            continue
         lines = []
         for point in findings.get(kind) or []:
             if not isinstance(point, dict):
@@ -640,6 +670,9 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
 
     target = canonical.get("target") or {}
     work_doi = ((target.get("identifiers") or {}).get("doi") or {}).get("value")
+    if not work_doi:  # a work named by its ID alone, `doi:10.…`
+        parsed = parse_canonical_work_id(str(target.get("work_id", "")))
+        work_doi = parsed[2] if parsed and parsed[0] == "doi" else None
     related = kept.get("related_article")
     # The version reviewed, unless the article it is part of already says it
     if work_doi and (related is not None or work_doi != (kept.get("article") or {}).get("doi")):
@@ -686,11 +719,17 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         # or else its findings; the summary is left out when it is the start of one of them
         # (a reader may take it from the first finding)
         sections = [s for s in narrative.get("sections") or [] if isinstance(s, dict)]
-        rest = "\n\n".join(
-            f"{s['title']}:\n\n{s['content']}"
-            for s in sections
-            if s.get("title") and s.get("content")
-        ) or _findings_text(canonical.get("findings") or {})
+        written = [s for s in sections if s.get("title") and s.get("content")]
+        # Findings whose text no section holds come after the sections
+        held = {
+            kind
+            for kind, titles in FINDING_SECTIONS.items()
+            for s in written
+            if str(s["title"]).casefold().replace("_", " ").strip() in titles
+        }
+        parts_ = [f"{s['title']}:\n\n{s['content']}" for s in written]
+        parts_.append(_findings_text(canonical.get("findings") or {}, held))
+        rest = "\n\n".join(part for part in parts_ if part)
         summary = opinion.get("summary") or narrative.get("summary")
         repeated = isinstance(summary, str) and _squash(summary) in _squash(rest)
         parts = [summary] if isinstance(summary, str) and summary.strip() and not repeated else []
