@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.2
+
+Only descriptions change, so every 0.7.1 review is valid under 0.7.2.
+
+### Schema
+
+- `opinion.summary` is the reviewer's opinion of the work in brief: their overall view or
+  verdict. Its description said "usually a summary of the work and its main contribution",
+  which led converters to put the reviewer's summary of the work there. That summary goes in
+  `narrative.summary`, whose description now says it is the work, not the reviewer's view.
+
 ## 0.7.1
 
 The addition is optional, so every 0.7.0 review is valid under 0.7.1.

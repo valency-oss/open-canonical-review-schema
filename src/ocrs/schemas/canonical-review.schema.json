@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.1/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -16,7 +16,7 @@
   ],
   "properties": {
     "$schema": {
-      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.1/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
+      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
       "type": "string",
       "format": "uri"
     },
@@ -398,7 +398,7 @@
       "additionalProperties": false,
       "properties": {
         "summary": {
-          "description": "The reviewer's summary of the work",
+          "description": "The reviewer's summary of the work itself: what it does and claims, not the reviewer's view of it, which goes in `opinion.summary`",
           "type": "string"
         },
         "detailed_review": {
@@ -1375,7 +1375,7 @@
       "additionalProperties": false,
       "properties": {
         "summary": {
-          "description": "The reviewer's view in brief, usually a summary of the work and its main contribution",
+          "description": "The reviewer's opinion of the work in brief: their overall view or verdict. A summary of the work itself goes in `narrative.summary`",
           "type": "string",
           "minLength": 1
         },

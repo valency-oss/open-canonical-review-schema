@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.1/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
   "review_id": "ai-review-1",
   "version": "1.0.0",
   "created_at": "2026-10-03T01:08:00Z",

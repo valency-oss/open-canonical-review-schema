@@ -1,0 +1,172 @@
+{
+  "catalog_id": "metric-catalog.core.v1",
+  "version": "1.0.0",
+  "created_at": "2025-12-25T00:00:00Z",
+  "license": "Apache-2.0",
+  "copyright": "Copyright (c) 2026 Valency Systems Inc.",
+  "description": "Core Open Canonical Review Schema (OCRS) metric catalog with aliases, recommended scales, and normalization guidance.",
+  "normalization": {
+    "default_method": "linear_to_unit_interval",
+    "tie_breakers": [
+      "anchors_if_present",
+      "min_max_if_present",
+      "heuristic_assume_1_5_or_1_10"
+    ],
+    "unit_interval_definition": "0 = worst, 1 = best"
+  },
+  "metrics": [
+    {
+      "key": "overall",
+      "aspect": "overall",
+      "label": "Overall Assessment",
+      "aliases": [
+        "overall rating",
+        "overall score",
+        "overall evaluation",
+        "recommendation score",
+        "final score",
+        "rating"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "correctness",
+      "aspect": "correctness",
+      "label": "Correctness / Soundness",
+      "aliases": [
+        "soundness",
+        "technical correctness",
+        "validity",
+        "correctness",
+        "methodological soundness",
+        "rigour of claims"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "rigor",
+      "aspect": "rigor",
+      "label": "Rigor",
+      "aliases": [
+        "rigour",
+        "methodological rigor",
+        "experimental rigor",
+        "statistical rigor",
+        "theoretical rigor"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "novelty",
+      "aspect": "novelty",
+      "label": "Novelty / Originality",
+      "aliases": [
+        "originality",
+        "newness",
+        "innovation",
+        "novel contribution",
+        "uniqueness"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "significance",
+      "aspect": "significance",
+      "label": "Significance",
+      "aliases": [
+        "importance",
+        "scientific significance",
+        "value",
+        "meaningfulness"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "impact",
+      "aspect": "impact",
+      "label": "Impact",
+      "aliases": [
+        "potential impact",
+        "expected impact",
+        "influence",
+        "reach"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "clarity",
+      "aspect": "clarity",
+      "label": "Clarity",
+      "aliases": [
+        "clarity",
+        "presentation clarity",
+        "exposition",
+        "organization",
+        "lucidity"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "readability",
+      "aspect": "readability",
+      "label": "Readability",
+      "aliases": [
+        "readability",
+        "writing quality",
+        "language quality",
+        "well-written"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "reproducibility",
+      "aspect": "reproducibility",
+      "label": "Reproducibility",
+      "aliases": [
+        "reproducibility",
+        "replicability",
+        "artifact quality",
+        "code quality",
+        "data availability"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "methodology",
+      "aspect": "methodology",
+      "label": "Methodology",
+      "aliases": [
+        "methods",
+        "experimental design",
+        "evaluation methodology",
+        "approach quality"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "ethics",
+      "aspect": "ethics",
+      "label": "Ethics / Responsible Research",
+      "aliases": [
+        "ethical concerns",
+        "responsible ai",
+        "broader impact",
+        "risk assessment",
+        "safety"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "confidence",
+      "aspect": "confidence",
+      "label": "Reviewer Confidence",
+      "aliases": [
+        "confidence",
+        "reviewer confidence",
+        "certainty",
+        "confidence in review"
+      ],
+      "direction": "higher_is_better"
+    }
+  ]
+}
