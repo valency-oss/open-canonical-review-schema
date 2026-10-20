@@ -154,19 +154,19 @@ def _best_opinion_text(payload: dict[str, Any]) -> str | None:
 
 
 def _collect_findings(payload: dict[str, Any]) -> dict[str, Any]:
-    """Extract strengths, weaknesses, questions from HotCRP fields."""
+    """Extract strengths, weaknesses, questions from HotCRP fields. A form with both
+    `questions` and `questions_for_authors` gives both, in that order."""
     findings: dict[str, Any] = {}
     for k in ("strengths", "weaknesses", "questions", "questions_for_authors"):
         v = payload.get(k)
         canon_key = "questions" if k == "questions_for_authors" else k
+        items: list[dict[str, Any]] = []
         if isinstance(v, list):
             items = [{"text": str(x)} for x in v if x is not None and str(x).strip()]
-            if items:
-                findings[canon_key] = items
         elif isinstance(v, str) and v.strip():
-            bullets = split_bullet_list(v)
-            if bullets:
-                findings[canon_key] = [{"text": b} for b in bullets]
+            items = [{"text": b} for b in split_bullet_list(v)]
+        if items:
+            findings.setdefault(canon_key, []).extend(items)
     return findings
 
 
@@ -536,19 +536,23 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
 
     if nar.get("confidential_to_editors"):
         out["confidential_comments"] = nar["confidential_to_editors"]
-    # The reader takes the questions for the authors as findings too, so they are written once
     if nar.get("author_questions"):
         out["questions_for_authors"] = nar["author_questions"]
 
     # Map findings
     findings = canonical.get("findings", {}) or {}
     for k in ("strengths", "weaknesses", "questions"):
+        texts = [
+            f.get("text") for f in findings.get(k) or [] if isinstance(f, dict) and f.get("text")
+        ]
         if k == "questions" and "questions_for_authors" in out:
-            continue
-        if isinstance(findings.get(k), list) and findings[k]:
-            out[k] = "\n".join(
-                f"- {f.get('text')}" for f in findings[k] if isinstance(f, dict) and f.get("text")
-            )
+            # The reader adds the questions for the authors to the questions, after those from
+            # `questions`: only those before them are written there
+            asked = split_bullet_list(out["questions_for_authors"])
+            if asked and texts[-len(asked) :] == asked:
+                texts = texts[: -len(asked)]
+        if texts:
+            out[k] = "\n".join(f"- {text}" for text in texts)
 
     # Scores, each with its label. The overall score carries the recommendation in its label
     dec = source_decision(canonical.get("decision", {}) or {})

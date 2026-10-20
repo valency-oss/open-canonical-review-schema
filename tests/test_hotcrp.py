@@ -700,3 +700,23 @@ def test_hotcrp_a_null_merit_does_not_hide_the_next_score():
     canon = map_from("hotcrp", {"pid": 1, "overall_merit": None, "overall": 4})
     assert canon["decision"]["recommendation"] == "accept"
     assert [m["value"] for m in canon["metrics"] if m["key"] == "overall"] == [4]
+
+
+def test_hotcrp_keeps_both_question_fields():
+    """A form with `questions` and `questions_for_authors` gives both, and gets both back."""
+    payload = {
+        "id": 1,
+        "pid": 2,
+        "comments": "Fine.",
+        "questions": "- Why this baseline?",
+        "questions_for_authors": "- How does it scale?",
+    }
+    canon = map_from("hotcrp", payload)
+    assert [f["text"] for f in canon["findings"]["questions"]] == [
+        "Why this baseline?",
+        "How does it scale?",
+    ]
+    back = to_hotcrp(canon)
+    assert back["questions"] == "- Why this baseline?"
+    assert back["questions_for_authors"] == "- How does it scale?"
+    assert map_from("hotcrp", back)["findings"] == canon["findings"]

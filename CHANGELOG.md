@@ -55,9 +55,11 @@ The schema says the same thing in fewer words. Every review valid under 0.7.1 is
   kept; OpenReview labels the overall score and the confidence with their form fields
   (`rating`, `overall rating`, `confidence`), as it labels its other scores, where they were
   `Overall Assessment` and `Reviewer Confidence`, so that each is written back to its own field
-  and the form's bounds for it apply again; CMT takes the paper's title from `paperTitle` and the review's date from `reviewDate`
-  as well as `createdAt`; Editorial Manager and ScholarOne take the title from
-  `manuscriptTitle`.
+  and the form's bounds for it apply again; CMT takes the paper's title from `paperTitle` and
+  the review's date from `reviewDate` as well as `createdAt`; Editorial Manager and ScholarOne
+  take the title from `manuscriptTitle`; HotCRP keeps both `questions` and
+  `questions_for_authors` when a form has both, where the questions for the authors replaced
+  the others.
 - Tests write each fixture back in its source's format and read it again, both ways. Every
   review OCRS reads from a system comes back unchanged through that system's format; going
   the other way, `tests/test_roundtrip.py` lists the system's own fields that OCRS has no
