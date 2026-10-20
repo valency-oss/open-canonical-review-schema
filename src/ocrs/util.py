@@ -857,13 +857,16 @@ def narrative_parts(canonical: dict[str, Any]) -> list[dict[str, Any]]:
 def recommendation_label(canonical: dict[str, Any]) -> str | None:
     """The review's recommendation as a source writes it: in the source's own words
     (`decision.source_label`) when they say this recommendation, else in OCRS's words
-    ("Major Revision"). A recommendation OCRS cannot name is the source's words alone."""
+    ("Major Revision"). A recommendation OCRS cannot name is the source's words alone, and so
+    is a `borderline` read from words that name none ("Not sure"), as the readers take them."""
     decision = source_decision(canonical.get("decision") or {})
     rec = decision.get("recommendation")
     own = decision.get("source_label")
+    own = (own.strip() or None) if isinstance(own, str) else None
     if not isinstance(rec, str):
-        return (own.strip() or None) if isinstance(own, str) else None
-    if isinstance(own, str) and map_recommendation_from_text(own) == rec:
+        return own
+    says = map_recommendation_from_text(own) if own else None
+    if own and (says == rec or (says is None and rec == "borderline")):
         return own
     return rec.replace("_", " ").title()
 

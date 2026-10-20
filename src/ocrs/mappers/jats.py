@@ -762,14 +762,26 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         if p.get("role") == "review" and for_authors(p) and p["content"].strip()
     ]
     text = "\n\n".join(reports) or opinion.get("text")
-    if not (isinstance(text, str) and text.strip()):
+
+    def headed(part: dict[str, Any]) -> str:
+        return f"{part['title']}:\n\n{part['content']}" if part.get("title") else part["content"]
+
+    if isinstance(text, str) and text.strip():
+        # Then the questions for the authors and the other parts they may read
+        others = [
+            s
+            for s in narrative_parts(canonical)
+            if s.get("role") in ("questions", "other") and for_authors(s) and s["content"].strip()
+        ]
+        text = "\n\n".join([text, *map(headed, others)])
+    else:
         # A review without a full text: its summary, then its other parts, each under its
         # heading when it has one, or else its findings; the summary is left out when it is
         # the start of one of them (a reader may take it from the first finding)
         written = [
             s
             for s in narrative_parts(canonical)
-            if "role" not in s and for_authors(s) and s["content"]
+            if s.get("role") in (None, "questions", "other") and for_authors(s) and s["content"]
         ]
         # Findings whose text no section holds come after the sections
         held = {
@@ -781,9 +793,7 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
             }
             for kind, titles in FINDING_SECTIONS.items()
         }
-        parts_ = [
-            f"{s['title']}:\n\n{s['content']}" if s.get("title") else s["content"] for s in written
-        ]
+        parts_ = [headed(s) for s in written]
         parts_.append(_findings_text(canonical.get("findings") or {}, held))
         rest = "\n\n".join(part for part in parts_ if part)
         summary = opinion.get("summary") or narrative_text(canonical, "summary")

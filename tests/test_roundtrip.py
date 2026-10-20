@@ -561,3 +561,30 @@ def test_a_labelled_score_reads_back_the_same(writer, value, label):
     review = written_review(writer, metrics=[{**metric, "justification": label}])
     [again] = map_from(writer, map_to(writer, review))["metrics"]
     assert (again["value"], again["justification"]) == (value, label)
+
+
+@pytest.mark.parametrize(
+    "source, payload",
+    [
+        (
+            "openreview",
+            {"id": "r1", "forum": "f1", "content": {"summary": "S.", "recommendation": "Not sure"}},
+        ),
+        (
+            "cmt",
+            {
+                "reviewId": "r1",
+                "paperId": 1,
+                "recommendation": "Not sure",
+                "commentsToAuthors": "T.",
+            },
+        ),
+        ("hotcrp", {"pid": 1, "rid": 2, "overall_merit": "Not sure", "comments": "T."}),
+    ],
+)
+def test_a_recommendation_in_words_that_name_none_keeps_them(source, payload):
+    """The readers take words that name no recommendation as borderline, and the writers give
+    the words back rather than "Borderline"."""
+    review = map_from(source, payload)
+    assert review["decision"] == {"recommendation": "borderline", "source_label": "Not sure"}
+    assert map_from(source, map_to(source, review))["decision"] == review["decision"]
