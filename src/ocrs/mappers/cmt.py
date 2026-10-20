@@ -335,11 +335,9 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
             continue
         key = m.get("key")
         if key == "overall":
+            # The reader takes a recommendation from this field and reads only a number
+            # there: any other value would hide the review's recommendation, or make one up
             if not is_number(m["value"]):
-                # The reader takes the recommendation from this field first and cannot read
-                # this score, so the score is written only when there is no recommendation
-                if not rec:
-                    out.setdefault("overallEvaluation", m["value"])
                 continue
             # The reader takes the recommendation from the score's label, then its value: a
             # label that would read back as another recommendation gives way to the decision's

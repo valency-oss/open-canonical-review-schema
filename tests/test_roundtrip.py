@@ -473,18 +473,13 @@ def test_an_overall_score_that_is_a_list_leaves_the_recommendation_to_its_field(
         decision={"recommendation": "accept"},
         metrics=[{**overall, "justification": "Accept"}],
     )
-    written = map_to(writer, review)
-    assert map_from(writer, written)["decision"]["recommendation"] == "accept"
-    # OpenReview takes its recommendation field before any score, so the score is written too
-    if writer == "openreview":
-        assert written["content"]["rating"] == ["a", "b"]
+    assert map_from(writer, map_to(writer, review))["decision"]["recommendation"] == "accept"
 
 
-@pytest.mark.parametrize(
-    ("writer", "field"),
-    [("cmt", "overallEvaluation"), ("hotcrp", "overall_merit"), ("openreview", "rating")],
-)
-def test_an_overall_score_that_is_not_a_number_is_written_without_a_recommendation(writer, field):
+@pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
+def test_an_overall_score_that_is_not_a_number_makes_up_no_recommendation(writer):
+    """The readers take a recommendation from the overall score's field and read only a number
+    there, so a score of another kind is left out rather than read back as a verdict."""
     overall = {"key": "overall", "label": "rating", "scale": {"type": "textual"}, "value": "Strong"}
-    written = map_to(writer, written_review(writer, metrics=[overall]))
-    assert (written.get("content") or written)[field] == "Strong"
+    again = map_from(writer, map_to(writer, written_review(writer, metrics=[overall])))
+    assert "recommendation" not in again.get("decision", {})
