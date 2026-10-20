@@ -76,7 +76,7 @@ def test_journal_narrative_minimal():
 
 def test_openreview_note_without_id_or_signature():
     canon = map_from("openreview", {"forum": "or_forum_123", "content": {"summary": "Fine."}})
-    assert "referee_id" not in canon["referee"]
+    assert "referee_id" not in canon["referees"][0]
     assert "source_review_id" not in canon["provenance"]
 
 
@@ -365,7 +365,7 @@ def written_review(source_system: str, **fields) -> dict:
         "version": "1.0.0",
         "created_at": "2025-01-01T00:00:00Z",
         "provenance": {"source_system": source_system},
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:paperId:7", "work_type": "article"},
         "opinion": {"summary": "A sound paper."},
         **fields,

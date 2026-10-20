@@ -15,7 +15,7 @@ def review():
         "version": "1.0.0",
         "created_at": "2026-10-12T12:00:00Z",
         "provenance": {"source_system": "example-journal"},
-        "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
         "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
         "opinion": {"summary": "A sound paper."},
     }
@@ -66,7 +66,7 @@ def test_revision_only_decisions_roundtrip(system, field, label, revision):
         payload = {"content": payload}
     canonical = map_from(system, payload)
     validate_canonical(canonical)
-    assert canonical["decision"] == {"revision_requirement": revision}
+    assert canonical["decision"] == {"revision_requirement": revision, "source_label": label}
     restored = map_from(system, map_to(system, canonical))
     validate_canonical(restored)
     assert restored["decision"] == canonical["decision"]

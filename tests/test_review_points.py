@@ -16,7 +16,7 @@ MINIMAL_REVIEW = {
     "version": "1.0.0",
     "created_at": "2026-10-16T12:00:00Z",
     "provenance": {"source_system": "example-journal"},
-    "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+    "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
     "target": {"work_id": "unknown", "work_type": "article"},
     "opinion": {"summary": "A sound paper."},
 }
@@ -74,7 +74,7 @@ FINDINGS = {
             "title": "Name the citation",
             "text": "Write the reference as a noun.",
             "scope": "typo",
-            "applies_to": {"finding_id": "typo-1"},
+            "addresses": ["typo-1"],
             "evidence_links": [{"type": "paper_section", "ref": "p.5", "location": {"page": 5}}],
             "suggested_edits": [{"replacement": "described in Ref. 21,"}],
             "group": ["Minor Corrections and Typos"],
@@ -132,11 +132,8 @@ def test_schema_rejects(path, value):
         (lambda f: f["weaknesses"][1].update(id="overview-1"), "not unique"),
         (lambda f: f["changes"][0].update(id="typo-1"), "not unique"),
         (lambda f: f["weaknesses"][0].update(summarizes=["missing"]), "not a finding id"),
-        (lambda f: f["weaknesses"][0].update(summarizes=["fix-1"]), "not a finding id"),
-        (
-            lambda f: f["changes"][0]["applies_to"].update(finding_id="missing"),
-            "not a finding id",
-        ),
+        (lambda f: f["changes"][0].update(addresses=["missing"]), "not a finding id"),
+        (lambda f: f["weaknesses"][0].update(claim_ids=["missing"]), "not a claim_id"),
         (
             lambda f: f["weaknesses"][1]["evidence_links"][0]["location"].update(page_end=9),
             "before page",
@@ -150,20 +147,34 @@ def test_references_must_resolve(change, message):
         validate_canonical(review(findings))
 
 
-def test_mitigations_are_action_items_too():
+def test_a_change_for_an_ethical_concern_is_a_change_with_scope_ethics():
     out = review()
-    out["ethics_and_risk"] = {"required_mitigations": [{"id": "typo-1", "text": "Redact."}]}
-    with pytest.raises(jsonschema.ValidationError, match="required_mitigations.*not unique"):
-        validate_canonical(out)
-    out["ethics_and_risk"]["required_mitigations"][0] = {
-        "id": "mitigation-1",
-        "text": "Redact.",
-        "applies_to": {"finding_id": "missing"},
-    }
+    out["ethics_and_risk"] = {"ethical_concerns": True}
+    mitigation = {"id": "mitigation-1", "text": "Redact.", "scope": "ethics", "addresses": ["x"]}
+    out["findings"]["changes"].append(mitigation)
     with pytest.raises(jsonschema.ValidationError, match="not a finding id"):
         validate_canonical(out)
-    out["ethics_and_risk"]["required_mitigations"][0]["applies_to"]["finding_id"] = "typo-1"
+    mitigation["addresses"] = ["typo-1"]
     validate_canonical(out)
+    # Ethics has no list of its own changes any more
+    out["ethics_and_risk"]["required_mitigations"] = [{"text": "Redact."}]
+    with pytest.raises(jsonschema.ValidationError, match="required_mitigations"):
+        validate_canonical(out)
+
+
+def test_a_change_says_how_serious_and_answers_points():
+    out = review()
+    change = out["findings"]["changes"][0]
+    change["severity"] = "trivial"
+    validate_canonical(out)
+    # Severity runs from info to critical; priority is gone
+    change["severity"] = "blocking"
+    with pytest.raises(jsonschema.ValidationError, match="severity"):
+        validate_canonical(out)
+    change["severity"] = "minor"
+    change["priority"] = "minor"
+    with pytest.raises(jsonschema.ValidationError, match="priority"):
+        validate_canonical(out)
 
 
 def test_source_data_is_not_checked_as_evidence():
@@ -171,7 +182,7 @@ def test_source_data_is_not_checked_as_evidence():
     lookalike = {"type": "custom", "ref": "x", "location": {"page": 9, "page_end": 3}}
     out["extensions"] = {"some-reviewer": {"evidence_links": [lookalike]}}
     out["provenance"]["raw_payload"] = {"evidence_links": [lookalike]}
-    out["referee"] = {
+    out["referees"][0] = {
         "referee_type": "ai",
         "identity_mode": "open",
         "ai_referee": {

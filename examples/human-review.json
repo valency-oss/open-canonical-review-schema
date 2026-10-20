@@ -1,25 +1,11 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
   "review_id": "journal-review-2041",
   "version": "1.0.0",
   "created_at": "2026-09-14T09:30:00Z",
   "provenance": {
     "source_system": "example-journal",
     "source_review_id": "R2-2041"
-  },
-  "referee": {
-    "referee_type": "human",
-    "identity_mode": "single_blind",
-    "competing_interests_declared": false,
-    "human_referee": {
-      "expertise": {
-        "self_reported_level": "expert",
-        "domain_tags": [
-          "hydrology",
-          "remote-sensing"
-        ]
-      }
-    }
   },
   "target": {
     "work_id": "internal_id:manuscript_id:manuscript-2041",
@@ -43,8 +29,8 @@
   },
   "decision": {
     "revision_requirement": "major",
-    "confidence": 0.8,
-    "summary_rationale": "The dataset is valuable; the validation needs ground stations outside the training region."
+    "summary_rationale": "The dataset is valuable; the validation needs ground stations outside the training region.",
+    "credence": 0.8
   },
   "metric_catalog_ref": "metric-catalog.core.v1",
   "metrics": [
@@ -110,5 +96,20 @@
         "text": "How does accuracy change in forested areas, where snow is hidden under the canopy?"
       }
     ]
-  }
+  },
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "single_blind",
+      "competing_interests_declared": false,
+      "human_referee": {},
+      "expertise": {
+        "self_reported_level": "expert",
+        "domain_tags": [
+          "hydrology",
+          "remote-sensing"
+        ]
+      }
+    }
+  ]
 }

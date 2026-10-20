@@ -1,56 +1,10 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
   "review_id": "hybrid-review-77",
   "version": "1.0.0",
   "created_at": "2026-10-01T16:00:00Z",
   "provenance": {
     "source_system": "example-platform"
-  },
-  "referee": {
-    "referee_type": "hybrid",
-    "identity_mode": "open",
-    "human_referee": {
-      "name": "Jane Smith"
-    },
-    "ai_referee": {
-      "system": {
-        "critic_framework": {
-          "name": "example-reviewer",
-          "version": "2.3.0"
-        },
-        "models": [
-          {
-            "role": "reviewer",
-            "model_id": "example-model"
-          }
-        ]
-      },
-      "execution": {
-        "started_at": "2026-10-01T14:00:00Z",
-        "ended_at": "2026-10-01T14:06:00Z"
-      }
-    },
-    "hybrid_workflow": {
-      "human_contributions": [
-        {
-          "type": "fact_checking",
-          "time_spent_minutes": 40,
-          "notes": "Checked each quote against the paper; removed one finding that misread Table 2."
-        },
-        {
-          "type": "editing",
-          "time_spent_minutes": 20
-        },
-        {
-          "type": "final_approval"
-        }
-      ],
-      "attribution": {
-        "ai_fraction_estimate": 0.6,
-        "human_fraction_estimate": 0.4,
-        "method": "Share of final text first written by each"
-      }
-    }
   },
   "target": {
     "work_id": "internal_id:preprint_id:preprint-77v2",
@@ -96,5 +50,53 @@
         ]
       }
     ]
-  }
+  },
+  "referees": [
+    {
+      "referee_type": "hybrid",
+      "identity_mode": "open",
+      "human_referee": {
+        "name": "Jane Smith"
+      },
+      "ai_referee": {
+        "system": {
+          "critic_framework": {
+            "name": "example-reviewer",
+            "version": "2.3.0"
+          },
+          "models": [
+            {
+              "role": "reviewer",
+              "model_id": "example-model"
+            }
+          ]
+        },
+        "execution": {
+          "started_at": "2026-10-01T14:00:00Z",
+          "ended_at": "2026-10-01T14:06:00Z"
+        }
+      },
+      "hybrid_workflow": {
+        "human_contributions": [
+          {
+            "type": "fact_checking",
+            "time_spent_minutes": 40,
+            "notes": "Checked each quote against the paper; removed one finding that misread Table 2."
+          },
+          {
+            "type": "editing",
+            "time_spent_minutes": 20
+          },
+          {
+            "type": "final_approval"
+          }
+        ],
+        "attribution": {
+          "ai_fraction_estimate": 0.6,
+          "human_fraction_estimate": 0.4,
+          "method": "Share of final text first written by each"
+        }
+      }
+    }
+  ]
 }

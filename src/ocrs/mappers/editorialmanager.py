@@ -13,16 +13,23 @@ from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
 from ..util import (
     department_affiliation,
+    fields_for,
     first_paragraph,
+    from_source,
     id_as_number,
     iso_date_or_time,
     map_recommendation_from_text,
     match_alias,
+    narrative_field,
+    narrative_parts,
     now_iso,
     parse_date_flexible,
     parse_labeled_score,
+    recommendation_label,
+    referee_of,
     score_sheet_answers,
     score_sheet_questions,
+    section,
     source_decision,
     source_work_id,
     split_decision,
@@ -71,6 +78,17 @@ def _with_known_names(payload: dict[str, Any]) -> dict[str, Any]:
     if no_id and document is not None and person is not None:
         out["reviewId"] = f"{document}_p{person}"
     return out
+
+
+# The fields of the review's own text the reader takes, in order, each as a part with
+# its role and audience; the first the form fills for each role and audience
+NARRATIVE_FIELDS: tuple[tuple[str, str, str | None], ...] = (
+    ("summary", "summary", None),
+    ("commentsToAuthor", "review", "authors"),
+    ("comments_to_author", "review", "authors"),
+    ("confidentialCommentsToEditor", "review", "editors"),
+    ("confidential_comments_to_editor", "review", "editors"),
+)
 
 
 def _extract_time(payload: dict[str, Any]) -> str:
@@ -310,11 +328,11 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
             "imported_at": now_iso(),
             "mapping": {
                 "mapping_spec_id": "canonical-review.mapping.v1",
-                "mapping_spec_version": "1.1.0",
+                "mapping_spec_version": "1.2.0",
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": referee,
+        "referees": [referee],
         "target": {
             "identifiers": identifiers,
             "work_id": generate_canonical_work_id(identifiers),
@@ -340,30 +358,26 @@ def from_editorialmanager(payload: dict[str, Any], *, keep_raw: bool = False) ->
     if venue:
         out["target"]["venue"] = venue
 
-    # Narrative mapping
-    narrative: dict[str, Any] = {}
-
-    for src, dst in [
-        ("commentsToAuthor", "detailed_review"),
-        ("comments_to_author", "detailed_review"),
-        ("confidentialCommentsToEditor", "confidential_to_editors"),
-        ("confidential_comments_to_editor", "confidential_to_editors"),
-        ("summary", "summary"),
-    ]:
-        v = payload.get(src)
-        if isinstance(v, str) and v.strip():
-            if dst not in narrative:
-                narrative[dst] = v.strip()
-    if written:
-        narrative["sections"] = [{"title": q, "content": text} for q, text in written]
-
+    # The review's own text, each field as a part, then the score sheet's answers in words
+    narrative: list[dict[str, Any]] = []
+    taken: set[tuple[str, str | None]] = set()
+    for field, role, audience in NARRATIVE_FIELDS:
+        v = payload.get(field)
+        if isinstance(v, str) and v.strip() and (role, audience) not in taken:
+            taken.add((role, audience))
+            narrative.append(section(v.strip(), title=field, role=role, audience=audience))
+    narrative += [section(text, title=question) for question, text in written]
     if narrative:
         out["narrative"] = narrative
 
     # Decision
-    rec = _parse_recommendation(payload)
-    if rec:
-        out["decision"] = split_decision({"recommendation": rec})
+    # The recommendation, and its text as the source wrote it
+    decision = {"recommendation": _parse_recommendation(payload)}
+    text = payload.get("recommendation")
+    if isinstance(text, str) and text.strip():
+        decision["source_label"] = text.strip()
+    if decision := split_decision(decision):
+        out["decision"] = decision
 
     # Revision number -> round
     rev = payload.get("revisionNumber")
@@ -398,6 +412,7 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
     Returns:
         An Editorial Manager-like review dictionary.
     """
+    same_source = from_source(canonical, "editorialmanager")
     # Extract review ID
     rid = canonical.get("review_id", "")
     if rid.startswith("em_"):
@@ -408,7 +423,7 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
         "manuscriptId": source_work_id(canonical.get("target", {})),
     }
 
-    referee = canonical.get("referee", {}) or {}
+    referee = referee_of(canonical)
     human = referee.get("human_referee", {}) or {}
     for field, value in [
         ("manuscriptTitle", canonical.get("target", {}).get("title")),
@@ -424,29 +439,34 @@ def to_editorialmanager(canonical: dict[str, Any]) -> dict[str, Any]:
             out[field] = value
 
     # Map narrative
-    nar = canonical.get("narrative", {}) or {}
     op = canonical.get("opinion", {}) or {}
 
-    if nar.get("summary"):
-        out["summary"] = nar["summary"]
-    if nar.get("detailed_review"):
-        out["commentsToAuthor"] = nar["detailed_review"]
+    # Each part of the review's own text under its own field, when read from this system
+    def own_field(role: str, *, editors: bool = False) -> tuple[str, str] | None:
+        fields = fields_for(NARRATIVE_FIELDS, role, editors=editors)
+        audience = "editors" if editors else None
+        return narrative_field(canonical, role, fields, audience=audience, same_source=same_source)
+
+    if summary := own_field("summary"):
+        out[summary[0]] = summary[1]
+    if review := own_field("review"):
+        out[review[0]] = review[1]
     elif op.get("text"):
         out["commentsToAuthor"] = op["text"]
     elif op.get("summary"):
         out["commentsToAuthor"] = op["summary"]
 
-    if nar.get("confidential_to_editors"):
-        out["confidentialCommentsToEditor"] = nar["confidential_to_editors"]
+    if confidential := own_field("review", editors=True):
+        out[confidential[0]] = confidential[1]
     # Parts of the text, as the score sheet's questions answered in words
-    questions = score_sheet_questions(nar.get("sections"))
+    questions = score_sheet_questions(narrative_parts(canonical))
     if questions:
         out["scoreSheetCustomQuestions"] = questions
 
     # Map recommendation
     dec = source_decision(canonical.get("decision", {}) or {})
     if isinstance(dec.get("recommendation"), str):
-        out["recommendation"] = dec["recommendation"].replace("_", " ").title()
+        out["recommendation"] = recommendation_label(canonical)
         codes = {v: k for k, v in EM_RECOMMENDATION_MAP.items()}
         if dec["recommendation"] in codes:
             out["recommendationCode"] = codes[dec["recommendation"]]

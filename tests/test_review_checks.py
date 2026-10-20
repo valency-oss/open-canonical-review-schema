@@ -15,7 +15,7 @@ REVIEW = {
     "version": "1.0.0",
     "created_at": "2026-10-16T12:00:00Z",
     "provenance": {"source_system": "some-ai-reviewer"},
-    "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+    "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
     "target": {
         "work_id": "unknown",
         "work_type": "preprint",
@@ -28,7 +28,7 @@ REVIEW = {
                 "title": "Multi-source forecasting",
                 "text": "The authors combine a ceiling thermal array with truck-yard snapshots.",
             },
-            {"text": "The model cuts temperature error by 21% at 20 minutes.", "claim_id": "c1"},
+            {"text": "The model cuts temperature error by 21% at 20 minutes.", "claim_ids": ["c1"]},
         ]
     },
     "claim_assessments": [
@@ -164,7 +164,7 @@ def test_schema_rejects(path, value):
         (lambda r: r["checks"][2].update(finding_ids=["missing"]), "not a finding id"),
         (lambda r: r["checks"][2].update(finding_ids=["ai-text"]), "not a finding id"),
         (
-            lambda r: r["opinion"]["contributions"][1].update(claim_id="missing"),
+            lambda r: r["opinion"]["contributions"][1].update(claim_ids=["missing"]),
             "not a claim_id",
         ),
         (
@@ -185,7 +185,5 @@ def test_comments_can_be_summarized_and_acted_on():
     out["findings"]["weaknesses"] = [
         {"id": "overview-1", "text": "Notation is inconsistent.", "summarizes": ["symbol-1"]}
     ]
-    out["findings"]["changes"] = [
-        {"text": "Rename the threshold.", "applies_to": {"finding_id": "symbol-1"}}
-    ]
+    out["findings"]["changes"] = [{"text": "Rename the threshold.", "addresses": ["symbol-1"]}]
     validate_canonical(out)

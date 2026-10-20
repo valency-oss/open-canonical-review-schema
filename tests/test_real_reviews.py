@@ -22,6 +22,7 @@ from test_roundtrip import AI_RUN, differences, frozen_clock, without_import_tim
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers import jats
+from ocrs.util import narrative_text
 
 REAL = Path(__file__).parent / "fixtures" / "real"
 SOURCES = json.loads((REAL / "sources.json").read_text())
@@ -130,11 +131,11 @@ def renamed(**names: str) -> set[str]:
     }
 
 
-# The note's bookkeeping, which OCRS has no place for
+# The note's bookkeeping, which OCRS has no place for. Its license comes back, from
+# provenance.license
 NOTE = {
     "- domain",
     "- invitations",
-    "- license",
     "- nonreaders",
     "- number",
     "- readers",
@@ -170,14 +171,14 @@ COLM_REVIEW = NOTE | unwrapped(
     "confidence", "ethics_flag", "rating", "reasons_to_accept", "reasons_to_reject", "summary"
 )
 # TMLR's review: its summary of contributions is the summary, its strengths and weaknesses the
-# review's text; its notes give no `nonreaders`
-TMLR_REVIEW = (NOTE - {"- nonreaders"}) | renamed(
-    summary_of_contributions="summary", strengths_and_weaknesses="review"
+# review's text, each written back to its own field; its notes give no `nonreaders`
+TMLR_REVIEW = (NOTE - {"- nonreaders"}) | unwrapped(
+    "summary_of_contributions", "strengths_and_weaknesses"
 )
 TMLR_REVIEW |= unwrapped("audience", "broader_impact_concerns", "claims_and_evidence")
 TMLR_REVIEW |= unwrapped("requested_changes")
 # The NeurIPS 2024 Datasets and Benchmarks track's review
-DATASETS_REVIEW = NOTE | {"- content.title"} | renamed(summary_and_contributions="summary")
+DATASETS_REVIEW = NOTE | {"- content.title"} | unwrapped("summary_and_contributions")
 DATASETS_REVIEW |= unwrapped(
     "additional_feedback",
     "clarity",
@@ -440,7 +441,7 @@ def test_a_tmlr_review_is_read():
         for k, v in real("openreview/rNsAQisgOo/review_yD4cisomcG.json")["content"].items()
     }
     assert review["opinion"]["summary"] == content["summary_of_contributions"]
-    assert review["narrative"]["detailed_review"] == content["strengths_and_weaknesses"]
+    assert narrative_text(review, "review") == content["strengths_and_weaknesses"]
     # The requested changes are the list's three items; the reference after the list, which
     # the first cites, is no change, and the field's text is kept whole
     assert [c["text"][:30] for c in review["findings"]["changes"]] == [
@@ -448,7 +449,9 @@ def test_a_tmlr_review_is_read():
         "The reviewer will be intereste",
         "Please improve the design of F",
     ]
-    sections = {s["title"]: s["content"] for s in review["narrative"]["sections"]}
+    sections = {
+        s["title"]: s["content"] for s in [p for p in review["narrative"] if "role" not in p]
+    }
     assert sections == {
         "requested_changes": content["requested_changes"].strip(),
         "broader_impact_concerns": "No.",
@@ -474,7 +477,7 @@ def test_an_iclr_2026_meta_review_keeps_all_its_parts():
     concerns and scores were lost."""
     review = read_real("openreview/y3oHMcoItR/meta_review_cqnYimoTWt.json")
     assert review["review_context"]["review_type"] == "meta_review"
-    assert [s["title"] for s in review["narrative"]["sections"]] == [
+    assert [s["title"] for s in [p for p in review["narrative"] if "role" not in p]] == [
         "reviewer_concerns",
         "reviewer_scores",
     ]
@@ -495,7 +498,7 @@ def test_a_score_given_with_its_label_reads_as_one_given_alone():
 def test_a_journal_reviewers_number_is_written_back():
     """The journal narrative writer dropped `reviewer_id`, so a review lost its referee."""
     review = read_real("journal/elife_100443_sa1.json")
-    assert review["referee"]["referee_id"] == "Reviewer #1"
+    assert review["referees"][0]["referee_id"] == "Reviewer #1"
     assert map_to("journal_narrative", review)["reviewer_id"] == "Reviewer #1"
 
 
@@ -534,13 +537,17 @@ def test_hotcrp_reads_its_apis_review_object():
     review = read_real("hotcrp/documented_api_review.json")
     assert review["review_id"] == "hotcrp_193"
     assert review["provenance"]["source_review_id"] == "193"
-    assert review["referee"]["referee_id"] == "pat@example.org"
-    assert review["referee"]["human_referee"]["name"] == "Pat Example"
+    assert review["referees"][0]["referee_id"] == "pat@example.org"
+    assert review["referees"][0]["human_referee"]["name"] == "Pat Example"
     # Its last change; it says no time of submission, so it was written when it was imported
     assert review["updated_at"] == "2025-01-01T00:00:00Z"
     assert review["created_at"] != review["updated_at"]
     assert [m["label"] for m in review["metrics"]] == ["Overall Merit", "Reviewer Expertise"]
-    assert set(review["narrative"]) == {"summary", "detailed_review", "confidential_to_editors"}
+    assert [(p["role"], p.get("audience")) for p in review["narrative"]] == [
+        ("summary", None),
+        ("review", "authors"),
+        ("review", "editors"),
+    ]
 
 
 def test_hotcrp_writes_an_unlabelled_score_as_it_came():
@@ -573,15 +580,15 @@ def test_scholarone_reads_its_web_services_record():
     # A record is one reviewer's review of one revision
     assert review["review_id"] == "s1_51234567_p9876543"
     assert review["created_at"] == "2026-03-20T16:45:10Z"
-    assert review["referee"]["referee_id"] == "9876543"
-    assert review["referee"]["human_referee"] == {
+    assert review["referees"][0]["referee_id"] == "9876543"
+    assert review["referees"][0]["human_referee"] == {
         "orcid": "0000-0002-1825-0097",
         "name": "Example, Dr. Riley",
         "affiliation": "Department of Chemistry, Example University",
         "third_party_id": {"key": "researcherid", "value": "A-1234-2020"},
     }
     # "Minor Revision", from the recommendation's text
-    assert review["decision"] == {"revision_requirement": "minor"}
+    assert review["decision"] == {"revision_requirement": "minor", "source_label": "Minor Revision"}
     # The score sheet's answers with numbers are scores, with the answer as their label
     assert [(m["label"], m["value"], m.get("justification")) for m in review["metrics"]] == [
         ("Does the manuscript contain new and significant information?", 4.0, "Yes"),
@@ -589,13 +596,13 @@ def test_scholarone_reads_its_web_services_record():
     ]
     # and those in words are parts of the text. The editor's rating of the reviewer is
     # neither: it is not part of the review
-    assert review["narrative"]["sections"] == [
+    assert [p for p in review["narrative"] if "role" not in p] == [
         {
             "title": "Which further references should the authors cite?",
             "content": "The calibration study the method builds on.",
         }
     ]
-    assert review["narrative"]["confidential_to_editors"] == "A minor revision should suffice."
+    assert narrative_text(review, audience="editors") == "A minor revision should suffice."
 
 
 def test_editorial_manager_reads_its_web_services_record():
@@ -603,20 +610,20 @@ def test_editorial_manager_reads_its_web_services_record():
     # The record has no review ID: it is made of the revision's document and the reviewer
     assert review["review_id"] == "em_JEXP-D-26-00142R1_p4455667"
     assert review["created_at"] == "2026-04-21T12:05:00Z"
-    assert review["referee"]["referee_id"] == "4455667"
-    human = review["referee"]["human_referee"]
+    assert review["referees"][0]["referee_id"] == "4455667"
+    human = review["referees"][0]["human_referee"]
     assert (human["scopus_id"], human["affiliation"]) == (
         "57190000001",
         "Example Institute of Technology",
     )
     # Revision 1 is the second round
     assert review["review_context"] == {"round": 2}
-    assert review["decision"] == {"revision_requirement": "major"}
+    assert review["decision"] == {"revision_requirement": "major", "source_label": "Major Revision"}
     # An integer question's answer is a score; its `numericValue` is always null
     assert [(m["label"], m["value"]) for m in review["metrics"]] == [
         ("Rate the originality of the work (1 = poor, 5 = excellent)", 4)
     ]
-    assert [s["title"] for s in review["narrative"]["sections"]] == [
+    assert [s["title"] for s in [p for p in review["narrative"] if "role" not in p]] == [
         "Is the English acceptable?",
         "Comments on the statistical analysis",
     ]
@@ -784,7 +791,7 @@ def test_an_f1000_report_is_read_from_its_jats():
     assert review["created_at"] == "2026-05-09T00:00:00Z"
     # The version it reviews, from its related article
     assert review["target"]["work_id"] == "doi:10.12688/f1000research.176295.1"
-    assert review["referee"] == {
+    assert review["referees"][0] == {
         "referee_type": "human",
         "identity_mode": "open",
         "human_referee": {
@@ -795,7 +802,11 @@ def test_an_f1000_report_is_read_from_its_jats():
         "competing_interests_declared": False,
     }
     # "approve-with-reservations", kept as F1000Research wrote it
-    assert review["decision"] == {"recommendation": "weak_accept"}
+    # The report's own term is kept beside OCRS's reading of it
+    assert review["decision"] == {
+        "recommendation": "weak_accept",
+        "source_label": "approve-with-reservations",
+    }
     kept = review["extensions"]["jats"]
     assert kept["recommendation"] == {
         "name": "recommendation",
@@ -804,7 +815,7 @@ def test_an_f1000_report_is_read_from_its_jats():
     assert (
         kept["permissions"]["licenses"][0]["url"] == "https://creativecommons.org/licenses/by/4.0/"
     )
-    assert review["narrative"]["detailed_review"].startswith("1. How did you check the defects")
+    assert narrative_text(review, "review").startswith("1. How did you check the defects")
     # The authors' response nested in the report goes back with it
     assert len(kept["responses"]) == 1
     written = ET.fromstring(map_to("jats", review)["sub_article"])
@@ -813,12 +824,12 @@ def test_an_f1000_report_is_read_from_its_jats():
 
 def test_an_elife_public_review_is_anonymous_and_sectioned():
     review = read_real("jats/elife_100443_sa1.json")
-    assert review["referee"]["identity_mode"] == "single_blind"
-    assert review["referee"]["human_referee"] == {}
+    assert review["referees"][0]["identity_mode"] == "single_blind"
+    assert review["referees"][0]["human_referee"] == {}
     # The sub-article states no version: the article it is part of does
     assert review["target"]["work_id"] == "doi:10.7554/eLife.100443.2"
     assert review["target"]["venue"] == "eLife"
-    assert [s["title"] for s in review["narrative"]["sections"]] == [
+    assert [s["title"] for s in [p for p in review["narrative"] if "role" not in p]] == [
         "Summary",
         "Strengths",
         "Weaknesses",
@@ -829,7 +840,7 @@ def test_an_elife_public_review_is_anonymous_and_sectioned():
 def test_an_elife_assessment_keeps_its_terms():
     review = read_real("jats/elife_100443_sa0.json")
     assert review["review_context"] == {"review_type": "meta_review"}
-    assert review["referee"]["human_referee"]["name"] == "Anurag Agrawal"
+    assert review["referees"][0]["human_referee"]["name"] == "Anurag Agrawal"
     # Its significance and strength of evidence have no OCRS field yet
     assert review["extensions"]["jats"]["keywords"] == [
         {"type": "claim-importance", "terms": ["Important"]},
@@ -850,7 +861,7 @@ def test_an_elife_author_response_has_all_its_authors():
         "affiliation": "Massachusetts General Hospital, Boston, United States",
     }
     # It quotes the reports it answers
-    quotes = [b for b in review["narrative"]["detailed_review"].split("\n\n") if b.startswith("> ")]
+    quotes = [b for b in narrative_text(review, "review").split("\n\n") if b.startswith("> ")]
     assert quotes[0].startswith("> “Claiming a possible therapeutic role")
     assert review["opinion"]["summary"].startswith("We agree that")
 
@@ -876,11 +887,15 @@ def test_a_review_from_elsewhere_is_written_as_a_referee_report():
     assert element.get("article-type") == "referee-report"
     again = map_from("jats", written)
     # Its summary, then its parts under their headings
-    text = again["narrative"]["detailed_review"]
+    text = narrative_text(again, "review")
     assert text.startswith(review["opinion"]["summary"])
     assert "strengths:" in text and "weaknesses:" in text
     # The recommendation goes as a JATS4R term; JATS has no place for how sure of it
-    assert again["decision"] == {"recommendation": review["decision"]["recommendation"]}
+    # Written back with the JATS4R term for the recommendation, which reads back as its label
+    assert again["decision"] == {
+        "recommendation": review["decision"]["recommendation"],
+        "source_label": review["decision"]["recommendation"],
+    }
 
 
 def test_sub_articles_are_an_articles_reports_not_their_responses():
@@ -979,7 +994,7 @@ def test_a_review_of_findings_and_a_summary_taken_from_them_keeps_them_all():
     review = from_openreview(note)
     assert review["opinion"]["summary"] == "No ablation."
     again = map_from("jats", map_to("jats", review))
-    assert again["narrative"]["sections"] == [
+    assert [p for p in again["narrative"] if "role" not in p] == [
         {"title": "Weaknesses", "content": "- No ablation.\n- One dataset."}
     ]
 

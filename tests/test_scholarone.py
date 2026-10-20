@@ -6,9 +6,11 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.scholarone import from_scholarone, to_scholarone
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "scholarone"
 
@@ -46,12 +48,12 @@ def test_scholarone_realistic():
     assert canon["target"]["venue"] == "Neurology AI"
 
     # Check reviewer ID construction
-    assert canon["referee"]["referee_id"] == "reviewer_2"
+    assert canon["referees"][0]["referee_id"] == "reviewer_2"
 
     # Check narrative
     assert "narrative" in canon
-    assert canon["narrative"].get("detailed_review")
-    assert canon["narrative"].get("confidential_to_editors")
+    assert narrative_text(canon, "review")
+    assert narrative_text(canon, audience="editors")
 
     # Check decision
     assert canon["decision"] == {"revision_requirement": "minor"}
@@ -105,7 +107,7 @@ def test_scholarone_text_recommendation():
         }
         canon = from_scholarone(payload)
         validate_canonical(canon)
-        assert canon["decision"] == expected
+        assert canon["decision"] == {**expected, "source_label": label}
 
 
 def test_scholarone_criteria_normalization():
@@ -163,7 +165,7 @@ def test_scholarone_competing_interests():
         "competingInterests": "None declared",
     }
     canon1 = from_scholarone(payload1)
-    assert canon1["referee"]["competing_interests_declared"] is False
+    assert canon1["referees"][0]["competing_interests_declared"] is False
 
     # Has conflicts
     payload2 = {
@@ -174,8 +176,8 @@ def test_scholarone_competing_interests():
         "competingInterests": "I have received consulting fees from the authors' institution.",
     }
     canon2 = from_scholarone(payload2)
-    assert canon2["referee"]["competing_interests_declared"] is True
-    assert "consulting fees" in canon2["referee"]["competing_interests_statement"]
+    assert canon2["referees"][0]["competing_interests_declared"] is True
+    assert "consulting fees" in canon2["referees"][0]["competing_interests_statement"]
 
 
 def test_scholarone_to_and_back():
@@ -210,17 +212,17 @@ def test_scholarone_to_stub():
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {
             "work_id": "internal_id:documentId:DOC-TEST",
             "work_type": "article",
             "venue": "Test Journal",
         },
         "opinion": {"summary": "Good paper."},
-        "narrative": {
-            "detailed_review": "The paper is well written.",
-            "confidential_to_editors": "No concerns.",
-        },
+        "narrative": [
+            {"role": "review", "content": "The paper is well written."},
+            {"role": "review", "audience": "editors", "content": "No concerns."},
+        ],
         "decision": {"recommendation": "accept"},
         "metrics": [
             {
@@ -263,14 +265,14 @@ def test_scholarone_reviewer_id_fallbacks():
         ({"reviewerOrcid": "0000-0002-1825-0097"}, "0000-0002-1825-0097"),
     ]:
         canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", **extra})
-        assert canon["referee"]["referee_id"] == expected
+        assert canon["referees"][0]["referee_id"] == expected
 
 
 def test_scholarone_no_reviewer_id():
     """Test referee_id is omitted when the payload has no reviewer fields."""
     canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1"})
-    assert "referee_id" not in canon["referee"]
-    assert canon["referee"]["human_referee"] == {}
+    assert "referee_id" not in canon["referees"][0]
+    assert canon["referees"][0]["human_referee"] == {}
 
 
 def test_scholarone_work_id_fallbacks():
@@ -298,7 +300,7 @@ def test_scholarone_text_only_payload():
     assert canon["opinion"] == {"summary": "A summary."}
     assert canon["metrics"] == []
     assert "decision" not in canon
-    assert "competing_interests_declared" not in canon["referee"]
+    assert "competing_interests_declared" not in canon["referees"][0]
     # Random UUID review ID
     assert len(canon["provenance"]["source_review_id"]) == 36
     assert canon["review_id"] == "s1_" + canon["provenance"]["source_review_id"]
@@ -337,7 +339,7 @@ def test_scholarone_human_referee_fields():
             "reviewerAffiliation": "University of London",
         },
     )
-    assert canon["referee"]["human_referee"] == {
+    assert canon["referees"][0]["human_referee"] == {
         "orcid": "0000-0002-1825-0097",
         "name": "Ada Lovelace",
         "affiliation": "University of London",
@@ -354,7 +356,7 @@ def test_scholarone_human_referee_fields():
             "affiliation": "Yale",
         },
     )
-    assert canon["referee"]["human_referee"] == {
+    assert canon["referees"][0]["human_referee"] == {
         "orcid": "0000-0002-1825-0097",
         "name": "Grace Hopper",
         "affiliation": "Yale",
@@ -364,7 +366,7 @@ def test_scholarone_human_referee_fields():
 def test_scholarone_invalid_orcid_dropped():
     """Test an ORCID that does not normalize is left out of human_referee."""
     canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "orcid": "1234"})
-    assert canon["referee"]["human_referee"] == {}
+    assert canon["referees"][0]["human_referee"] == {}
 
 
 def test_scholarone_review_id_variants():
@@ -389,7 +391,7 @@ def test_scholarone_narrative_variants():
             "summary": "A short summary.",
         },
     )
-    assert canon["narrative"] == {
+    assert narrative_fields(canon) == {
         "detailed_review": "Snake case comments.\n\nSecond paragraph.",
         "confidential_to_editors": "For the editor only.",
         "summary": "A short summary.",
@@ -404,7 +406,7 @@ def test_scholarone_narrative_first_key_wins():
         "scholarone",
         {"documentId": "DOC-1", "commentsToAuthor": "Camel.", "comments_to_author": "Snake."},
     )
-    assert canon["narrative"] == {"detailed_review": "Camel."}
+    assert narrative_fields(canon) == {"detailed_review": "Camel."}
 
 
 def test_scholarone_opinion_from_summary():
@@ -423,7 +425,7 @@ def test_scholarone_string_recommendation_code():
             "overallRecommendationLabel": "Accept",
         },
     )
-    assert canon["decision"] == {"recommendation": "accept"}
+    assert canon["decision"] == {"recommendation": "accept", "source_label": "Accept"}
     assert canon["metrics"] == []
 
 
@@ -477,8 +479,8 @@ def test_scholarone_criteria_edge_cases():
 def test_scholarone_competing_interests_none():
     """Test a bare "None" competing-interests statement is not a declaration."""
     canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "competingInterests": "None"})
-    assert canon["referee"]["competing_interests_declared"] is False
-    assert "competing_interests_statement" not in canon["referee"]
+    assert canon["referees"][0]["competing_interests_declared"] is False
+    assert "competing_interests_statement" not in canon["referees"][0]
 
 
 def _minimal_canonical(**overrides) -> dict:
@@ -497,7 +499,7 @@ def _minimal_canonical(**overrides) -> dict:
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {"referee_type": "human", "identity_mode": "confidential"},
+        "referees": [{"referee_type": "human", "identity_mode": "confidential"}],
         "target": {"work_id": "internal_id:documentId:DOC-X", "work_type": "article"},
         "opinion": {"summary": "Summary text."},
     }
@@ -609,6 +611,6 @@ def test_scholarone_empty_or_short_criterion_names_are_other():
 
 def test_scholarone_reviewer_number_zero_is_kept():
     canon = map_from("scholarone", {**TEXT, "documentId": "D", "reviewerNumber": 0})
-    assert canon["referee"]["referee_id"] == "reviewer_0"
+    assert canon["referees"][0]["referee_id"] == "reviewer_0"
     assert canon["review_id"].endswith("D_r0")
     assert map_to("scholarone", canon)["reviewerNumber"] == 0

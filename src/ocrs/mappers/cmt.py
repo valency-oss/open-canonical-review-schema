@@ -22,10 +22,15 @@ from ..util import (
     map_recommendation_from_numeric,
     map_recommendation_from_text,
     match_alias,
+    narrative_field,
+    narrative_text,
     normalize_linear,
     now_iso,
     parse_numeric_prefix,
+    recommendation_label,
+    referee_of,
     score_with_label,
+    section,
     source_decision,
     source_work_id,
     split_decision,
@@ -124,11 +129,11 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
             "imported_at": now_iso(),
             "mapping": {
                 "mapping_spec_id": "canonical-review.mapping.v1",
-                "mapping_spec_version": "1.1.0",
+                "mapping_spec_version": "1.2.0",
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": referee,
+        "referees": [referee],
         "target": {
             "identifiers": identifiers,
             "work_id": generate_canonical_work_id(identifiers),
@@ -150,22 +155,27 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
     if keep_raw:
         out["provenance"]["raw_payload"] = payload
 
-    # Narrative
-    nar = {}
+    # The review's own text: its summary, and its comments to the authors and to the chairs
+    narrative = []
     summary = payload.get("summary")
     if isinstance(summary, str) and summary.strip():
-        nar["summary"] = summary.strip()
+        narrative.append(section(summary.strip(), title="summary", role="summary"))
         out["opinion"]["summary"] = summary.strip()
-    review_text = payload.get("commentsToAuthors") or payload.get("reviewText")
+    review_field = "commentsToAuthors" if payload.get("commentsToAuthors") else "reviewText"
+    review_text = payload.get(review_field)
     if isinstance(review_text, str) and review_text.strip():
-        nar["detailed_review"] = review_text.strip()
+        narrative.append(
+            section(review_text.strip(), title=review_field, role="review", audience="authors")
+        )
         if "summary" not in out["opinion"]:
             out["opinion"]["summary"] = first_paragraph(review_text.strip())
     chairs = payload.get("commentsToChairs")
     if isinstance(chairs, str) and chairs.strip():
-        nar["confidential_to_editors"] = chairs.strip()
-    if nar:
-        out["narrative"] = nar
+        narrative.append(
+            section(chairs.strip(), title="commentsToChairs", role="review", audience="editors")
+        )
+    if narrative:
+        out["narrative"] = narrative
 
     # Decision
     dec = {}
@@ -198,6 +208,9 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
                 out["metrics"][-1]["justification"] = rest
         elif isinstance(rec_raw, str):
             dec["recommendation"] = map_recommendation_from_text(rec_raw) or "borderline"
+            # The recommendation in the form's own words
+            if rec_raw.strip():
+                dec["source_label"] = rec_raw.strip()
     conf_raw = payload.get("confidence")
     if conf_raw is not None:
         num, conf_label = parse_numeric_prefix(conf_raw)
@@ -221,7 +234,7 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
             if conf_label:
                 out["metrics"][-1]["justification"] = conf_label
             if n01 is not None:
-                dec["confidence"] = float(max(0.0, min(1.0, n01)))
+                dec["credence"] = float(max(0.0, min(1.0, n01)))
     if dec:
         out["decision"] = split_decision(dec)
 
@@ -269,8 +282,8 @@ def from_cmt(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, An
             mm["justification"] = rest
         out["metrics"].append(mm)
 
-    if out.get("referee", {}).get("referee_id") is None:
-        out["referee"].pop("referee_id", None)
+    if referee.get("referee_id") is None:
+        referee.pop("referee_id", None)
 
     # cleanup
     for m in out["metrics"]:
@@ -296,7 +309,7 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
     under their own field names, with their labels, so that reading the row gives the same
     review; a review from elsewhere gives its scores under their catalog keys."""
     target = canonical.get("target", {}) or {}
-    referee = canonical.get("referee", {}) or {}
+    referee = referee_of(canonical)
     same_source = from_source(canonical, "cmt")
     out: dict[str, Any] = {
         "reviewId": canonical.get("review_id"),
@@ -314,20 +327,25 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
 
     # narrative/opinion
     op = canonical.get("opinion", {}) or {}
-    nar = canonical.get("narrative", {}) or {}
-    review_text = nar.get("detailed_review") or op.get("text")
+    # The comments to the authors under their own field, when read from CMT
+    found = narrative_field(
+        canonical, "review", ("commentsToAuthors", "reviewText"), same_source=same_source
+    )
+    review_field, review_text = found or ("commentsToAuthors", op.get("text"))
     # The summary, unless it is the first paragraph of the review, which the reader takes
-    summary = op.get("summary") or nar.get("summary")
+    own_summary = narrative_text(canonical, "summary")
+    summary = op.get("summary") or own_summary
     if isinstance(summary, str) and (
-        "summary" in nar
+        own_summary is not None
         or not isinstance(review_text, str)
         or summary != first_paragraph(review_text)
     ):
         out["summary"] = summary
     if isinstance(review_text, str):
-        out["commentsToAuthors"] = review_text
-    if isinstance(nar.get("confidential_to_editors"), str):
-        out["commentsToChairs"] = nar["confidential_to_editors"]
+        out[review_field] = review_text
+    chairs = narrative_text(canonical, audience="editors")
+    if chairs is not None:
+        out["commentsToChairs"] = chairs
 
     # decision + metrics
     dec = source_decision(canonical.get("decision", {}) or {})
@@ -346,7 +364,7 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
             # label that would read back as another recommendation gives way to the decision's
             label = m.get("justification")
             if rec and _recommendation_read_back(m["value"], label) != rec:
-                label = rec.replace("_", " ").title()
+                label = recommendation_label(canonical)
             out.setdefault("overallEvaluation", score_with_label({**m, "justification": label}))
         elif key == "confidence":
             out.setdefault("confidence", score_with_label(m))
@@ -358,5 +376,5 @@ def to_cmt(canonical: dict[str, Any]) -> dict[str, Any]:
             if field not in _DECISION_FIELDS:
                 out.setdefault(field, score_with_label(m))
     if rec and "overallEvaluation" not in out:
-        out["recommendation"] = rec
+        out["recommendation"] = recommendation_label(canonical)
     return out

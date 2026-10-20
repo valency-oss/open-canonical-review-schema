@@ -12,6 +12,7 @@ from ocrs import map_from, map_to, map_with_record, supported_targets, validate_
 from ocrs.mappers import deepreview, reviewer3
 from ocrs.mappers.ai import extension, findings_of, indented, overall_texts, reviewer_model
 from ocrs.mappers.openaireview import to_openaireview
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures"
 AI = FIXTURES / "ai"
@@ -246,7 +247,7 @@ class TestDeepReview:
             p["text"] for p in findings_of(review, "strengths")
         ]
         # The review's own `##` headings are kept as `###`, inside the Review section
-        detailed = review["narrative"]["detailed_review"]
+        detailed = narrative_text(review, "review")
         assert report["other"]["Review"] == detailed.replace("## ", "### ")
         assert len(report["weaknesses"]) == len(findings_of(review, "weaknesses"))
         assert report["other"]["Contributions"] == "* **Idea:** A method."
@@ -358,7 +359,7 @@ class TestReviewer3:
         assert [c["text"] for c in report["comments"]] == [p["text"] for p in points]
         assert {c["title"] for c in report["comments"]} <= {"Weakness", "Question"}
         assert report["other"]["Summary"] == review["opinion"]["summary"]
-        assert report["other"]["Review"] == review["narrative"]["detailed_review"]
+        assert report["other"]["Review"] == narrative_text(review, "review")
         assert report["other"]["Similarity"] == "Low."
         assert "Strengths" in report["other"]
         again = map_with_record("reviewer3", written, **RUN).review
@@ -479,7 +480,7 @@ class TestHelpers:
 
     def test_reviewer_model(self):
         def review(*models):
-            return {"referee": {"ai_referee": {"system": {"models": list(models)}}}}
+            return {"referees": [{"ai_referee": {"system": {"models": list(models)}}}]}
 
         assert reviewer_model({}) is None
         assert reviewer_model(review({"role": "reviewer", "model_id": "unspecified"})) is None
@@ -494,7 +495,11 @@ class TestHelpers:
     def test_overall_texts(self):
         assert overall_texts({}) == (None, None)
         assert overall_texts({"opinion": {"summary": "s", "text": "s"}}) == ("s", None)
-        narrative = {"summary": "n", "detailed_review": "d", "confidential_to_editors": "c"}
+        narrative = [
+            {"role": "summary", "content": "n"},
+            {"role": "review", "content": "d"},
+            {"role": "review", "audience": "editors", "content": "c"},
+        ]
         assert overall_texts({"narrative": narrative}) == ("n", "d")
         assert overall_texts({"opinion": {"text": "t"}, "narrative": narrative}) == ("n", "t")
 
@@ -626,7 +631,9 @@ class TestWhereThingsGoBack:
 class TestCopilotRound:
     def test_deepreview_fenced_headings_are_code(self):
         review = human_review()
-        review["narrative"]["detailed_review"] = "Intro.\n\n```md\n## Example\n```\n\n## Real"
+        review["narrative"] = [
+            {"role": "review", "content": "Intro.\n\n```md\n## Example\n```\n\n## Real"}
+        ]
         written = map_to("deepreview", review)
         assert "```md\n## Example\n```" in written
         report = deepreview.parse_report(written)

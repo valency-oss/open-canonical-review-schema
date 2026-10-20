@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -11,12 +11,13 @@
     "version",
     "created_at",
     "provenance",
+    "referees",
     "target",
     "opinion"
   ],
   "properties": {
     "$schema": {
-      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
+      "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
       "type": "string",
       "format": "uri"
     },
@@ -64,6 +65,24 @@
           "minLength": 1,
           "pattern": "^10\\.\\d{4,9}/[^\\s]+$"
         },
+        "license": {
+          "description": "The license the review itself is published under, as the source states it (e.g., OpenReview's 'CC BY 4.0', a JATS <license>). Not the license of the work under review",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "name": {
+              "description": "The license's name or SPDX identifier, as the source gives it (e.g., 'CC BY 4.0', 'CC-BY-4.0')",
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "description": "The license's URL (e.g., 'https://creativecommons.org/licenses/by/4.0/')",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
         "imported_at": {
           "description": "When the review was mapped to OCRS",
           "type": "string",
@@ -98,13 +117,10 @@
         }
       }
     },
-    "referee": {
-      "$ref": "#/$defs/referee"
-    },
     "referees": {
+      "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews)",
       "type": "array",
       "minItems": 1,
-      "description": "Array of referees for panel reviews or collaborative reviews. Use this instead of 'referee' when multiple reviewers are involved.",
       "items": {
         "$ref": "#/$defs/referee"
       }
@@ -220,8 +236,14 @@
           "description": "Hours the reviewer spent on the review",
           "type": "number",
           "minimum": 0
-        },
-        "expertise": {"$ref": "#/$defs/expertise"}
+        }
+      }
+    },
+    "related_reviews": {
+      "description": "Other reviews this one relates to: one it responds to (an author's response to a report, a reply in a discussion), one it replaces, or ones it summarizes (a meta-review)",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewRelation"
       }
     },
     "metric_catalog_ref": {
@@ -259,15 +281,18 @@
           "type": "string",
           "enum": ["none", "minor", "major", "unspecified"]
         },
-        "confidence": {
-          "description": "How sure the reviewer is of the recommendation, from 0 (not at all) to 1 (certain)",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
+        "credence": {
+          "$ref": "#/$defs/credence",
+          "description": "How firmly the reviewer holds the recommendation, from 0 (a guess) to 1 (certain of it)"
         },
         "summary_rationale": {
           "description": "Why the reviewer recommends this, in brief",
           "type": "string"
+        },
+        "source_label": {
+          "description": "The recommendation in the source's own words, verbatim (e.g., 'Accept (Oral)', F1000's 'Approved with Reservations'). `recommendation` and `revision_requirement` are OCRS's reading of it",
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -283,35 +308,35 @@
           "description": "What the work does well",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/finding"
+            "$ref": "#/$defs/point"
           }
         },
         "weaknesses": {
           "description": "Problems in the work: errors, gaps, unsupported claims",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/finding"
+            "$ref": "#/$defs/point"
           }
         },
         "questions": {
           "description": "Questions for the authors",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/finding"
+            "$ref": "#/$defs/point"
           }
         },
         "comments": {
           "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/finding"
+            "$ref": "#/$defs/point"
           }
         },
         "changes": {
-          "description": "Changes the reviewer asks for, each with a priority that says how serious the problem is",
+          "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is and a scope that says what kind of change it is",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/actionItem"
+            "$ref": "#/$defs/point"
           }
         }
       }
@@ -331,7 +356,7 @@
       }
     },
     "ethics_and_risk": {
-      "description": "Ethical concerns the reviewer raises",
+      "description": "Ethical concerns the reviewer raises. The changes it asks for to address them are findings.changes with scope 'ethics'",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -359,44 +384,14 @@
         "notes": {
           "description": "The reviewer's ethical concerns, in their own words",
           "type": "string"
-        },
-        "required_mitigations": {
-          "description": "What the authors must do to address the ethical concerns",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/actionItem"
-          }
         }
       }
     },
     "narrative": {
-      "description": "The review's free text, for systems that collect it as named text fields",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "summary": {
-          "description": "The reviewer's summary of the work",
-          "type": "string"
-        },
-        "detailed_review": {
-          "description": "The main text of the review",
-          "type": "string"
-        },
-        "author_questions": {
-          "description": "Questions for the authors, as one text",
-          "type": "string"
-        },
-        "confidential_to_editors": {
-          "description": "Comments for the editors or committee only, never shown to the authors",
-          "type": "string"
-        },
-        "sections": {
-          "description": "Further named parts of the review text, in order",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/section"
-          }
-        }
+      "description": "The review's own text, as the source gives it, in its parts and in order: the named text fields of a review form, the headed sections of a report, or one undivided text. `opinion` and `findings` are OCRS's structured reading of it",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
       }
     },
     "calibration": {
@@ -456,7 +451,7 @@
       }
     },
     "text_format": {
-      "description": "How to read the review's free text (opinion, findings, action items, narrative). When absent, the format is unknown",
+      "description": "How to read the review's free text (opinion, findings, narrative). When absent, the format is unknown",
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
@@ -483,14 +478,8 @@
   },
   "allOf": [
     {
-      "anyOf": [
-        { "required": ["referee"] },
-        { "required": ["referees"] }
-      ]
-    },
-    {
       "$anchor": "reviewContent",
-      "description": "A review says something about the work. It has at least one of: an opinion summary, text, stance, reason or contribution; a finding; a recommendation, revision requirement or decision rationale; a metric, claim assessment, artifact assessment or check; an ethical concern, its notes, categories or mitigations; narrative text; or a written report. Text counts only when it has a character other than whitespace",
+      "description": "A review says something about the work. It has at least one of: an opinion summary, text, stance, reason or contribution; a finding; a recommendation, revision requirement, decision rationale or the source's own verdict; a metric, claim assessment, artifact assessment or check; an ethical concern, its notes or categories; narrative text; or a written report. Text counts only when it has a character other than whitespace",
       "anyOf": [
         {
           "required": ["opinion"],
@@ -527,7 +516,8 @@
               "anyOf": [
                 {"required": ["recommendation"]},
                 {"required": ["revision_requirement"]},
-                {"required": ["summary_rationale"], "properties": {"summary_rationale": {"$ref": "#/$defs/nonBlank"}}}
+                {"required": ["summary_rationale"], "properties": {"summary_rationale": {"$ref": "#/$defs/nonBlank"}}},
+                {"required": ["source_label"], "properties": {"source_label": {"$ref": "#/$defs/nonBlank"}}}
               ]
             }
           }
@@ -543,25 +533,14 @@
               "anyOf": [
                 {"required": ["ethical_concerns"], "properties": {"ethical_concerns": {"const": true}}},
                 {"required": ["notes"], "properties": {"notes": {"$ref": "#/$defs/nonBlank"}}},
-                {"required": ["concern_categories"], "properties": {"concern_categories": {"minItems": 1}}},
-                {"required": ["required_mitigations"], "properties": {"required_mitigations": {"contains": {"$ref": "#/$defs/hasTitleOrText"}}}}
+                {"required": ["concern_categories"], "properties": {"concern_categories": {"minItems": 1}}}
               ]
             }
           }
         },
         {
           "required": ["narrative"],
-          "properties": {
-            "narrative": {
-              "anyOf": [
-                {"required": ["summary"], "properties": {"summary": {"$ref": "#/$defs/nonBlank"}}},
-                {"required": ["detailed_review"], "properties": {"detailed_review": {"$ref": "#/$defs/nonBlank"}}},
-                {"required": ["author_questions"], "properties": {"author_questions": {"$ref": "#/$defs/nonBlank"}}},
-                {"required": ["confidential_to_editors"], "properties": {"confidential_to_editors": {"$ref": "#/$defs/nonBlank"}}},
-                {"required": ["sections"], "properties": {"sections": {"contains": {"required": ["content"], "properties": {"content": {"$ref": "#/$defs/nonBlank"}}}}}}
-              ]
-            }
-          }
+          "properties": {"narrative": {"contains": {"required": ["content"], "properties": {"content": {"$ref": "#/$defs/nonBlank"}}}}}
         },
         {"required": ["written_report"]}
       ]
@@ -573,7 +552,7 @@
       "pattern": "\\S"
     },
     "hasTitleOrText": {
-      "description": "A point, contribution or action item whose title or text is not blank. The review content rule counts only such items",
+      "description": "A point whose title or text is not blank. The review content rule counts only such points",
       "anyOf": [
         {"required": ["title"], "properties": {"title": {"$ref": "#/$defs/nonBlank"}}},
         {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}}
@@ -1010,31 +989,8 @@
           "description": "What the work contributes, as the reviewer reads it. Neutral: neither strengths nor assessed claims",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/contribution"
+            "$ref": "#/$defs/point"
           }
-        }
-      }
-    },
-    "contribution": {
-      "description": "One contribution of the work, as the reviewer reads it",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["text"],
-      "properties": {
-        "title": {
-          "description": "Short headline for the contribution, as the reviewer wrote it",
-          "type": "string",
-          "minLength": 1
-        },
-        "text": {
-          "description": "The contribution, as the reviewer wrote it",
-          "type": "string",
-          "minLength": 1
-        },
-        "claim_id": {
-          "description": "The claim this contribution corresponds to, by claim_id in claim_assessments, when the reviewer also assesses it",
-          "type": "string",
-          "minLength": 1
         }
       }
     },
@@ -1057,9 +1013,10 @@
           ]
         },
         "identity_mode": {
-          "description": "How the reviewer's and authors' identities are disclosed: double blind (hidden both ways), single blind (reviewer hidden), open, pseudonymous, or confidential (known only to the editors)",
+          "description": "How the reviewer's and authors' identities are disclosed: triple blind (also hidden from the editors), double blind (hidden both ways), single blind (reviewer hidden), open, pseudonymous, or confidential (known only to the editors)",
           "type": "string",
           "enum": [
+            "triple_blind",
             "double_blind",
             "single_blind",
             "open",
@@ -1078,6 +1035,9 @@
         "competing_interests_statement": {
           "description": "The reviewer's statement of competing interests",
           "type": "string"
+        },
+        "expertise": {
+          "$ref": "#/$defs/expertise"
         },
         "human_referee": {
           "description": "The human reviewer's identity and expertise. Optional: a fully anonymous review can leave it out",
@@ -1170,7 +1130,6 @@
           "type": "string",
           "description": "Institutional affiliation"
         },
-        "expertise": {"$ref": "#/$defs/expertise"},
         "affiliation_redacted": {
           "description": "Whether the affiliation was removed to keep the reviewer anonymous",
           "type": "boolean"
@@ -1182,7 +1141,7 @@
       }
     },
     "expertise": {
-      "description": "The reviewer's expertise in the work's subject",
+      "description": "The referee's expertise in the work's subject",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1938,6 +1897,7 @@
             "ethics",
             "overall",
             "confidence",
+            "expertise",
             "other"
           ]
         },
@@ -2041,6 +2001,19 @@
           "description": "Distance between allowed values (e.g., 1 for whole numbers)",
           "type": "number"
         },
+        "values": {
+          "description": "The values the scale allows, when they are not every step from min to max (e.g., ICLR's overall rating: 1, 3, 5, 6, 8, 10)",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          }
+        },
         "anchors": {
           "description": "Labels for particular values (e.g., 1 = 'poor', 4 = 'excellent')",
           "type": "array",
@@ -2116,8 +2089,8 @@
       "minimum": 0,
       "maximum": 1
     },
-    "finding": {
-      "description": "One point the reviewer makes",
+    "point": {
+      "description": "One point the reviewer makes: a strength, a weakness, a question, a comment, a change it asks for, or one of the work's contributions as the reviewer reads it",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -2125,27 +2098,45 @@
       ],
       "properties": {
         "id": {
-          "description": "Identifier of this point, unique among the review's findings, action items and checks, so other points can refer to it",
+          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
           "type": "string",
           "minLength": 1
         },
         "title": {
           "type": "string",
           "minLength": 1,
-          "description": "Short headline for the finding, as the reviewer wrote it"
+          "description": "Short headline for the point, as the reviewer wrote it"
         },
         "text": {
           "description": "The point in full, as the reviewer wrote it",
           "type": "string"
         },
         "severity": {
-          "description": "How serious the point is, from info to critical",
+          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
           "type": "string",
           "enum": [
             "info",
+            "trivial",
             "minor",
             "major",
             "critical"
+          ]
+        },
+        "scope": {
+          "description": "For a change, the kind of change",
+          "type": "string",
+          "enum": [
+            "typo",
+            "clarification",
+            "analysis",
+            "experiment",
+            "theory",
+            "writing",
+            "figure",
+            "references",
+            "artifact",
+            "ethics",
+            "other"
           ]
         },
         "tags": {
@@ -2153,6 +2144,15 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "evidence_links": {
@@ -2173,18 +2173,29 @@
           "$ref": "#/$defs/probability",
           "description": "How likely the reviewer thinks the point holds (for a weakness, that the problem is real), from 0 (certainly not) to 1 (certainly). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
         },
-        "credence": {"$ref": "#/$defs/credence"},
-        "group": {
-          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+        "credence": {
+          "$ref": "#/$defs/credence"
+        },
+        "summarizes": {
+          "description": "Ids of the points this one restates in brief. A point that summarizes others is an overview: leave it out when counting points. An empty list marks an overview whose source does not say which points it covers",
           "type": "array",
-          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1
           }
         },
-        "summarizes": {
-          "description": "Ids of the findings this point restates in brief. A point that summarizes others is an overview: leave it out when counting points. An empty list marks an overview whose source does not say which points it covers",
+        "addresses": {
+          "description": "Ids of the points this one answers: for a change, the weaknesses or questions it would resolve",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "claim_ids": {
+          "description": "The claims this point concerns, by claim_id in claim_assessments",
           "type": "array",
           "uniqueItems": true,
           "items": {
@@ -2197,107 +2208,6 @@
         "credence": [
           "probability"
         ]
-      }
-    },
-    "actionItem": {
-      "description": "One change the reviewer asks for",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "text"
-      ],
-      "properties": {
-        "id": {
-          "description": "Identifier of this point, unique among the review's findings, action items and checks, so other points can refer to it",
-          "type": "string",
-          "minLength": 1
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Short headline for the change, as the reviewer wrote it"
-        },
-        "text": {
-          "description": "The change, as the reviewer wrote it",
-          "type": "string"
-        },
-        "priority": {
-          "description": "How serious the problem the change fixes is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording",
-          "type": "string",
-          "enum": [
-            "critical",
-            "major",
-            "minor",
-            "trivial"
-          ]
-        },
-        "scope": {
-          "description": "Kind of change",
-          "type": "string",
-          "enum": [
-            "typo",
-            "clarification",
-            "analysis",
-            "experiment",
-            "theory",
-            "writing",
-            "figure",
-            "references",
-            "artifact",
-            "ethics",
-            "other"
-          ]
-        },
-        "applies_to": {
-          "description": "Part of the work the change applies to",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "section": {
-              "description": "Section of the work",
-              "type": "string"
-            },
-            "figure": {
-              "description": "Figure of the work",
-              "type": "string"
-            },
-            "table": {
-              "description": "Table of the work",
-              "type": "string"
-            },
-            "claim_id": {
-              "description": "Claim it applies to, by claim_id in claim_assessments",
-              "type": "string"
-            },
-            "finding_id": {
-              "description": "Finding it addresses, by id in findings",
-              "type": "string"
-            }
-          }
-        },
-        "evidence_links": {
-          "description": "Places in the work the change applies to",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
-        },
-        "suggested_edits": {
-          "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/suggestedEdit"
-          }
-        },
-        "group": {
-          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
       }
     },
     "check": {
@@ -2313,7 +2223,7 @@
       ],
       "properties": {
         "id": {
-          "description": "Identifier of this check, unique among the review's checks, findings and action items",
+          "description": "Identifier of this check, unique among the review's checks and points",
           "type": "string",
           "minLength": 1
         },
@@ -2473,17 +2383,37 @@
       }
     },
     "section": {
-      "description": "One named part of the review text",
+      "description": "One part of the review's own text: a named field of a review form, a headed section of a report, or the whole text",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "title",
         "content"
       ],
       "properties": {
         "title": {
-          "description": "Heading of the part",
-          "type": "string"
+          "description": "The part's heading, or the name of the form field it fills, as the source gives it",
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "description": "What the part is, when the source says: the reviewer's summary, the main text of the review, the questions for the authors, or something else",
+          "type": "string",
+          "enum": [
+            "summary",
+            "review",
+            "questions",
+            "other"
+          ]
+        },
+        "audience": {
+          "description": "Who the source shows the part to: everyone, the authors, the other reviewers, or the editors or committee only. When absent, the source does not say",
+          "type": "string",
+          "enum": [
+            "public",
+            "authors",
+            "reviewers",
+            "editors"
+          ]
         },
         "content": {
           "description": "Text of the part",
@@ -2495,6 +2425,58 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "reviewRelation": {
+      "description": "Another review this one relates to, and how",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "review_id"
+          ]
+        },
+        {
+          "required": [
+            "doi"
+          ]
+        },
+        {
+          "required": [
+            "url"
+          ]
+        }
+      ],
+      "properties": {
+        "type": {
+          "description": "How this review relates to the other: it responds to it, it replaces it, or it summarizes it",
+          "type": "string",
+          "enum": [
+            "responds_to",
+            "supersedes",
+            "summarizes"
+          ]
+        },
+        "review_id": {
+          "description": "The other review's review_id, or its identifier in the source system",
+          "type": "string",
+          "minLength": 1
+        },
+        "doi": {
+          "description": "The other review's DOI, without a resolver prefix",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^10\\.\\d{4,9}/[^\\s]+$"
+        },
+        "url": {
+          "description": "Link to the other review",
+          "type": "string",
+          "format": "uri"
         }
       }
     },

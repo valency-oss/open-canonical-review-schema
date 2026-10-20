@@ -29,7 +29,7 @@ MINIMAL_REVIEW = {
     "version": "1.0.0",
     "created_at": "2026-10-06T12:00:00Z",
     "provenance": {"source_system": "example-journal"},
-    "referee": {"referee_type": "human", "identity_mode": "double_blind"},
+    "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
     "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
     "opinion": {"summary": "A sound paper."},
 }

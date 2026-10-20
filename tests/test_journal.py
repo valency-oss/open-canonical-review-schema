@@ -7,9 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from conftest import narrative_fields
 
 from ocrs import map_from, map_to
 from ocrs.mappers.journal import to_journal_narrative
+from ocrs.util import narrative_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "journal"
 
@@ -35,8 +37,8 @@ class TestFromJournalNarrative:
         assert canon["opinion"]["summary"] == (
             "This manuscript addresses an important problem. The methods are plausible but unclear."
         )
-        assert canon["narrative"]["detailed_review"] == payload["full_text"]
-        assert "referee_id" not in canon["referee"]
+        assert narrative_text(canon, "review") == payload["full_text"]
+        assert "referee_id" not in canon["referees"][0]
         assert "raw_payload" not in canon["provenance"]
 
     def test_full_payload(self):
@@ -55,13 +57,13 @@ class TestFromJournalNarrative:
         assert canon["created_at"] == "2024-03-01T12:00:00Z"
         assert canon["provenance"]["source_review_id"] == "src-1"
         assert canon["provenance"]["raw_payload"] == payload
-        assert canon["referee"]["referee_id"] == "referee-2"
+        assert canon["referees"][0]["referee_id"] == "referee-2"
         assert canon["target"]["identifiers"] == {
             "internal_id": {"field_name": "manuscript_id", "value": "MS-2024-001"}
         }
         assert canon["target"]["work_id"] == "internal_id:manuscript_id:MS-2024-001"
         assert canon["target"]["venue"] == "Example Letters"
-        assert canon["narrative"] == {"detailed_review": "Short review."}
+        assert narrative_fields(canon) == {"detailed_review": "Short review."}
 
     def test_id_fallback(self):
         """id is used for review_id and source_review_id when they are missing."""
@@ -136,7 +138,7 @@ class TestToJournalNarrative:
         """narrative.detailed_review is used as full_text, stripped."""
         canon = {
             "created_at": "2024-03-01T12:00:00Z",
-            "narrative": {"detailed_review": "  Detail.  "},
+            "narrative": [{"role": "review", "content": "  Detail.  "}],
             "opinion": {"text": "Opinion text.", "summary": "Summary."},
         }
         back = to_journal_narrative(canon)
@@ -146,7 +148,7 @@ class TestToJournalNarrative:
     def test_opinion_text_fallback(self):
         """opinion.text is used when the detailed review is blank."""
         canon = {
-            "narrative": {"detailed_review": "   "},
+            "narrative": [{"role": "review", "content": "   "}],
             "opinion": {"text": " Opinion text. ", "summary": "Summary."},
         }
         assert to_journal_narrative(canon)["full_text"] == "Opinion text."
@@ -184,4 +186,4 @@ def test_without_a_journal_there_is_no_venue():
 
 def test_a_numeric_reviewer_id_is_kept_as_text():
     canon = map_from("journal_narrative", {"journal": "J", "reviewer_id": 5, "full_text": "Ok."})
-    assert canon["referee"]["referee_id"] == "5"
+    assert canon["referees"][0]["referee_id"] == "5"

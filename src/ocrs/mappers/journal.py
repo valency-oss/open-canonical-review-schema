@@ -10,7 +10,7 @@ from typing import Any
 
 from ..identifiers import generate_canonical_work_id, parse_canonical_work_id
 from ..schema import schema_id
-from ..util import first_paragraph, now_iso
+from ..util import first_paragraph, narrative_text, now_iso, referee_of, section
 
 
 def _build_target_identifiers(payload: dict[str, Any]) -> dict[str, Any]:
@@ -79,15 +79,17 @@ def from_journal_narrative(
             "imported_at": now_iso(),
             "mapping": {
                 "mapping_spec_id": "canonical-review.mapping.v1",
-                "mapping_spec_version": "1.1.0",
+                "mapping_spec_version": "1.2.0",
                 "mapper_version": "0.1.0",
             },
         },
-        "referee": {
-            "referee_type": "human",
-            "identity_mode": "confidential",
-            "human_referee": {},
-        },
+        "referees": [
+            {
+                "referee_type": "human",
+                "identity_mode": "confidential",
+                "human_referee": {},
+            }
+        ],
         "target": {
             "identifiers": identifiers,
             "work_id": generate_canonical_work_id(identifiers),
@@ -95,12 +97,13 @@ def from_journal_narrative(
         },
         "metrics": [],
         "opinion": {"summary": _summary(full_text)} if full_text.strip() else {},
-        "narrative": {"detailed_review": full_text.strip()} if full_text.strip() else {},
     }
+    if full_text.strip():
+        out["narrative"] = [section(full_text.strip(), title="full_text", role="review")]
 
     # A journal's reviewer number is an ID like any other
     if reviewer_id is not None and reviewer_id != "":
-        out["referee"]["referee_id"] = str(reviewer_id)
+        out["referees"][0]["referee_id"] = str(reviewer_id)
     if isinstance(venue, str) and venue.strip():
         out["target"]["venue"] = venue.strip()
 
@@ -120,14 +123,14 @@ def to_journal_narrative(canonical: dict[str, Any]) -> dict[str, Any]:
     out["journal"] = canonical.get("target", {}).get("venue")
     out["review_id"] = canonical.get("review_id")
     out["created_at"] = canonical.get("created_at")
-    reviewer_id = (canonical.get("referee") or {}).get("referee_id")
+    reviewer_id = referee_of(canonical).get("referee_id")
     if reviewer_id:
         out["reviewer_id"] = reviewer_id
     # Narrative text
-    nar = canonical.get("narrative", {}) or {}
     text = None
-    if isinstance(nar.get("detailed_review"), str) and nar["detailed_review"].strip():
-        text = nar["detailed_review"].strip()
+    review_text = narrative_text(canonical, "review")
+    if review_text and review_text.strip():
+        text = review_text.strip()
     else:
         op = canonical.get("opinion", {}) or {}
         if isinstance(op.get("text"), str) and op["text"].strip():

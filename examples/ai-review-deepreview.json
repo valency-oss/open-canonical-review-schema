@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
   "review_id": "deepreview-cold-storage-1",
   "version": "1.0.0",
   "created_at": "2026-10-15T18:05:00Z",
@@ -11,29 +11,6 @@
       "mapping_spec_id": "canonical-review.mapping.v1",
       "mapping_spec_version": "1.1.0",
       "mapper_version": "1.1.0"
-    }
-  },
-  "referee": {
-    "referee_type": "ai",
-    "identity_mode": "open",
-    "ai_referee": {
-      "system": {
-        "critic_framework": {
-          "name": "deepreview",
-          "version": "unspecified"
-        },
-        "models": [
-          {
-            "role": "reviewer",
-            "model_id": "unspecified"
-          }
-        ]
-      },
-      "execution": {
-        "started_at": "2026-10-15T17:40:00Z",
-        "ended_at": "2026-10-15T18:05:00Z",
-        "wall_time_seconds": 1500.0
-      }
     }
   },
   "target": {
@@ -325,5 +302,30 @@
         "severity": "major"
       }
     ]
-  }
+  },
+  "referees": [
+    {
+      "referee_type": "ai",
+      "identity_mode": "open",
+      "ai_referee": {
+        "system": {
+          "critic_framework": {
+            "name": "deepreview",
+            "version": "unspecified"
+          },
+          "models": [
+            {
+              "role": "reviewer",
+              "model_id": "unspecified"
+            }
+          ]
+        },
+        "execution": {
+          "started_at": "2026-10-15T17:40:00Z",
+          "ended_at": "2026-10-15T18:05:00Z",
+          "wall_time_seconds": 1500.0
+        }
+      }
+    }
+  ]
 }

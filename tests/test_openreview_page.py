@@ -26,6 +26,7 @@ from ocrs.mappers.openreview_page import (
     to_markdown,
     utc_iso,
 )
+from ocrs.util import narrative_text
 
 ROOT = Path(__file__).parent.parent
 PAGE = ROOT / "tests" / "fixtures" / "openreview" / "forum_page.html"
@@ -95,7 +96,7 @@ def test_one_review_per_official_review_and_each_validates(reviews):
     for review in reviews:
         validate_canonical(review)
         assert review["provenance"]["source_system"] == "openreview"
-        assert review["referee"] == {
+        assert review["referees"][0] == {
             "referee_type": "human",
             "identity_mode": "pseudonymous",
             "referee_id": review["extensions"]["openreview"]["note"]["signature"],
@@ -160,7 +161,7 @@ def test_findings_follow_the_reviewers_headings(reviews):
         "What are the wall-clock times?",
     ]
     assert all("group" not in p for p in findings["questions"])
-    assert "[1] A. Reference." in reviews[0]["narrative"]["detailed_review"]
+    assert "[1] A. Reference." in narrative_text(reviews[0], "review")
 
 
 def test_plain_labels_work_as_headings_too(reviews):
@@ -200,9 +201,11 @@ def test_scores_keep_their_values_and_labels_without_inventing_a_scale(reviews):
 def test_narrative_and_text_format(reviews):
     review = reviews[0]
 
-    assert review["opinion"]["summary"] == review["narrative"]["summary"]
-    assert review["narrative"]["author_questions"].startswith("Please answer:")
-    assert review["narrative"]["sections"] == [{"title": "Limitations", "content": "Yes."}]
+    assert review["opinion"]["summary"] == narrative_text(review, "summary")
+    assert narrative_text(review, "questions").startswith("Please answer:")
+    assert [p for p in review["narrative"] if "role" not in p] == [
+        {"title": "Limitations", "content": "Yes."}
+    ]
     assert review["ethics_and_risk"] == {"notes": "NO or VERY MINOR ethics concerns only"}
     assert review["text_format"] == {"markup": "markdown", "math": "tex"}
     assert reviews[1]["text_format"] == {"markup": "markdown", "math": "none"}
@@ -716,7 +719,7 @@ def test_separate_fields_are_also_kept_whole_in_the_narrative(html):
     review = reviews_from_forum_page(page)[0]
 
     assert {"title": "Strengths", "content": "Why it is good:\n\n1. Clear."} in (
-        review["narrative"]["sections"]
+        [p for p in review["narrative"] if "role" not in p]
     )
     assert "Strengths" not in review["extensions"]["openreview"]["unmapped_fields"]
     validate_canonical(review)
@@ -815,8 +818,8 @@ def test_only_disclosed_signatures_are_treated_as_disclosed(html, signature, mod
     page = html.replace("by <span>Reviewer abcd</span>", f"by <span>{signature}</span>", 1)
     review = reviews_from_forum_page(page)[0]
 
-    assert review["referee"]["identity_mode"] == mode
-    assert review["referee"]["referee_id"] == signature
+    assert review["referees"][0]["identity_mode"] == mode
+    assert review["referees"][0]["referee_id"] == signature
 
 
 def test_closing_hashes_of_a_heading_are_not_part_of_it():
@@ -851,9 +854,10 @@ def test_a_report_in_a_single_field_is_the_detailed_review(html, label):
     page = html[:start] + field + "One long report.</span></div><div>" + html[end:]
     review = reviews_from_forum_page(page)[0]
 
-    assert review["narrative"]["detailed_review"] == "One long report."
+    assert narrative_text(review, "review") == "One long report."
     assert label not in review["extensions"]["openreview"]["unmapped_fields"]
-    assert {"ocrs": "narrative.detailed_review", "field": label, "how": "copied"} in (
+    [index] = [i for i, part in enumerate(review["narrative"]) if part.get("role") == "review"]
+    assert {"ocrs": f"narrative[{index}]", "field": label, "how": "copied"} in (
         review["extensions"]["openreview"]["source_fields"]
     )
     validate_canonical(review)

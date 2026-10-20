@@ -1,10 +1,10 @@
 {
-  "catalog_id": "metric-catalog.core.v1",
-  "version": "1.0.0",
-  "created_at": "2025-12-25T00:00:00Z",
+  "catalog_id": "metric-catalog.core.v1.1",
+  "version": "1.1.0",
+  "created_at": "2026-10-20T00:00:00Z",
   "license": "Apache-2.0",
   "copyright": "Copyright (c) 2026 Valency Systems Inc.",
-  "description": "Core Open Canonical Review Schema (OCRS) metric catalog with aliases, recommended scales, and normalization guidance.",
+  "description": "Core Open Canonical Review Schema (OCRS) metric catalog with aliases, recommended scales, and normalization guidance. Version 1.1 adds the reviewer's expertise, which forms such as HotCRP's ask for apart from confidence.",
   "normalization": {
     "default_method": "linear_to_unit_interval",
     "tie_breakers": [
@@ -165,6 +165,18 @@
         "reviewer confidence",
         "certainty",
         "confidence in review"
+      ],
+      "direction": "higher_is_better"
+    },
+    {
+      "key": "expertise",
+      "aspect": "expertise",
+      "label": "Reviewer Expertise",
+      "aliases": [
+        "expertise",
+        "reviewer expertise",
+        "familiarity",
+        "reviewer familiarity"
       ],
       "direction": "higher_is_better"
     }

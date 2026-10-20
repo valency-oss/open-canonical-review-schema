@@ -24,7 +24,7 @@ from urllib.parse import parse_qs, quote, unquote, urlsplit
 from ..catalog import alias_map, load_catalog
 from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
-from ..util import is_score_field, match_alias, now_iso, parse_numeric_prefix
+from ..util import is_score_field, match_alias, now_iso, parse_numeric_prefix, section
 from .ai import Fences
 
 MAPPER_VERSION = "0.1.0"
@@ -1093,18 +1093,20 @@ def review_from_note(
         "imported_at": imported_at or now_iso(),
         "mapping": {
             "mapping_spec_id": "canonical-review.mapping.v1",
-            "mapping_spec_version": "1.1.0",
+            "mapping_spec_version": "1.2.0",
             "mapper_version": MAPPER_VERSION,
             "lossiness_notes": lossiness,
         },
     }
     if keep_raw:
         review["provenance"]["raw_payload"] = note.as_dict()
-    review["referee"] = {
-        "referee_type": "human",
-        "identity_mode": _signature_mode(note.signature),
-        **({"referee_id": note.signature} if note.signature else {}),
-    }
+    review["referees"] = [
+        {
+            "referee_type": "human",
+            "identity_mode": _signature_mode(note.signature),
+            **({"referee_id": note.signature} if note.signature else {}),
+        }
+    ]
     identifiers = {
         "internal_id": {
             "field_name": "openreview_forum",
@@ -1148,35 +1150,33 @@ def review_from_note(
     if findings:
         review["findings"] = findings
 
-    narrative: dict[str, Any] = {}
-    for label, key in [
+    # The review's own text, each field as a part under the page's name for it
+    narrative: list[dict[str, Any]] = []
+
+    def part(label: str, role: str | None = None) -> None:
+        links.add(f"narrative[{len(narrative)}]", label)
+        narrative.append(section(note.get(label), title=label, role=role))
+
+    for label, role in [
         ("Summary", "summary"),
-        ("Strengths And Weaknesses", "detailed_review"),
-        ("Questions", "author_questions"),
+        ("Strengths And Weaknesses", "review"),
+        ("Questions", "questions"),
     ]:
-        value = note.get(label)
-        if value:
-            narrative[key] = value
-            links.add(f"narrative.{key}", label)
-    if (
-        "detailed_review" not in narrative
-    ):  # forms whose report is one field, as the API mapper reads
-        for label in ("Review", "Main Review", "Detailed Review", "Comments"):
-            value = note.get(label)
-            if value:
-                narrative["detailed_review"] = value
-                links.add("narrative.detailed_review", label)
-                break
-    sections = []
+        if note.get(label):
+            part(label, role)
+    if not any(p.get("role") == "review" for p in narrative):
+        # Forms whose report is one field, as the API mapper reads
+        label = next(
+            (x for x in ("Review", "Main Review", "Detailed Review", "Comments") if note.get(x)),
+            None,
+        )
+        if label:
+            part(label, "review")
     # The separate Strengths and Weaknesses fields of some forms: whole, as findings take
     # only their points.
     for label in ("Limitations", "Paper Formatting Concerns", "Strengths", "Weaknesses"):
-        value = note.get(label)
-        if value:
-            sections.append({"title": label, "content": value})
-            links.add(f"narrative.sections[{len(sections) - 1}]", label)
-    if sections:
-        narrative["sections"] = sections
+        if note.get(label):
+            part(label)
     if narrative:
         review["narrative"] = narrative
 

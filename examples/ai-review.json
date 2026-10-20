@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.7.2/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
   "review_id": "ai-review-1",
   "version": "1.0.0",
   "created_at": "2026-10-03T01:08:00Z",
@@ -11,36 +11,6 @@
       "mapping_spec_id": "canonical-review.mapping.v1",
       "mapping_spec_version": "1.1.0",
       "mapper_version": "1.0.2"
-    }
-  },
-  "referee": {
-    "referee_type": "ai",
-    "identity_mode": "open",
-    "ai_referee": {
-      "system": {
-        "critic_framework": {
-          "name": "openaireview",
-          "version": "27740f8434cf",
-          "commit": "27740f8434cf18bd2d66d228291d9dcc3e046bc2"
-        },
-        "models": [
-          {
-            "role": "reviewer",
-            "model_id": "us.anthropic.claude-opus-5-5"
-          }
-        ]
-      },
-      "execution": {
-        "started_at": "2026-10-03T01:00:00Z",
-        "ended_at": "2026-10-03T01:08:00Z",
-        "wall_time_seconds": 480.0
-      },
-      "outputs": {
-        "token_usage": {
-          "input_tokens": 125024,
-          "output_tokens": 46844
-        }
-      }
     }
   },
   "target": {
@@ -132,5 +102,37 @@
         }
       }
     }
-  }
+  },
+  "referees": [
+    {
+      "referee_type": "ai",
+      "identity_mode": "open",
+      "ai_referee": {
+        "system": {
+          "critic_framework": {
+            "name": "openaireview",
+            "version": "27740f8434cf",
+            "commit": "27740f8434cf18bd2d66d228291d9dcc3e046bc2"
+          },
+          "models": [
+            {
+              "role": "reviewer",
+              "model_id": "us.anthropic.claude-opus-5-5"
+            }
+          ]
+        },
+        "execution": {
+          "started_at": "2026-10-03T01:00:00Z",
+          "ended_at": "2026-10-03T01:08:00Z",
+          "wall_time_seconds": 480.0
+        },
+        "outputs": {
+          "token_usage": {
+            "input_tokens": 125024,
+            "output_tokens": 46844
+          }
+        }
+      }
+    }
+  ]
 }

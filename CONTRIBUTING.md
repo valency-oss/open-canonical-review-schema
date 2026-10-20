@@ -33,8 +33,8 @@ the review schema's `$id`:
 | File | What it defines |
 |---|---|
 | `canonical-review.schema.json` | A review: its fields, their types, allowed values and descriptions |
-| `metric-catalog.core.v1.json` | The metric keys reviews use in `metrics` |
-| `mapping-spec.v1.1.0.json` | The defaults mappers apply, the metric catalog they use, and the signals that mark a review as written by an AI referee |
+| `metric-catalog.core.v1.1.json` | The metric keys reviews use in `metrics` |
+| `mapping-spec.v1.2.0.json` | The defaults mappers apply, the metric catalog they use, and the signals that mark a review as written by an AI referee |
 
 A field's `description` is part of the specification: it says what the value means. The rules
 that JSON Schema cannot express, such as ids that must be unique and references that must name

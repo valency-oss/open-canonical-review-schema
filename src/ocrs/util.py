@@ -741,11 +741,13 @@ def score_sheet_answers(
 
 
 def score_sheet_questions(sections: Any) -> list[dict[str, Any]]:
-    """Text answers, as `narrative.sections` holds them, as score-sheet questions."""
+    """Text answers, as the narrative holds them (a part titled with its question, with no
+    role), as score-sheet questions."""
     return [
         {"questionText": s["title"], "scoreSheetCustomAnswer": {"answerText": s["content"]}}
         for s in (sections if isinstance(sections, list) else [])
         if isinstance(s, dict)
+        and "role" not in s
         and isinstance(s.get("title"), str)
         and isinstance(s.get("content"), str)
     ]
@@ -764,3 +766,100 @@ def department_affiliation(departments: Any) -> str | None:
     parts = parts or [first.get(k) for k in ("department", "institution")]
     affiliation = ", ".join(p.strip() for p in parts if isinstance(p, str) and p.strip())
     return affiliation or None
+
+
+# A review's referees and its own text, as OCRS 0.8 holds them
+
+
+def referee_of(canonical: dict[str, Any]) -> dict[str, Any]:
+    """The review's first referee: the one a format with room for a single reviewer names."""
+    referees = canonical.get("referees") or []
+    first = referees[0] if isinstance(referees, list) and referees else None
+    return first if isinstance(first, dict) else {}
+
+
+def section(
+    content: str,
+    *,
+    title: str | None = None,
+    role: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
+    """A part of the review's own text, with what is known of it: the source's name for it
+    (`title`), what it is (`role`) and who the source shows it to (`audience`)."""
+    part = {"title": title, "role": role, "audience": audience, "content": content}
+    return {key: value for key, value in part.items() if value is not None}
+
+
+def narrative_part(
+    canonical: dict[str, Any], role: str | None = None, *, audience: str | None = None
+) -> dict[str, Any] | None:
+    """The first part of the review's own text with this role (any, without one). Asked for
+    no audience, it is a part not kept for the editors; asked for one, a part for it."""
+    for part in narrative_parts(canonical):
+        if role is not None and part.get("role") != role:
+            continue
+        if audience is None and part.get("audience") == "editors":
+            continue
+        if audience is not None and part.get("audience") != audience:
+            continue
+        return part
+    return None
+
+
+def narrative_text(
+    canonical: dict[str, Any], role: str | None = None, *, audience: str | None = None
+) -> str | None:
+    """The text of `narrative_part`."""
+    part = narrative_part(canonical, role, audience=audience)
+    return part["content"] if part else None
+
+
+def narrative_field(
+    canonical: dict[str, Any],
+    role: str | None,
+    fields: tuple[str, ...],
+    *,
+    audience: str | None = None,
+    same_source: bool = False,
+) -> tuple[str, str] | None:
+    """A part of the review's own text, and the field a source writes it in: its own field
+    (the part's `title`) when the review was read from that source and the reader takes the
+    part from that field, else the first of `fields`."""
+    part = narrative_part(canonical, role, audience=audience)
+    if part is None or not fields:
+        return None
+    title = part.get("title")
+    return (title if same_source and title in fields else fields[0]), part["content"]
+
+
+def narrative_parts(canonical: dict[str, Any]) -> list[dict[str, Any]]:
+    """The parts of the review's own text, in order."""
+    parts = canonical.get("narrative")
+    return [
+        part
+        for part in (parts if isinstance(parts, list) else [])
+        if isinstance(part, dict) and isinstance(part.get("content"), str)
+    ]
+
+
+def recommendation_label(canonical: dict[str, Any]) -> str | None:
+    """The review's recommendation as a source writes it: in the source's own words
+    (`decision.source_label`) when they say this recommendation, else in OCRS's words
+    ("Major Revision")."""
+    decision = source_decision(canonical.get("decision") or {})
+    rec = decision.get("recommendation")
+    if not isinstance(rec, str):
+        return None
+    own = decision.get("source_label")
+    if isinstance(own, str) and map_recommendation_from_text(own) == rec:
+        return own
+    return rec.replace("_", " ").title()
+
+
+def fields_for(
+    table: tuple[tuple[str, str, str | None], ...], role: str, *, editors: bool = False
+) -> tuple[str, ...]:
+    """The fields a reader's table, (field, role, audience) in order, takes a part with this
+    role from: the editors' own fields, or the others."""
+    return tuple(field for field, r, a in table if r == role and (a == "editors") == editors)

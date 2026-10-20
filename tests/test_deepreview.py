@@ -245,10 +245,10 @@ Something new.
 
 def test_run_details():
     review = mapped(reviewer_version="2026-10").review
-    system = review["referee"]["ai_referee"]["system"]
+    system = review["referees"][0]["ai_referee"]["system"]
     assert system["critic_framework"] == {"name": "deepreview", "version": "2026-10"}
     assert system["models"] == [{"role": "reviewer", "model_id": "unspecified"}]
-    framework = mapped().review["referee"]["ai_referee"]["system"]["critic_framework"]
+    framework = mapped().review["referees"][0]["ai_referee"]["system"]["critic_framework"]
     assert framework["version"] == "unspecified"
 
 

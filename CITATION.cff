@@ -5,7 +5,7 @@ title: "Open Canonical Review Schema (OCRS)"
 abstract: "A JSON Schema and Python mappers for peer reviews written by people, AI systems or both."
 authors:
   - name: "Valency Systems Inc."
-version: 0.7.2
+version: 0.8.0
 license: Apache-2.0
 repository-code: "https://github.com/valency-oss/open-canonical-review-schema"
 url: "https://valency-oss.github.io/open-canonical-review-schema/"

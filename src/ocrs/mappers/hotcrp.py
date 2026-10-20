@@ -12,6 +12,7 @@ from ..identifiers import generate_canonical_work_id
 from ..schema import schema_id
 from ..util import (
     field_name,
+    fields_for,
     first_paragraph,
     first_present,
     from_source,
@@ -21,11 +22,15 @@ from ..util import (
     iso_to_epoch,
     map_recommendation_from_text,
     match_alias,
+    narrative_field,
     now_iso,
     parse_date_flexible,
     parse_labeled_score,
+    recommendation_label,
+    referee_of,
     score_to_recommendation,
     score_with_label,
+    section,
     source_decision,
     source_work_id,
     split_bullet_list,
@@ -83,6 +88,19 @@ EXPERTISE_LEVEL_MAP = {
     4: "expert",
     5: "expert",
 }
+
+
+# The fields of the review's own text the reader takes, in order, each as a part with
+# its role and audience; the first the form fills for each role and audience
+NARRATIVE_FIELDS: tuple[tuple[str, str, str | None], ...] = (
+    ("paper_summary", "summary", None),
+    ("summary", "summary", None),
+    ("comments", "review", "authors"),
+    ("detailed_comments", "review", "authors"),
+    ("confidential_comments", "review", "editors"),
+    ("comments_to_pc", "review", "editors"),
+    ("questions_for_authors", "questions", "authors"),
+)
 
 
 def _extract_time(payload: dict[str, Any]) -> str:
@@ -275,7 +293,7 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
         "imported_at": now_iso(),
         "mapping": {
             "mapping_spec_id": "canonical-review.mapping.v1",
-            "mapping_spec_version": "1.1.0",
+            "mapping_spec_version": "1.2.0",
             "mapper_version": "0.1.0",
         },
     }
@@ -294,7 +312,7 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
             else {}
         ),
         "provenance": provenance,
-        "referee": referee,
+        "referees": [referee],
         "target": {
             "identifiers": identifiers,
             "work_id": generate_canonical_work_id(identifiers),
@@ -308,21 +326,14 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
     if keep_raw:
         out["provenance"]["raw_payload"] = raw
 
-    # Narrative mapping
-    narrative: dict[str, Any] = {}
-    for src, dst in [
-        ("paper_summary", "summary"),
-        ("summary", "summary"),
-        ("comments", "detailed_review"),
-        ("detailed_comments", "detailed_review"),
-        ("confidential_comments", "confidential_to_editors"),
-        ("comments_to_pc", "confidential_to_editors"),
-        ("questions_for_authors", "author_questions"),
-    ]:
-        v = payload.get(src)
-        if isinstance(v, str) and v.strip():
-            if dst not in narrative:
-                narrative[dst] = v.strip()
+    # The review's own text, each field as a part: the first field the form fills for each
+    narrative: list[dict[str, Any]] = []
+    taken: set[tuple[str, str | None]] = set()
+    for field, role, audience in NARRATIVE_FIELDS:
+        v = payload.get(field)
+        if isinstance(v, str) and v.strip() and (role, audience) not in taken:
+            taken.add((role, audience))
+            narrative.append(section(v.strip(), title=field, role=role, audience=audience))
     if narrative:
         out["narrative"] = narrative
 
@@ -382,6 +393,9 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
             out["metrics"].append(metric)
         elif isinstance(rec_raw, str):
             decision["recommendation"] = map_recommendation_from_text(rec_raw) or "borderline"
+            # The recommendation in the form's own words
+            if rec_raw.strip():
+                decision["source_label"] = rec_raw.strip()
 
     # Parse reviewer expertise
     exp_raw = first_present(payload, ("reviewer_expertise", "expertise"))
@@ -395,9 +409,9 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
         )
         if parsed["numeric"] is not None:
             metric = {
-                "key": "confidence",
+                "key": "expertise",
                 "label": "Reviewer Expertise",
-                "aspect": "confidence",
+                "aspect": "expertise",
                 "scale": parsed["scale"],
                 "value": parsed["numeric"],  # Always numeric
             }
@@ -411,9 +425,9 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
                 metric["justification"] = parsed["label"]
             out["metrics"].append(metric)
 
-            # Also add expertise to review_context
+            # The referee's expertise, as a level
             level = EXPERTISE_LEVEL_MAP.get(int(parsed["numeric"]), "knowledgeable")
-            out["review_context"] = {"expertise": {"self_reported_level": level}}
+            referee["expertise"] = {"self_reported_level": level}
 
     # Parse confidence if separate from expertise
     conf_raw = payload.get("confidence")
@@ -445,7 +459,7 @@ def from_hotcrp(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str,
                     metric["justification"] = parsed["label"]
                 out["metrics"].append(metric)
             if parsed["normalized"] is not None:
-                decision["confidence"] = float(max(0.0, min(1.0, parsed["normalized"])))
+                decision["credence"] = float(max(0.0, min(1.0, parsed["normalized"])))
 
     if decision:
         out["decision"] = split_decision(decision)
@@ -564,7 +578,7 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
         out["modified_at"] = modified_at
 
     # The reviewer, as the reader takes it
-    referee = canonical.get("referee", {}) or {}
+    referee = referee_of(canonical)
     human = referee.get("human_referee", {}) or {}
     reviewer = {"user": referee.get("referee_id")} | {
         k: human.get(k) for k in ("name", "affiliation", "orcid")
@@ -575,21 +589,26 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
 
     # Map opinion/narrative to comments
     op = canonical.get("opinion", {}) or {}
-    nar = canonical.get("narrative", {}) or {}
 
-    if nar.get("summary"):
-        out["paper_summary"] = nar["summary"]
-    if nar.get("detailed_review"):
-        out["comments"] = nar["detailed_review"]
+    # Each part of the review's own text under its own field, when read from HotCRP
+    def own_field(role: str, *, editors: bool = False) -> tuple[str, str] | None:
+        fields = fields_for(NARRATIVE_FIELDS, role, editors=editors)
+        audience = "editors" if editors else None
+        return narrative_field(canonical, role, fields, audience=audience, same_source=same_source)
+
+    if summary := own_field("summary"):
+        out[summary[0]] = summary[1]
+    if review := own_field("review"):
+        out[review[0]] = review[1]
     elif op.get("text"):
         out["comments"] = op["text"]
     elif op.get("summary"):
         out["comments"] = op["summary"]
 
-    if nar.get("confidential_to_editors"):
-        out["confidential_comments"] = nar["confidential_to_editors"]
-    if nar.get("author_questions"):
-        out["questions_for_authors"] = nar["author_questions"]
+    if confidential := own_field("review", editors=True):
+        out[confidential[0]] = confidential[1]
+    if questions := own_field("questions"):
+        out[questions[0]] = questions[1]
 
     # Map findings
     findings = canonical.get("findings", {}) or {}
@@ -609,7 +628,7 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
     # Scores, each with its label. The overall score carries the recommendation in its label
     dec = source_decision(canonical.get("decision", {}) or {})
     rec = dec.get("recommendation") if isinstance(dec.get("recommendation"), str) else None
-    rec_label = rec.replace("_", " ").title() if rec else None
+    rec_label = recommendation_label(canonical)
     for m in canonical.get("metrics", []) or []:
         if not isinstance(m, dict) or m.get("value") is None:
             continue
@@ -625,12 +644,10 @@ def to_hotcrp(canonical: dict[str, Any]) -> dict[str, Any]:
             if rec and _recommendation_read_back(m["value"], label) != rec:
                 label = rec_label
             out.setdefault("overall_merit", score_with_label({**m, "justification": label}, ". "))
-        elif key == "confidence":
-            # HotCRP asks for expertise; a review read from it may also give a confidence
-            confidence = same_source and label == "Reviewer Confidence"
-            out.setdefault(
-                "confidence" if confidence else "reviewer_expertise", score_with_label(m, ". ")
-            )
+        elif key in ("expertise", "confidence"):
+            # HotCRP's form asks for the reviewer's expertise, and some forms for confidence
+            field = "reviewer_expertise" if key == "expertise" else "confidence"
+            out.setdefault(field, score_with_label(m, ". "))
         elif key:
             named = (same_source or key == "other") and isinstance(label, str) and label.strip()
             field = field_name(label) if named else key

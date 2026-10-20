@@ -90,7 +90,7 @@ def step_rows(steps: list[Step], review: dict[str, Any], item: str) -> Iterator[
 
 def render_header(result: MappingResult) -> Iterator[str]:
     review, record = result.review, result.record
-    system = review["referee"]["ai_referee"]["system"]
+    system = review["referees"][0]["ai_referee"]["system"]
     framework = system["critic_framework"]
     target = review["target"]
     version = f", version {target['version']}" if target.get("version") else ""
