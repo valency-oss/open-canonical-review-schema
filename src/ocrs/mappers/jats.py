@@ -767,11 +767,15 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         return f"{part['title']}:\n\n{part['content']}" if part.get("title") else part["content"]
 
     if isinstance(text, str) and text.strip():
-        # Then the questions for the authors and the other parts they may read
+        # Then the questions for the authors and the other parts they may read, but for those
+        # the text already holds (a report read from JATS holds the parts cut from it)
         others = [
             s
             for s in narrative_parts(canonical)
-            if s.get("role") in ("questions", "other") and for_authors(s) and s["content"].strip()
+            if s.get("role") in (None, "questions", "other")
+            and for_authors(s)
+            and s["content"].strip()
+            and s["content"].strip() not in text
         ]
         text = "\n\n".join([text, *map(headed, others)])
     else:
