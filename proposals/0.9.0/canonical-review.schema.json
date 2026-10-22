@@ -189,6 +189,13 @@
         "language": {
           "description": "Language of the work (e.g., 'en')",
           "type": "string"
+        },
+        "artifacts": {
+          "description": "Identities of the work’s associated materials, stored once and referenced by ID. These records do not assert that an artifact was assessed or checked.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
         }
       }
     },
@@ -3319,6 +3326,53 @@
       "required": [
         "definitions"
       ]
+    },
+    "artifact": {
+      "description": "Identity of an associated material. Store evaluations in findings and observed test results in checks.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "description": "Review-local artifact ID, unique across all addressable records.",
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "description": "Kind of material.",
+          "type": "string",
+          "enum": [
+            "code",
+            "data",
+            "model",
+            "protocol",
+            "supplement",
+            "other"
+          ]
+        },
+        "ref": {
+          "description": "URL, repository, DOI or source-described location, when known. Do not invent a location for absent or inaccessible material.",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "description": "Exact revision, commit or release, when known.",
+          "type": "string",
+          "minLength": 1
+        },
+        "content_hash": {
+          "$ref": "#/$defs/contentHash",
+          "description": "Hash identifying the exact artifact contents."
+        },
+        "reported_availability": {
+          "description": "Availability as the source states it. An actual access test is a check result; omission is not a claim of availability.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   }
 }

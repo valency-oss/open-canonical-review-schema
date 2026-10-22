@@ -89,3 +89,18 @@ def test_a_local_metric_does_not_require_an_external_venue():
             }
         },
     )
+
+
+def test_artifact_identity_does_not_require_a_url_or_an_assessment():
+    validate_part(
+        "artifact", {"id": "a1", "type": "code", "reported_availability": "not_available"}
+    )
+    validate_part("artifact", {"id": "a2", "type": "data", "version": "v2"})
+
+
+@pytest.mark.parametrize(
+    "artifact", [{"type": "code"}, {"id": "a1"}, {"id": "a1", "type": "code", "assessment": "poor"}]
+)
+def test_artifacts_require_addressable_identity_and_keep_assessments_elsewhere(artifact):
+    with pytest.raises(ValidationError):
+        validate_part("artifact", artifact)

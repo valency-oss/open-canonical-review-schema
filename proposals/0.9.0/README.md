@@ -19,3 +19,14 @@ is used to guess missing scale bounds.
 
 Definition references must resolve within this review. Scale values, bounds and intervals
 are checked against the referenced definition when the candidate is activated.
+
+## Artifact identities
+
+`target.artifacts[]` lists code, data, models, protocols and supplementary materials.
+Each has an ID and a type; location, exact version, content hash and reported availability
+are optional. Missing or unavailable material does not need an invented URL. Merely listing
+an artifact does not mean that the reviewer checked it.
+
+The final hierarchy uses shared evidence pointers to refer to these IDs. Examinations
+live in checks, and their significance lives in findings. Artifact records need no reverse
+lists of checks, findings or metrics.
