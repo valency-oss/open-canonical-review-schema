@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from decimal import Decimal
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -48,7 +48,7 @@ def validate_canonical(
     if is_hierarchical(validator.schema.get("$id", "")) or is_hierarchical(obj.get("$schema", "")):
         check_references(obj, text_sources=text_sources)
     else:
-        check_legacy_references(obj)
+        check_legacy_references(obj, evidence_schema=validator.schema)
 
 
 FINDING_KINDS = ("strengths", "weaknesses", "questions", "comments", "changes")
@@ -259,12 +259,17 @@ def _check_metric(metric: dict, scale: dict) -> None:
     """Check the observation against its referenced original scale, not a guessed scale."""
 
     def number(v):
-        return type(v) in (int, float) and math.isfinite(v)
+        return type(v) is int or type(v) is float and math.isfinite(v)
 
     if "min" in scale and "max" in scale and scale["min"] > scale["max"]:
         raise ValidationError("Scale min exceeds max")
     values = metric["value"] if isinstance(metric["value"], list) else [metric["value"]]
     for value in values:
+        numeric_scale = scale["type"] in {"interval", "ratio"} or (
+            "values" not in scale and any(key in scale for key in ("min", "max", "step"))
+        )
+        if numeric_scale and not number(value):
+            raise ValidationError("A numeric scale requires numeric metric values")
         if "values" in scale:
             # JSON true and 1 are different allowed values, despite Python equality.
             if not any(
@@ -278,8 +283,8 @@ def _check_metric(metric: dict, scale: dict) -> None:
             if "min" in scale and value < scale["min"] or "max" in scale and value > scale["max"]:
                 raise ValidationError(f"Metric value {value} is outside its scale")
             if "step" in scale and "min" in scale:
-                delta = Decimal(str(value)) - Decimal(str(scale["min"]))
-                if delta % Decimal(str(scale["step"])):
+                delta = Fraction(str(value)) - Fraction(str(scale["min"]))
+                if (delta / Fraction(str(scale["step"]))).denominator != 1:
                     raise ValidationError("Metric value does not follow the original scale step")
     interval = metric.get("uncertainty", {}).get("interval")
     if interval:

@@ -1,0 +1,313 @@
+{
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
+  "review_id": "NeurIPS2024_Review_7834",
+  "version": "1.0.0",
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-02T00:00:00Z",
+  "provenance": {
+    "source_system": "openreview",
+    "imported_at": "2026-01-01T00:00:00Z",
+    "mapping": {
+      "mapping_spec_id": "canonical-review.mapping.v1",
+      "mapping_spec_version": "1.2.0",
+      "mapper_version": "0.1.0"
+    },
+    "source_review_id": "NeurIPS2024_Review_7834"
+  },
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "confidential",
+      "human_referee": {},
+      "referee_id": "~Reviewer_ABC1"
+    }
+  ],
+  "target": {
+    "identifiers": {
+      "internal_id": {
+        "field_name": "openreview_forum",
+        "value": "xY9kL2mN3pQ",
+        "hyperlink": "https://openreview.net/forum?id=xY9kL2mN3pQ"
+      }
+    },
+    "work_id": "internal_id:openreview_forum:xY9kL2mN3pQ",
+    "work_type": "preprint"
+  },
+  "metrics": [
+    {
+      "value": 7,
+      "normalized": {
+        "value_0_1": 0.6666666666666666,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "Accept, but not among top submissions",
+      "id": "metric-1",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "overall"
+      }
+    },
+    {
+      "value": 4,
+      "normalized": {
+        "value_0_1": 0.75,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "The reviewer is confident but not absolutely certain that the evaluation is correct",
+      "id": "metric-2",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "confidence"
+      }
+    },
+    {
+      "value": 3,
+      "normalized": {
+        "value_0_1": 0.5,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "Good",
+      "id": "metric-3",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "correctness"
+      }
+    },
+    {
+      "value": 4,
+      "normalized": {
+        "value_0_1": 0.75,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "Excellent",
+      "id": "metric-4",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "clarity"
+      }
+    },
+    {
+      "value": 3,
+      "normalized": {
+        "value_0_1": 0.5,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "Good",
+      "id": "metric-5",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "novelty"
+      }
+    },
+    {
+      "value": 4,
+      "normalized": {
+        "value_0_1": 0.75,
+        "method": "linear_to_unit_interval"
+      },
+      "justification": "Good - most details provided",
+      "id": "metric-6",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "reproducibility"
+      }
+    }
+  ],
+  "opinion": {
+    "summary": "This paper proposes a novel transformer architecture for long-sequence modeling that achieves linear complexity through a learned sparse attention pattern. The key insight is that attention sparsity can be dynamically predicted based on input characteristics rather than using fixed patterns. Experiments on Long Range Arena and language modeling tasks show consistent improvements over existing efficient transformers.",
+    "decision": {
+      "recommendation": "accept"
+    },
+    "metric_refs": [
+      "metric-1"
+    ]
+  },
+  "narrative": [
+    {
+      "title": "summary",
+      "role": "summary",
+      "content": "This paper proposes a novel transformer architecture for long-sequence modeling that achieves linear complexity through a learned sparse attention pattern. The key insight is that attention sparsity can be dynamically predicted based on input characteristics rather than using fixed patterns. Experiments on Long Range Arena and language modeling tasks show consistent improvements over existing efficient transformers."
+    },
+    {
+      "title": "review",
+      "role": "review",
+      "content": "## Summary\nThe paper addresses the quadratic complexity bottleneck of transformers for long sequences by introducing a learnable sparse attention mechanism. Unlike prior work that uses fixed sparsity patterns (e.g., Longformer, BigBird), this approach predicts attention sparsity dynamically.\n\n## Strengths\n- **Novel technical contribution**: The learned sparsity predictor is a creative solution that adapts to input complexity.\n- **Strong empirical results**: The method outperforms baselines on all LRA tasks and shows competitive perplexity on language modeling.\n- **Theoretical analysis**: Section 4 provides useful bounds on approximation error.\n- **Clear writing**: The paper is well-organized and the method is clearly explained.\n\n## Weaknesses\n- **Training overhead**: The sparsity predictor adds ~15% training time, which could be problematic for very large models.\n- **Limited scaling analysis**: Experiments only go up to 16K sequence length; it's unclear if the benefits hold at 100K+.\n- **Comparison gaps**: Missing comparison with Flash Attention and recent linear attention variants (RWKV, Mamba).\n\n## Questions\n1. How sensitive is the method to the sparsity predictor architecture?\n2. Can you provide wall-clock training times comparing to baseline methods?\n3. What happens when the predicted sparsity is very different from the optimal?\n\n## Minor Issues\n- Typo in Eq. 7: missing summation index\n- Figure 4 colors are hard to distinguish for colorblind readers"
+    }
+  ],
+  "findings": {
+    "strengths": [
+      {
+        "text": "Novel learned sparsity mechanism that adapts to input",
+        "id": "strength-1"
+      },
+      {
+        "text": "Strong empirical results across multiple benchmarks",
+        "id": "strength-2"
+      },
+      {
+        "text": "Solid theoretical grounding with approximation bounds",
+        "id": "strength-3"
+      },
+      {
+        "text": "Clear presentation and well-organized paper",
+        "id": "strength-4"
+      }
+    ],
+    "weaknesses": [
+      {
+        "text": "Training overhead may limit applicability to very large models",
+        "id": "weakness-1"
+      },
+      {
+        "text": "Limited evaluation at extreme sequence lengths",
+        "id": "weakness-2"
+      },
+      {
+        "text": "Missing comparisons with recent efficient attention methods",
+        "id": "weakness-3"
+      }
+    ],
+    "questions": [
+      {
+        "text": "Sensitivity to sparsity predictor architecture?",
+        "id": "question-1"
+      },
+      {
+        "text": "Wall-clock training time comparison?",
+        "id": "question-2"
+      },
+      {
+        "text": "Behavior when predicted sparsity diverges from optimal?",
+        "id": "question-3"
+      }
+    ],
+    "comments": [
+      {
+        "text": "No ethical concerns reported.",
+        "tags": [
+          "ethics"
+        ],
+        "id": "ethics-1"
+      }
+    ]
+  },
+  "extensions": {
+    "openreview": {
+      "ethics_flags": {
+        "fields": {
+          "ethics_flag": "No"
+        },
+        "say": {
+          "ethical_concerns": false
+        }
+      }
+    },
+    "ocrs_0_8": {
+      "fields": [
+        {
+          "path": "decision.credence",
+          "value": 0.75
+        },
+        {
+          "path": "ethics_and_risk",
+          "value": {
+            "ethical_concerns": false,
+            "finding_id": "ethics-1",
+            "had_notes": false
+          }
+        }
+      ],
+      "generated_ids": [
+        "strength-1",
+        "strength-2",
+        "strength-3",
+        "strength-4",
+        "weakness-1",
+        "weakness-2",
+        "weakness-3",
+        "question-1",
+        "question-2",
+        "question-3",
+        "ethics-1",
+        "metric-1",
+        "metric-2",
+        "metric-3",
+        "metric-4",
+        "metric-5",
+        "metric-6"
+      ]
+    }
+  },
+  "review_context": {
+    "metric_schemas": {
+      "source-form": {
+        "source": {
+          "name": "openreview",
+          "catalog_ref": "metric-catalog.core.v1.1"
+        },
+        "definitions": {
+          "overall": {
+            "label": "rating",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 10
+            },
+            "catalog_key": "overall",
+            "dimension": "overall"
+          },
+          "confidence": {
+            "label": "confidence",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            },
+            "catalog_key": "confidence",
+            "dimension": "confidence"
+          },
+          "correctness": {
+            "label": "soundness",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            },
+            "catalog_key": "correctness",
+            "dimension": "correctness"
+          },
+          "clarity": {
+            "label": "presentation",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            },
+            "catalog_key": "clarity",
+            "dimension": "clarity"
+          },
+          "novelty": {
+            "label": "contribution",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            },
+            "catalog_key": "novelty",
+            "dimension": "novelty"
+          },
+          "reproducibility": {
+            "label": "reproducibility",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            },
+            "catalog_key": "reproducibility",
+            "dimension": "reproducibility"
+          }
+        }
+      }
+    }
+  }
+}

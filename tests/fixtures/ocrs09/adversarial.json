@@ -73,7 +73,7 @@
             "definitions": {
               "technical_merit": {
                 "label": "Technical merit",
-                "dimension": "technical_merit",
+                "dimension": "other",
                 "scale": {
                   "type": "ordinal",
                   "min": 1,
@@ -138,7 +138,7 @@
               },
               "reviewer_confidence": {
                 "label": "Reviewer confidence",
-                "dimension": "reviewer_confidence",
+                "dimension": "review_confidence",
                 "scale": {
                   "type": "ordinal",
                   "min": 1,
