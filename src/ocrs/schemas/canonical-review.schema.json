@@ -6,15 +6,7 @@
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "review_id",
-    "version",
-    "created_at",
-    "provenance",
-    "referees",
-    "target",
-    "opinion"
-  ],
+  "required": ["review_id", "version", "created_at", "provenance", "referees", "target", "opinion"],
   "properties": {
     "$schema": {
       "description": "The URL of the OCRS schema this review follows: the `$id` of a published version (e.g., 'https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json'). It tells validators and editors which version to check the review against; it is not part of the review",
@@ -43,9 +35,7 @@
       "description": "Where this record came from: the source system, its own identifiers, and how it was mapped to OCRS",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "source_system"
-      ],
+      "required": ["source_system"],
       "properties": {
         "source_system": {
           "description": "The system the review was taken from (e.g., 'hotcrp', 'scholarone', 'openreview', 'openaireview', 'deepreview')",
@@ -121,18 +111,13 @@
       "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews)",
       "type": "array",
       "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/referee"
-      }
+      "items": {"$ref": "#/$defs/referee"}
     },
     "target": {
       "description": "The work under review: the exact version the reviewer read. Other versions and forms of it go in relations",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "work_id",
-        "work_type"
-      ],
+      "required": ["work_id", "work_type"],
       "properties": {
         "work_id": {
           "type": "string",
@@ -169,9 +154,7 @@
         "relations": {
           "description": "Other versions and forms of the reviewed work, each with how it relates to the reviewed version (e.g., the reviewed version is_new_version_of an earlier one, or is_version_of a preprint)",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/workRelation"
-          }
+          "items": {"$ref": "#/$defs/workRelation"}
         },
         "venue": {
           "description": "Journal, conference or platform the work was submitted to",
@@ -194,9 +177,7 @@
           "description": "Identities of the work’s associated materials, stored once and referenced by ID. These records do not assert that an artifact was assessed or checked.",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/artifact"
-          }
+          "items": {"$ref": "#/$defs/artifact"}
         }
       }
     },
@@ -249,9 +230,7 @@
           "description": "Source forms and local metric definitions, keyed by review-local schema ID.",
           "type": "object",
           "minProperties": 1,
-          "propertyNames": {
-            "minLength": 1
-          },
+          "propertyNames": {"minLength": 1},
           "additionalProperties": {
             "$ref": "#/$defs/metricSchema",
             "description": "One reusable source form."
@@ -262,21 +241,15 @@
     "related_reviews": {
       "description": "Other reviews this one relates to: one it responds to (an author's response to a report, a reply in a discussion), one it replaces, or ones it summarizes (a meta-review)",
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/reviewRelation"
-      }
+      "items": {"$ref": "#/$defs/reviewRelation"}
     },
     "metrics": {
       "description": "Scores the reviewer gave, each on its own scale (e.g., soundness 3 of 4, overall 6 of 10)",
       "type": "array",
       "minItems": 0,
-      "items": {
-        "$ref": "#/$defs/metricAssessment"
-      }
+      "items": {"$ref": "#/$defs/metricAssessment"}
     },
-    "opinion": {
-      "$ref": "#/$defs/opinion"
-    },
+    "opinion": {"$ref": "#/$defs/opinion"},
     "findings": {
       "description": "The review's specific points, grouped by kind",
       "type": "object",
@@ -285,46 +258,34 @@
         "strengths": {
           "description": "What the work does well",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/finding"
-          }
+          "items": {"$ref": "#/$defs/finding"}
         },
         "weaknesses": {
           "description": "Problems in the work: errors, gaps, unsupported claims",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/weakness"
-          }
+          "items": {"$ref": "#/$defs/weakness"}
         },
         "questions": {
           "description": "Questions for the authors",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/finding"
-          }
+          "items": {"$ref": "#/$defs/finding"}
         },
         "comments": {
           "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/finding"
-          }
+          "items": {"$ref": "#/$defs/finding"}
         },
         "changes": {
           "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is; classify the kind of change with tags",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/change"
-          }
+          "items": {"$ref": "#/$defs/change"}
         }
       }
     },
     "narrative": {
       "description": "The review's own text, as the source gives it, in its parts and in order: the named text fields of a review form, the headed sections of a report, or one undivided text. `opinion` and `findings` are OCRS's structured reading of it",
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/section"
-      }
+      "items": {"$ref": "#/$defs/section"}
     },
     "calibration": {
       "description": "Information for comparing this reviewer's scores with other reviewers'",
@@ -353,10 +314,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "type",
-          "value"
-        ],
+        "required": ["type", "value"],
         "properties": {
           "type": {
             "description": "Signature scheme",
@@ -378,9 +336,7 @@
     "checks": {
       "description": "Systematic checks run on the work, such as reference verification or AI-text detection, including those that found nothing",
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/check"
-      }
+      "items": {"$ref": "#/$defs/check"}
     },
     "text_format": {
       "description": "How to read the review's free text (opinion, findings, narrative). When absent, the format is unknown",
@@ -411,9 +367,7 @@
       "description": "Data with no OCRS field, kept under one key per source format (e.g., extensions.openaireview)",
       "type": "object"
     },
-    "written_report": {
-      "$ref": "#/$defs/writtenReport"
-    },
+    "written_report": {"$ref": "#/$defs/writtenReport"},
     "work_summary": {
       "description": "The reviewer’s descriptive account of the work, separate from their opinion.",
       "type": "object",
@@ -450,386 +404,167 @@
       "anyOf": [
         {
           "properties": {
-            "opinion": {
-              "properties": {
-                "summary": {
-                  "type": "string",
-                  "pattern": "\\S"
-                }
-              },
-              "required": [
-                "summary"
-              ]
-            }
+            "opinion": {"properties": {"summary": {"type": "string", "pattern": "\\S"}}, "required": ["summary"]}
           },
-          "required": [
-            "opinion"
-          ]
+          "required": ["opinion"]
         },
         {
           "properties": {
             "opinion": {
               "properties": {
                 "decision": {
-                  "properties": {
-                    "source_label": {
-                      "type": "string",
-                      "pattern": "\\S"
-                    }
-                  },
-                  "required": [
-                    "source_label"
-                  ]
+                  "properties": {"source_label": {"type": "string", "pattern": "\\S"}},
+                  "required": ["source_label"]
                 }
               },
-              "required": [
-                "decision"
-              ]
+              "required": ["decision"]
             }
           },
-          "required": [
-            "opinion"
-          ]
+          "required": ["opinion"]
         },
         {
           "properties": {
             "opinion": {
               "properties": {
                 "decision": {
-                  "properties": {
-                    "rationale": {
-                      "type": "string",
-                      "pattern": "\\S"
-                    }
-                  },
-                  "required": [
-                    "rationale"
-                  ]
+                  "properties": {"rationale": {"type": "string", "pattern": "\\S"}},
+                  "required": ["rationale"]
                 }
               },
-              "required": [
-                "decision"
-              ]
+              "required": ["decision"]
             }
           },
-          "required": [
-            "opinion"
-          ]
+          "required": ["opinion"]
         },
         {
           "properties": {
-            "work_summary": {
-              "properties": {
-                "summary": {
-                  "type": "string",
-                  "pattern": "\\S"
-                }
-              },
-              "required": [
-                "summary"
-              ]
+            "work_summary": {"properties": {"summary": {"type": "string", "pattern": "\\S"}}, "required": ["summary"]}
+          },
+          "required": ["work_summary"]
+        },
+        {
+          "properties": {
+            "opinion": {
+              "properties": {"decision": {"properties": {"recommendation": {}}, "required": ["recommendation"]}},
+              "required": ["decision"]
             }
           },
-          "required": [
-            "work_summary"
-          ]
+          "required": ["opinion"]
         },
         {
           "properties": {
             "opinion": {
               "properties": {
-                "decision": {
-                  "properties": {
-                    "recommendation": {}
-                  },
-                  "required": [
-                    "recommendation"
-                  ]
-                }
+                "decision": {"properties": {"revision_requirement": {}}, "required": ["revision_requirement"]}
               },
-              "required": [
-                "decision"
-              ]
+              "required": ["decision"]
             }
           },
-          "required": [
-            "opinion"
-          ]
-        },
-        {
-          "properties": {
-            "opinion": {
-              "properties": {
-                "decision": {
-                  "properties": {
-                    "revision_requirement": {}
-                  },
-                  "required": [
-                    "revision_requirement"
-                  ]
-                }
-              },
-              "required": [
-                "decision"
-              ]
-            }
-          },
-          "required": [
-            "opinion"
-          ]
+          "required": ["opinion"]
         },
         {
           "properties": {
             "findings": {
               "properties": {
                 "strengths": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "strengths"
-              ]
+              "required": ["strengths"]
             }
           },
-          "required": [
-            "findings"
-          ]
+          "required": ["findings"]
         },
         {
           "properties": {
             "findings": {
               "properties": {
                 "weaknesses": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "weaknesses"
-              ]
+              "required": ["weaknesses"]
             }
           },
-          "required": [
-            "findings"
-          ]
+          "required": ["findings"]
         },
         {
           "properties": {
             "findings": {
               "properties": {
                 "questions": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "questions"
-              ]
+              "required": ["questions"]
             }
           },
-          "required": [
-            "findings"
-          ]
+          "required": ["findings"]
         },
         {
           "properties": {
             "findings": {
               "properties": {
                 "comments": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "comments"
-              ]
+              "required": ["comments"]
             }
           },
-          "required": [
-            "findings"
-          ]
+          "required": ["findings"]
         },
         {
           "properties": {
             "findings": {
               "properties": {
                 "changes": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "changes"
-              ]
+              "required": ["changes"]
             }
           },
-          "required": [
-            "findings"
-          ]
+          "required": ["findings"]
         },
         {
           "properties": {
             "work_summary": {
               "properties": {
                 "claims": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "claims"
-              ]
+              "required": ["claims"]
             }
           },
-          "required": [
-            "work_summary"
-          ]
+          "required": ["work_summary"]
         },
         {
           "properties": {
             "work_summary": {
               "properties": {
                 "contributions": {
-                  "contains": {
-                    "properties": {
-                      "text": {
-                        "type": "string",
-                        "pattern": "\\S"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ]
-                  }
+                  "contains": {"properties": {"text": {"type": "string", "pattern": "\\S"}}, "required": ["text"]}
                 }
               },
-              "required": [
-                "contributions"
-              ]
+              "required": ["contributions"]
             }
           },
-          "required": [
-            "work_summary"
-          ]
+          "required": ["work_summary"]
         },
-        {
-          "properties": {
-            "metrics": {
-              "minItems": 1
-            }
-          },
-          "required": [
-            "metrics"
-          ]
-        },
-        {
-          "properties": {
-            "checks": {
-              "minItems": 1
-            }
-          },
-          "required": [
-            "checks"
-          ]
-        },
+        {"properties": {"metrics": {"minItems": 1}}, "required": ["metrics"]},
+        {"properties": {"checks": {"minItems": 1}}, "required": ["checks"]},
         {
           "properties": {
             "narrative": {
-              "contains": {
-                "properties": {
-                  "content": {
-                    "type": "string",
-                    "pattern": "\\S"
-                  }
-                },
-                "required": [
-                  "content"
-                ]
-              }
+              "contains": {"properties": {"content": {"type": "string", "pattern": "\\S"}}, "required": ["content"]}
             }
           },
-          "required": [
-            "narrative"
-          ]
+          "required": ["narrative"]
         },
-        {
-          "properties": {
-            "written_report": {}
-          },
-          "required": [
-            "written_report"
-          ]
-        },
-        {
-          "properties": {
-            "opinion": {
-              "properties": {
-                "stance": {}
-              },
-              "required": [
-                "stance"
-              ]
-            }
-          },
-          "required": [
-            "opinion"
-          ]
-        }
+        {"properties": {"written_report": {}}, "required": ["written_report"]},
+        {"properties": {"opinion": {"properties": {"stance": {}}, "required": ["stance"]}}, "required": ["opinion"]}
       ]
     }
   ],
@@ -841,35 +576,15 @@
     "hasTitleOrText": {
       "description": "A point whose title or text is not blank. The review content rule counts only such points",
       "anyOf": [
-        {
-          "required": [
-            "title"
-          ],
-          "properties": {
-            "title": {
-              "$ref": "#/$defs/nonBlank"
-            }
-          }
-        },
-        {
-          "required": [
-            "text"
-          ],
-          "properties": {
-            "text": {
-              "$ref": "#/$defs/nonBlank"
-            }
-          }
-        }
+        {"required": ["title"], "properties": {"title": {"$ref": "#/$defs/nonBlank"}}},
+        {"required": ["text"], "properties": {"text": {"$ref": "#/$defs/nonBlank"}}}
       ]
     },
     "identifierWithLink": {
       "type": "object",
       "additionalProperties": false,
       "description": "An identifier value with optional hyperlink for resolution",
-      "required": [
-        "value"
-      ],
+      "required": ["value"],
       "properties": {
         "value": {
           "description": "The identifier itself",
@@ -887,10 +602,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "System-specific internal identifier with field name context",
-      "required": [
-        "field_name",
-        "value"
-      ],
+      "required": ["field_name", "value"],
       "properties": {
         "field_name": {
           "type": "string",
@@ -913,10 +625,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Another version or form of the reviewed work, and how it relates to the reviewed version",
-      "required": [
-        "type",
-        "identifiers"
-      ],
+      "required": ["type", "identifiers"],
       "properties": {
         "type": {
           "description": "How the reviewed version relates to this one, read as '<reviewed version> <type> <this work>'. Crossref's intra-work relation types (relations.xsd), plus DataCite's IsNewVersionOf and IsPreviousVersionOf, in snake_case",
@@ -966,9 +675,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "Digital Object Identifier (e.g., 10.1000/xyz-123)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The DOI, without a resolver prefix",
@@ -987,9 +694,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "arXiv identifier (e.g., 2401.12345 or 2401.12345v2 or hep-th/9901001)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The arXiv identifier",
@@ -1016,9 +721,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "PubMed Central ID (e.g., PMC5555555)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The PMCID, including the PMC prefix",
@@ -1037,9 +740,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "OpenAlex Work ID (e.g., W2741809807)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The OpenAlex Work ID",
@@ -1058,9 +759,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "Valency Hub work ID (e.g., W_6r533gdt), or the ID of one version of the work (e.g., W_6r533gdt_v2)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The Valency work ID: 'W_' and at least 8 characters from a-z and 2-9, without i, l and o. A version's ID adds '_v' and the version number",
@@ -1079,9 +778,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "Handle (e.g., 20.500.12345/abc or 1721.1/12345). DOIs are also handles; give them in doi",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The handle, without a resolver prefix",
@@ -1100,9 +797,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "Archival Resource Key (e.g., ark:/13030/tf5p30086k)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The ARK, including the 'ark:' label, without a resolver prefix",
@@ -1121,9 +816,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "ISBN of a book or chapter (e.g., 9780262035613)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The ISBN-10 or ISBN-13, digits only, without hyphens or spaces; an ISBN-10 may end in X",
@@ -1142,9 +835,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "ISSN of the journal or series the work appears in (e.g., 2050-084X). It identifies the serial, not the work, so give it alongside an identifier of the work",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The ISSN, with its hyphen",
@@ -1163,9 +854,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "European Case Law Identifier, for a court decision (e.g., ECLI:EU:C:2014:317)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The ECLI: country, court, year and number",
@@ -1184,9 +873,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "Accession number in a data repository, for a dataset or other deposited record (e.g., MN908947 in GenBank)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The accession number",
@@ -1219,9 +906,7 @@
           "type": "object",
           "additionalProperties": false,
           "description": "UUID assigned to the work (e.g., 123e4567-e89b-12d3-a456-426614174000)",
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "properties": {
             "value": {
               "description": "The UUID in its hyphenated form",
@@ -1250,10 +935,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Generic third-party identifier with namespace",
-      "required": [
-        "key",
-        "value"
-      ],
+      "required": ["key", "value"],
       "properties": {
         "key": {
           "type": "string",
@@ -1271,9 +953,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Lightweight reference to a third-party AI referee system when full provenance is not available",
-      "required": [
-        "third_party_id"
-      ],
+      "required": ["third_party_id"],
       "properties": {
         "third_party_id": {
           "type": "string",
@@ -1346,10 +1026,7 @@
       "description": "Who wrote the review: a person, an AI system or both",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "referee_type",
-        "identity_mode"
-      ],
+      "required": ["referee_type", "identity_mode"],
       "properties": {
         "referee_type": {
           "description": "Whether a person, an AI system or both wrote the review",
@@ -1384,9 +1061,7 @@
           "description": "The reviewer's statement of competing interests",
           "type": "string"
         },
-        "expertise": {
-          "$ref": "#/$defs/expertise"
-        },
+        "expertise": {"$ref": "#/$defs/expertise"},
         "human_referee": {
           "description": "The human reviewer's identity and expertise. Optional: a fully anonymous review can leave it out",
           "$ref": "#/$defs/humanReferee"
@@ -1405,34 +1080,10 @@
         }
       },
       "allOf": [
+        {"if": {"properties": {"referee_type": {"const": "ai"}}}, "then": {"required": ["ai_referee"]}},
         {
-          "if": {
-            "properties": {
-              "referee_type": {
-                "const": "ai"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "ai_referee"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "referee_type": {
-                "const": "hybrid"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "ai_referee",
-              "hybrid_workflow"
-            ]
-          }
+          "if": {"properties": {"referee_type": {"const": "hybrid"}}},
+          "then": {"required": ["ai_referee", "hybrid_workflow"]}
         }
       ]
     },
@@ -1506,9 +1157,7 @@
         "domain_tags": {
           "description": "Subject areas the reviewer is expert in",
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": {"type": "string"}
         }
       }
     },
@@ -1518,14 +1167,7 @@
       "properties": {
         "seed": {
           "description": "Random seed for reproducing the review process, not the reviewed work; used for stages without an explicit stage seed",
-          "oneOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            }
-          ]
+          "oneOf": [{"type": "integer"}, {"type": "string"}]
         },
         "seeds": {
           "description": "Explicit seeds for review stages (e.g., retrieval or generation), overriding the whole-review seed for those stages",
@@ -1533,10 +1175,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "stage",
-              "seed"
-            ],
+            "required": ["stage", "seed"],
             "properties": {
               "stage": {
                 "description": "The stage this seed is for (e.g., 'retrieval', 'generation')",
@@ -1544,14 +1183,7 @@
               },
               "seed": {
                 "description": "Random seed for the stage",
-                "oneOf": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
+                "oneOf": [{"type": "integer"}, {"type": "string"}]
               }
             }
           }
@@ -1656,21 +1288,12 @@
       "oneOf": [
         {
           "description": "Full provenance: the system and the run, optionally with inputs, outputs and safety, and no reference",
-          "required": [
-            "system",
-            "execution"
-          ],
-          "not": {
-            "required": [
-              "reference"
-            ]
-          }
+          "required": ["system", "execution"],
+          "not": {"required": ["reference"]}
         },
         {
           "description": "A lightweight reference alone",
-          "required": [
-            "reference"
-          ],
+          "required": ["reference"],
           "maxProperties": 1
         }
       ]
@@ -1678,19 +1301,13 @@
     "aiSystemProvenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "critic_framework",
-        "models"
-      ],
+      "required": ["critic_framework", "models"],
       "properties": {
         "critic_framework": {
           "description": "The review software that ran the models (e.g., OpenAIReview)",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "name",
-            "version"
-          ],
+          "required": ["name", "version"],
           "properties": {
             "name": {
               "description": "Name of the review software",
@@ -1729,16 +1346,12 @@
           "description": "Models the system used, each with its role",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/aiModelSpec"
-          }
+          "items": {"$ref": "#/$defs/aiModelSpec"}
         },
         "tools": {
           "description": "Tools the system called, such as search or code execution",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/aiToolSpec"
-          }
+          "items": {"$ref": "#/$defs/aiToolSpec"}
         },
         "policies": {
           "description": "The review policy the system followed",
@@ -1764,10 +1377,7 @@
     "aiModelSpec": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "role",
-        "model_id"
-      ],
+      "required": ["role", "model_id"],
       "properties": {
         "role": {
           "description": "What the model did in the review",
@@ -1805,9 +1415,7 @@
     "aiToolSpec": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "properties": {
         "name": {
           "description": "Tool name",
@@ -1832,10 +1440,7 @@
     "aiExecutionProvenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "started_at",
-        "ended_at"
-      ],
+      "required": ["started_at", "ended_at"],
       "properties": {
         "started_at": {
           "description": "When the run started",
@@ -1906,10 +1511,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "type",
-                  "amount"
-                ],
+                "required": ["type", "amount"],
                 "properties": {
                   "type": {
                     "description": "Kind of cost",
@@ -1960,10 +1562,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "type",
-              "ref"
-            ],
+            "required": ["type", "ref"],
             "properties": {
               "type": {
                 "description": "Kind of material",
@@ -2023,10 +1622,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "role",
-              "prompt_hash"
-            ],
+            "required": ["role", "prompt_hash"],
             "properties": {
               "role": {
                 "description": "What the prompt is for (e.g., 'system', 'reviewer')",
@@ -2059,10 +1655,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "type",
-              "ref"
-            ],
+            "required": ["type", "ref"],
             "properties": {
               "type": {
                 "description": "Kind of file",
@@ -2138,17 +1731,13 @@
     "hybridWorkflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "human_contributions"
-      ],
+      "required": ["human_contributions"],
       "properties": {
         "human_contributions": {
           "description": "What people did in the review, one item per contribution",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/humanContribution"
-          }
+          "items": {"$ref": "#/$defs/humanContribution"}
         },
         "attribution": {
           "description": "How much of the review came from AI and how much from people",
@@ -2178,9 +1767,7 @@
     "humanContribution": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "properties": {
         "type": {
           "description": "Kind of contribution",
@@ -2220,11 +1807,7 @@
       "description": "One assessment value, referencing its source form and original scale in review_context.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "definition_ref",
-        "value"
-      ],
+      "required": ["id", "definition_ref", "value"],
       "properties": {
         "value": {
           "description": "The score, as given on its scale",
@@ -2259,10 +1842,7 @@
               "minLength": 1
             }
           },
-          "required": [
-            "value_0_1",
-            "method"
-          ]
+          "required": ["value_0_1", "method"]
         },
         "id": {
           "description": "Review-local observation ID, unique across addressable records.",
@@ -2292,9 +1872,7 @@
       "description": "The scale a score is on",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "properties": {
         "type": {
           "description": "Kind of scale: ordered levels, numbers, yes/no, unordered categories or text",
@@ -2326,13 +1904,7 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {
-            "type": [
-              "number",
-              "string",
-              "boolean"
-            ]
-          }
+          "items": {"type": ["number", "string", "boolean"]}
         },
         "anchors": {
           "description": "Labels for particular values (e.g., 1 = 'poor', 4 = 'excellent')",
@@ -2340,18 +1912,11 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "value",
-              "label"
-            ],
+            "required": ["value", "label"],
             "properties": {
               "value": {
                 "description": "The value",
-                "type": [
-                  "number",
-                  "string",
-                  "boolean"
-                ]
+                "type": ["number", "string", "boolean"]
               },
               "label": {
                 "description": "What the value means",
@@ -2373,28 +1938,11 @@
     "metricValue": {
       "description": "A score: a number, yes/no, a label, or a list of them",
       "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "integer"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": [
-              "string",
-              "number",
-              "boolean"
-            ]
-          }
-        }
+        {"type": "number"},
+        {"type": "integer"},
+        {"type": "boolean"},
+        {"type": "string"},
+        {"type": "array", "items": {"type": ["string", "number", "boolean"]}}
       ]
     },
     "probability": {
@@ -2532,39 +2080,18 @@
         }
       },
       "anyOf": [
-        {
-          "required": [
-            "execution_status"
-          ]
-        },
-        {
-          "required": [
-            "outcome"
-          ]
-        },
-        {
-          "required": [
-            "summary"
-          ]
-        },
-        {
-          "required": [
-            "results"
-          ]
-        }
+        {"required": ["execution_status"]},
+        {"required": ["outcome"]},
+        {"required": ["summary"]},
+        {"required": ["results"]}
       ],
-      "required": [
-        "id",
-        "kind"
-      ]
+      "required": ["id", "kind"]
     },
     "suggestedEdit": {
       "description": "A rewrite the reviewer proposes for a passage of the work",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "replacement"
-      ],
+      "required": ["replacement"],
       "properties": {
         "original": {
           "description": "The exact text to replace, when the reviewer states it. When absent, the reviewer gave only the new text, and the point's evidence links show the passage it concerns",
@@ -2581,9 +2108,7 @@
       "description": "One part of the review's own text: a named field of a review form, a headed section of a report, or the whole text",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "content"
-      ],
+      "required": ["content"],
       "properties": {
         "title": {
           "description": "The part's heading, or the name of the form field it fills, as the source gives it",
@@ -2617,9 +2142,7 @@
         "tags": {
           "description": "Labels for the part",
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": {"type": "string"}
         }
       }
     },
@@ -2627,26 +2150,8 @@
       "description": "Another review this one relates to, and how",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "review_id"
-          ]
-        },
-        {
-          "required": [
-            "doi"
-          ]
-        },
-        {
-          "required": [
-            "url"
-          ]
-        }
-      ],
+      "required": ["type"],
+      "anyOf": [{"required": ["review_id"]}, {"required": ["doi"]}, {"required": ["url"]}],
       "properties": {
         "type": {
           "description": "How this review relates to the other: it responds to it, it replaces it, or it summarizes it",
@@ -2699,9 +2204,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "resource"
-      ]
+      "required": ["resource"]
     },
     "evidenceLocation": {
       "description": "Optional named locations and ranges, combinable with a positional span; page and section never change a span’s origin.",
@@ -2771,9 +2274,7 @@
           "description": "Exact text with optional immediately surrounding text to distinguish repeated passages",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "exact"
-          ],
+          "required": ["exact"],
           "properties": {
             "exact": {
               "description": "Exact sentence or passage being referenced",
@@ -2791,22 +2292,13 @@
           }
         }
       },
-      "dependentRequired": {
-        "page_end": [
-          "page"
-        ],
-        "line_end": [
-          "line_start"
-        ]
-      }
+      "dependentRequired": {"page_end": ["page"], "line_end": ["line_start"]}
     },
     "writtenReport": {
       "type": "object",
       "additionalProperties": false,
       "description": "Optional written report document submitted alongside the structured review",
-      "required": [
-        "content_type"
-      ],
+      "required": ["content_type"],
       "properties": {
         "filename": {
           "type": "string",
@@ -2851,10 +2343,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Content-addressed hash for integrity verification",
-      "required": [
-        "algorithm",
-        "value"
-      ],
+      "required": ["algorithm", "value"],
       "properties": {
         "algorithm": {
           "description": "Hash algorithm",
@@ -2887,10 +2376,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "schema_id",
-        "key"
-      ]
+      "required": ["schema_id", "key"]
     },
     "metricSource": {
       "description": "Source form identity and original rubric, as supplied; omit unknown metadata.",
@@ -2979,10 +2465,7 @@
           ]
         }
       },
-      "required": [
-        "label",
-        "scale"
-      ]
+      "required": ["label", "scale"]
     },
     "metricSchema": {
       "description": "One external or locally authored review form, stored once.",
@@ -2997,27 +2480,20 @@
           "description": "Metric definitions keyed by source field identity.",
           "type": "object",
           "minProperties": 1,
-          "propertyNames": {
-            "minLength": 1
-          },
+          "propertyNames": {"minLength": 1},
           "additionalProperties": {
             "$ref": "#/$defs/metricDefinition",
             "description": "A named metric definition."
           }
         }
       },
-      "required": [
-        "definitions"
-      ]
+      "required": ["definitions"]
     },
     "artifact": {
       "description": "Identity of an associated material. Store evaluations in findings and observed test results in checks.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "type"
-      ],
+      "required": ["id", "type"],
       "properties": {
         "id": {
           "description": "Review-local artifact ID, unique across all addressable records. JSON Schema cannot check uniqueness across records; ocrs.validate_canonical does.",
@@ -3131,10 +2607,7 @@
               "type": "number"
             }
           },
-          "required": [
-            "low",
-            "high"
-          ]
+          "required": ["low", "high"]
         },
         "rationale": {
           "description": "Source explanation, including qualitative uncertainty without an invented number.",
@@ -3142,12 +2615,7 @@
         }
       },
       "minProperties": 1,
-      "not": {
-        "required": [
-          "probability",
-          "interval"
-        ]
-      }
+      "not": {"required": ["probability", "interval"]}
     },
     "findingUncertainty": {
       "description": "Shared uncertainty on a finding: probability, optional associated credence and rationale; no interval.",
@@ -3156,20 +2624,8 @@
           "$ref": "#/$defs/uncertainty",
           "description": "The shared uncertainty fields."
         },
-        {
-          "not": {
-            "required": [
-              "interval"
-            ]
-          }
-        },
-        {
-          "dependentRequired": {
-            "credence": [
-              "probability"
-            ]
-          }
-        }
+        {"not": {"required": ["interval"]}},
+        {"dependentRequired": {"credence": ["probability"]}}
       ]
     },
     "metricUncertainty": {
@@ -3179,13 +2635,7 @@
           "$ref": "#/$defs/uncertainty",
           "description": "The shared uncertainty fields."
         },
-        {
-          "not": {
-            "required": [
-              "probability"
-            ]
-          }
-        }
+        {"not": {"required": ["probability"]}}
       ]
     },
     "contentRef": {
@@ -3210,10 +2660,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "type",
-        "id"
-      ]
+      "required": ["type", "id"]
     },
     "finding": {
       "description": "One source-stated strength, weakness, question or comment. Do not create a point solely to justify a rating.",
@@ -3237,25 +2684,18 @@
         "tags": {
           "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": {"type": "string"}
         },
         "group": {
           "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "items": {"type": "string", "minLength": 1}
         },
         "evidence_links": {
           "description": "Places in the work the point refers to",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
+          "items": {"$ref": "#/$defs/evidenceLink"}
         },
         "about": {
           "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
@@ -3271,10 +2711,7 @@
           "description": "Probability of this assertion, optional associated credence and rationale."
         }
       },
-      "required": [
-        "id",
-        "text"
-      ]
+      "required": ["id", "text"]
     },
     "weakness": {
       "description": "One problem or limitation, with optional seriousness independent of its probability.",
@@ -3298,25 +2735,18 @@
         "tags": {
           "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": {"type": "string"}
         },
         "group": {
           "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "items": {"type": "string", "minLength": 1}
         },
         "evidence_links": {
           "description": "Places in the work the point refers to",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
+          "items": {"$ref": "#/$defs/evidenceLink"}
         },
         "about": {
           "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
@@ -3343,10 +2773,7 @@
           ]
         }
       },
-      "required": [
-        "id",
-        "text"
-      ]
+      "required": ["id", "text"]
     },
     "change": {
       "description": "One requested action. Keep OR alternatives in one item when any one is sufficient; split independently requested actions.",
@@ -3381,32 +2808,23 @@
         "tags": {
           "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": {"type": "string"}
         },
         "group": {
           "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
           "type": "array",
           "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "items": {"type": "string", "minLength": 1}
         },
         "suggested_edits": {
           "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/suggestedEdit"
-          }
+          "items": {"$ref": "#/$defs/suggestedEdit"}
         },
         "evidence_links": {
           "description": "Places in the work the point refers to",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
+          "items": {"$ref": "#/$defs/evidenceLink"}
         },
         "addresses": {
           "description": "Optional IDs of strengths, weaknesses, questions or comments this change addresses. No inverse list is stored.",
@@ -3419,10 +2837,7 @@
           "uniqueItems": true
         }
       },
-      "required": [
-        "id",
-        "text"
-      ]
+      "required": ["id", "text"]
     },
     "contribution": {
       "description": "A descriptive contribution, not an evaluative strength.",
@@ -3446,15 +2861,10 @@
         "evidence_links": {
           "description": "Places in the work the point refers to",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
+          "items": {"$ref": "#/$defs/evidenceLink"}
         }
       },
-      "required": [
-        "id",
-        "text"
-      ]
+      "required": ["id", "text"]
     },
     "claim": {
       "description": "A proposition attributed to the work. Extraction does not endorse its truth.",
@@ -3482,15 +2892,10 @@
         "evidence_links": {
           "description": "Places in the work the point refers to",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
+          "items": {"$ref": "#/$defs/evidenceLink"}
         }
       },
-      "required": [
-        "id",
-        "text"
-      ]
+      "required": ["id", "text"]
     },
     "checkResult": {
       "description": "One raw observation. A result need not produce an evaluative finding.",
@@ -3524,26 +2929,8 @@
           }
         }
       },
-      "anyOf": [
-        {
-          "required": [
-            "status"
-          ]
-        },
-        {
-          "required": [
-            "text"
-          ]
-        },
-        {
-          "required": [
-            "data"
-          ]
-        }
-      ],
-      "required": [
-        "id"
-      ]
+      "anyOf": [{"required": ["status"]}, {"required": ["text"]}, {"required": ["data"]}],
+      "required": ["id"]
     },
     "resourceRef": {
       "description": "The referenced source material. Work and review refer to this record; artifact IDs resolve in target.artifacts.",
@@ -3585,10 +2972,7 @@
             "authors": {
               "description": "Authors, as the reviewer names them",
               "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
+              "items": {"type": "string", "minLength": 1}
             },
             "year": {
               "description": "Year of publication",
@@ -3599,54 +2983,18 @@
               "type": "string",
               "minLength": 1
             },
-            "identifiers": {
-              "$ref": "#/$defs/workIdentifiers"
-            }
+            "identifiers": {"$ref": "#/$defs/workIdentifiers"}
           }
         }
       },
       "allOf": [
+        {"if": {"properties": {"type": {"const": "artifact"}}}, "then": {"required": ["id"]}},
         {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "artifact"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "id"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "external"
-              }
-            }
-          },
-          "then": {
-            "anyOf": [
-              {
-                "required": [
-                  "ref"
-                ]
-              },
-              {
-                "required": [
-                  "work"
-                ]
-              }
-            ]
-          }
+          "if": {"properties": {"type": {"const": "external"}}},
+          "then": {"anyOf": [{"required": ["ref"]}, {"required": ["work"]}]}
         }
       ],
-      "required": [
-        "type"
-      ]
+      "required": ["type"]
     },
     "textSpan": {
       "description": "A zero-based Unicode code-point range [start, end) in one exact stored text representation. Whitespace and line breaks count without normalization. Offsets are not bytes, tokens or UTF-16 code units.",
@@ -3669,11 +3017,7 @@
           "minimum": 1
         }
       },
-      "required": [
-        "text_ref",
-        "start",
-        "end"
-      ]
+      "required": ["text_ref", "start", "end"]
     }
   }
 }

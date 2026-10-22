@@ -6,6 +6,12 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
+      - id: format-schema
+        name: format the schema in its house layout
+        entry: python scripts/format_schema.py
+        language: python
+        files: ^(src/ocrs/schemas|versions/v[^/]+)/canonical-review\.schema\.json$
+        pass_filenames: false
       - id: sync-example-schema
         name: sync $schema in examples
         entry: python scripts/sync_examples.py

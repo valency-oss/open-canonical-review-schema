@@ -102,13 +102,22 @@ def test_example_names_the_current_schema(path):
     assert _sync_examples().sync(text, schema_id()) == text
 
 
-def _sync_examples():
-    spec = importlib.util.spec_from_file_location(
-        "sync_examples", ROOT / "scripts" / "sync_examples.py"
-    )
+def _script(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _sync_examples():
+    return _script("sync_examples")
+
+
+def test_schema_files_are_in_the_house_layout():
+    """As `scripts/format_schema.py` writes them, so re-serializing makes no diff."""
+    format_schema = _script("format_schema")
+    for path in format_schema.schema_files():
+        assert path.read_text(encoding="utf-8") == format_schema.formatted(path), path
 
 
 @pytest.mark.parametrize(
