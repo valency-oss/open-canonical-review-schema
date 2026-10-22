@@ -2437,9 +2437,29 @@
           "type": "string"
         },
         "dimension": {
-          "description": "Canonical concept, such as overall, correctness, confidence or expertise (the metric catalog's keys); custom namespaced concepts are allowed.",
+          "description": "Canonical metric dimension from the closed vocabulary. review_confidence expresses confidence in the overall review; confidence remains valid for existing source mappings. Use other for an unlisted source criterion and retain its original label and prompt.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "enum": [
+            "correctness",
+            "rigor",
+            "clarity",
+            "readability",
+            "novelty",
+            "significance",
+            "impact",
+            "reproducibility",
+            "methodology",
+            "evaluation",
+            "writing",
+            "presentation",
+            "ethics",
+            "overall",
+            "confidence",
+            "expertise",
+            "other",
+            "review_confidence"
+          ]
         },
         "prompt": {
           "description": "Original question or instructions.",

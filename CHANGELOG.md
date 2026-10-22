@@ -15,6 +15,8 @@ stored in one direction. Published earlier schemas remain unchanged.
   Move the old `key`, `label`, `aspect` and `scale` into a definition; `aspect` becomes
   `dimension`. The old catalog reference belongs to the source form. Do not invent
   missing rubric metadata or normalize without recording the method.
+  `dimension` keeps the closed 0.8 aspect enum and adds `review_confidence`; retain an
+  unlisted source criterion's label and prompt with `dimension: "other"`.
 - `target.artifacts[]` identifies associated materials with IDs, types and optional
   locations, versions, hashes and reported availability. Examinations belong in checks;
   evaluations belong in findings. An unavailable artifact needs no invented URL.
@@ -74,12 +76,19 @@ join `opinion.metric_refs`.
   `extensions.openreview.caller_scale_bounds`, not as the source form's snapshot.
 - `validate_canonical(..., schema_path=...)` applies that schema to one call only.
   Records naming 0.9 or any later schema version get the hierarchy's reference checks.
+  Evidence ranges are checked using the selected schema, including legacy locations.
 - Validation checks global IDs, reference types, definition resolution, original scale
   values and bounds, intervals, source ranges and optional text-span resolution.
   Allowed link directions make the semantic graph acyclic without reciprocal edges.
 - Tests cover the discussed adversarial cases, current-record round trips through the
   real-review corpus, migration, Unicode spans, original source fields and examples.
   Historical 0.8 field-contract tests remain against its immutable published schema.
+  Fixed OpenReview and DeepReview golden records also check the public 0.9 output directly.
+- Export tolerates deleted summaries and status-free raw observations, preserves IDs
+  that new changes reference, and does not restore deleted claim, artifact or ethics
+  evaluations from migration metadata. Later normalization and interval edits take
+  precedence over retained legacy fields. Repeated reasons share one support link;
+  empty legacy check notes round-trip without inventing text or a check verdict.
 - The package, versioned schema, examples, README and citation are updated together.
 
 ## 0.8.0

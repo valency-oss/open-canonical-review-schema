@@ -11,7 +11,8 @@ entire duplicate review. No new judgment or reasoning edge is inferred from a sc
 from __future__ import annotations
 
 import copy
-from decimal import Decimal
+import json
+from fractions import Fraction
 from typing import Any
 
 LEGACY_SCHEMA = (
@@ -179,7 +180,8 @@ def upgrade_content(
             existing = {"text": reason}
             identify(existing, "reason")
             findings.setdefault("comments", []).append(existing)
-        opinion.setdefault("supported_by", []).append(existing["id"])
+        if existing["id"] not in opinion.setdefault("supported_by", []):
+            opinion["supported_by"].append(existing["id"])
         reason_ids.append(existing["id"])
     if reason_ids:
         keep("opinion.reason_ids", reason_ids)
@@ -246,8 +248,10 @@ def upgrade_content(
         for j, item in enumerate(check.pop("items", [])):
             result = {"status": item["status"], "evidence_links": [item["target"]]}
             identify(result, "result")
-            if "notes" in item:
+            if item.get("notes"):
                 result["text"] = item["notes"]
+            elif "notes" in item:
+                keep_on(result["id"], f"{path}.items[{j}]", "notes", item["notes"])
             if "flagged" in item:
                 result["data"] = {"flagged": item["flagged"]}
             results.append(result)
@@ -268,7 +272,10 @@ def upgrade_content(
         if not results:
             check.pop("results")
 
-    for i, assessment in enumerate(out.pop("artifact_assessments", [])):
+    assessments = out.pop("artifact_assessments", [])
+    if "checks" not in out and any(a.get("checks") for a in assessments):
+        keep("checks_absent", True)
+    for i, assessment in enumerate(assessments):
         artifact = {
             "type": {"models": "model", "appendix": "supplement"}.get(
                 assessment["artifact_type"], assessment["artifact_type"]
@@ -297,7 +304,7 @@ def upgrade_content(
             info["had_notes"] = "reproducibility_notes" in assessment
         if assessment.get("checks"):
             ids = []
-            for c in assessment["checks"]:
+            for j, c in enumerate(assessment["checks"]):
                 r = {
                     "status": c["status"],
                     "evidence_links": [{"resource": {"type": "artifact", "id": artifact["id"]}}],
@@ -305,6 +312,8 @@ def upgrade_content(
                 identify(r, "result")
                 if c.get("notes"):
                     r["text"] = c["notes"]
+                elif "notes" in c:
+                    keep_on(r["id"], f"artifact_assessments[{i}].checks[{j}]", "notes", c["notes"])
                 ck = {"kind": "artifact:" + c["key"], "results": [r]}
                 identify(ck, "check")
                 out.setdefault("checks", []).append(ck)
@@ -368,9 +377,8 @@ def upgrade_content(
                 "max" in scale and value > scale["max"]
             )
             if "step" in scale and "min" in scale:
-                conflict |= bool(
-                    (Decimal(str(value)) - Decimal(str(scale["min"]))) % Decimal(str(scale["step"]))
-                )
+                delta = Fraction(str(value)) - Fraction(str(scale["min"]))
+                conflict |= (delta / Fraction(str(scale["step"]))).denominator != 1
             if conflict:
                 keep(f"metric_assumed_scale.{m['id']}", scale)
                 definition["scale"] = {"type": scale["type"]}
@@ -598,7 +606,7 @@ def legacy_view(review: dict[str, Any]) -> dict:
         if opinion.get("summary", "").endswith("\n\n" + text):
             opinion["summary"] = opinion["summary"][: -len(text) - 2]
             opinion["text"] = text
-    elif rest.get("opinion.text_only"):
+    elif rest.get("opinion.text_only") and "summary" in opinion:
         opinion["text"] = opinion.pop("summary")
     if "decision" in opinion:
         decision = opinion.pop("decision")
@@ -625,15 +633,16 @@ def legacy_view(review: dict[str, Any]) -> dict:
     for claim in descriptive.get("claims", []):
         id = claim["id"]
         info = rest.get(f"claim_status.{id}", {"status": "not_evaluated"})
+        assessment = all_findings.get(info.get("finding_id"))
         legacy = {
             "claim_id": rest.get(f"claim_original_id.{id}", id),
             "claim_text": claim["text"],
-            "status": info["status"],
+            "status": info["status"] if assessment else "not_evaluated",
         }
         if claim.get("evidence_links"):
             legacy["evidence_links"] = claim["evidence_links"]
-        if info.get("finding_id"):
-            f = all_findings.get(info["finding_id"], {})
+        if assessment:
+            f = assessment
             if info.get("had_notes"):
                 legacy["notes"] = f.get("text", "")
             remove_findings.add(info["finding_id"])
@@ -655,12 +664,14 @@ def legacy_view(review: dict[str, Any]) -> dict:
                 artifact["type"], artifact["type"]
             ),
             "availability": artifact.get("reported_availability", "unknown"),
-            "assessment": info["assessment"],
+            "assessment": (
+                info["assessment"] if info.get("finding_id") in all_findings else "not_evaluated"
+            ),
         }
         if artifact.get("ref"):
             a["ref"] = artifact["ref"]
-        if info.get("finding_id"):
-            f = all_findings.get(info["finding_id"], {})
+        if info.get("finding_id") in all_findings:
+            f = all_findings[info["finding_id"]]
             if info.get("had_notes"):
                 a["reproducibility_notes"] = f.get("text", "")
             evidence = f.get("evidence_links", [])[1:]
@@ -672,19 +683,34 @@ def legacy_view(review: dict[str, Any]) -> dict:
                 continue
             c = checks[id]
             r = c["results"][0]
+            # An edited raw observation need not have an evaluative status. Keep it
+            # as an ordinary check rather than restoring the old pass/fail verdict.
+            if "status" not in r or "data" in r or len(c["results"]) != 1:
+                continue
             item = {"key": c["kind"].removeprefix("artifact:"), "status": r["status"]}
             if r.get("text"):
                 item["notes"] = r["text"]
+            elif "notes" in rest.get(f"record:{r['id']}", {}):
+                item["notes"] = rest[f"record:{r['id']}"]["notes"]
             a.setdefault("checks", []).append(item)
             remove_checks.add(id)
         out.setdefault("artifact_assessments", []).append(a)
-    if info := rest.get("ethics_and_risk"):
-        f = all_findings.get(info["finding_id"], {})
+    info = rest.get("ethics_and_risk")
+    if info and info["finding_id"] in all_findings:
+        f = all_findings[info["finding_id"]]
         ethics = {k: v for k, v in info.items() if k not in {"finding_id", "had_notes"}}
         if info.get("had_notes"):
             ethics["notes"] = rest.get("ethics_blank_notes", f.get("text", ""))
         out["ethics_and_risk"] = ethics
         remove_findings.add(info["finding_id"])
+    # A consumed legacy assessment/reason may now be the target of a requested
+    # change. Keep the actual finding as well so the surviving link still resolves.
+    protected = set()
+    for id, finding in all_findings.items():
+        for field in ("addresses", "summarizes"):
+            protected.update(finding.get(field, []))
+            protected.update(rest.get(f"record:{id}", {}).get(field, []))
+    remove_findings.difference_update(protected)
     for category in list(findings):
         kept = [f for f in findings[category] if f["id"] not in remove_findings]
         if findings[category] and not kept:
@@ -713,9 +739,18 @@ def legacy_view(review: dict[str, Any]) -> dict:
                     f[key] = value
     for c in out.get("checks", []):
         c.update(rest.get(f"record:{c['id']}", {}))
+        observations = []
         for r in c.pop("results", []):
             data = r.get("data")
-            if isinstance(data, dict) and "measurements" in data:
+            if (
+                isinstance(data, dict)
+                and set(data) == {"measurements"}
+                and isinstance(data["measurements"], list)
+                and all(
+                    isinstance(m, dict) and {"key", "value"} <= m.keys()
+                    for m in data["measurements"]
+                )
+            ):
                 c.setdefault("measurements", []).extend(data["measurements"])
             elif r.get("status"):
                 item = {
@@ -724,15 +759,52 @@ def legacy_view(review: dict[str, Any]) -> dict:
                 }
                 if "text" in r:
                     item["notes"] = r["text"]
+                elif "notes" in rest.get(f"record:{r['id']}", {}):
+                    item["notes"] = rest[f"record:{r['id']}"]["notes"]
+                if "data" in r and not (isinstance(data, dict) and set(data) == {"flagged"}):
+                    item["notes"] = "\n\n".join(
+                        text
+                        for text in (
+                            item.get("notes"),
+                            "Data: " + json.dumps(data, ensure_ascii=False),
+                        )
+                        if text
+                    )
                 if isinstance(data, dict) and "flagged" in data:
                     item["flagged"] = data["flagged"]
                 c.setdefault("items", []).append(item)
+            else:
+                if r.get("text"):
+                    observations.append(r["text"])
+                if "data" in r:
+                    observations.append("Data: " + json.dumps(data, ensure_ascii=False))
+        if c.get("execution_status"):
+            observations.append("Execution status: " + c["execution_status"])
+        if observations:
+            c["summary"] = "\n\n".join(
+                [*([c["summary"]] if c.get("summary") else []), *observations]
+            )
         c.pop("procedure", None)
         c.pop("execution_status", None)
         c.pop("run_ref", None)
         c.pop("results_coverage", None)
     if "checks" in out:
         out["checks"] = [c for c in out["checks"] if c["id"] not in remove_checks]
+        for c in out["checks"]:
+            if c["kind"] not in {
+                "ai_text_detection",
+                "reference_verification",
+                "fatal_flaw_screen",
+                "similarity",
+                "image_integrity",
+                "statistics",
+                "retraction",
+                "other",
+            }:
+                c["label"] = " — ".join(x for x in (c.get("label"), c["kind"]) if x)
+                c["kind"] = "other"
+        if not out["checks"] and rest.get("checks_absent"):
+            out.pop("checks")
     for metric in out.get("metrics", []):
         if "definition_ref" not in metric:
             continue
@@ -751,11 +823,16 @@ def legacy_view(review: dict[str, Any]) -> dict:
             metric["scale"] = rest[f"metric_assumed_scale.{metric['id']}"]
         if f"metric_assumed_normalized.{metric['id']}" in rest:
             metric["normalized"] = rest[f"metric_assumed_normalized.{metric['id']}"]
-        if rest.get(f"metric_unstated_method.{metric['id']}") and "normalized" in metric:
+        if (
+            rest.get(f"metric_unstated_method.{metric['id']}")
+            and metric.get("normalized", {}).get("method") == "unspecified"
+        ):
             metric["normalized"].pop("method", None)
-        if f"metric_uncertainty.{metric['id']}" in rest:
+        if f"metric_uncertainty.{metric['id']}" in rest and "uncertainty" not in metric:
             metric["uncertainty"] = rest[f"metric_uncertainty.{metric['id']}"]
-        if f"metric_interval.{metric['id']}" in rest:
+        if f"metric_interval.{metric['id']}" in rest and "interval" not in metric.get(
+            "uncertainty", {}
+        ):
             metric.setdefault("uncertainty", {})["interval"] = rest[
                 f"metric_interval.{metric['id']}"
             ]
@@ -790,9 +867,15 @@ def legacy_view(review: dict[str, Any]) -> dict:
 
     evidence(out)
 
+    referenced = set()
+    for items in [*findings.values(), opinion.get("contributions", []), out.get("checks", [])]:
+        for item in items:
+            for field in ("addresses", "summarizes", "finding_ids"):
+                referenced.update(item.get(field, []))
+
     def strip_ids(value):
         if isinstance(value, dict):
-            if value.get("id") in generated:
+            if value.get("id") in generated and value["id"] not in referenced:
                 value.pop("id")
             for key, child in value.items():
                 if key not in {"extensions", "raw_payload", "snapshot", "data"}:
