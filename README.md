@@ -13,7 +13,9 @@
 
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
+[**Explore the schema →**](https://ocrs.valency.io/schema) Browse the full record, follow the review-content hierarchy, and hover over fields for their descriptions. Select a field to inspect its allowed values and validation rules.
 
+[![OCRS schema explorer, showing grouped findings and their fields](site/schema-explorer.jpg)](https://ocrs.valency.io/schema)
 
 ## Why OCRS?
 
