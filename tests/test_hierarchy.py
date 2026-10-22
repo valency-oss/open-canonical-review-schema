@@ -315,6 +315,36 @@ def test_wrapped_schema_still_checks_current_record_references(tmp_path):
         load_schema()
 
 
+def up_down_up(review):
+    """0.9 → the 0.8 view source writers use → 0.9 again, and that view once more."""
+    from v08_schema import validate_canonical as validate_08
+
+    down = legacy_view(review)
+    validate_08(down)
+    again = migrate(down)
+    validate_canonical(again)
+    assert differences(review, again) == set()
+    assert differences(down, legacy_view(again)) == set()
+
+
+@pytest.mark.parametrize(("source", "path", "form"), SOURCE_REVIEWS + AI_REVIEWS)
+def test_fixture_reviews_go_down_to_08_and_back_up_unchanged(source, path, form):
+    payload = load(path)
+    if source in {"openaireview", "deepreview", "reviewer3"}:
+        payload = {"output": payload, **AI_RUN}
+    up_down_up(map_from(source, payload, **form))
+
+
+@pytest.mark.parametrize(("source", "file", "form"), REVIEWS)
+@pytest.mark.usefixtures("clock")
+def test_real_reviews_go_down_to_08_and_back_up_unchanged(source, file, form):
+    payload = json.loads((REAL / file).read_text())
+    if "output_run" in form:
+        up_down_up(map_from(source, {"output": payload, **form["output_run"]}))
+    else:
+        up_down_up(map_from(source, payload, **form))
+
+
 def legacy(**content):
     """A record in the published 0.8 shape, checked against that schema."""
     from v08_schema import validate_canonical as validate_08
@@ -450,3 +480,14 @@ def test_caller_scale_bounds_are_not_presented_as_the_original_form():
     forms = review["review_context"]["metric_schemas"].values()
     assert all("snapshot" not in form.get("source", {}) for form in forms)
     assert review["extensions"]["openreview"]["caller_scale_bounds"] == bounds
+
+
+def test_going_down_leaves_no_category_that_only_migration_filled():
+    old = legacy(
+        opinion={"summary": "A summary."},
+        findings={"strengths": [{"text": "Clear."}]},
+        ethics_and_risk={"ethical_concerns": True, "notes": "Consent is not described."},
+    )
+    down = legacy_view(migrate(old))
+    assert set(down["findings"]) == {"strengths"}
+    assert down["ethics_and_risk"] == old["ethics_and_risk"]

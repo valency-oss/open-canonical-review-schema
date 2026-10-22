@@ -685,8 +685,13 @@ def legacy_view(review: dict[str, Any]) -> dict:
             ethics["notes"] = rest.get("ethics_blank_notes", f.get("text", ""))
         out["ethics_and_risk"] = ethics
         remove_findings.add(info["finding_id"])
-    for category in findings:
-        findings[category] = [f for f in findings[category] if f["id"] not in remove_findings]
+    for category in list(findings):
+        kept = [f for f in findings[category] if f["id"] not in remove_findings]
+        if findings[category] and not kept:
+            # Only findings that migration made were here, so 0.8 listed none.
+            del findings[category]
+            continue
+        findings[category] = kept
         for f in findings[category]:
             if "uncertainty" in f:
                 f.update(f.pop("uncertainty"))
