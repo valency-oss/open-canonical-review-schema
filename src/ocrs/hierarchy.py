@@ -18,6 +18,13 @@ LEGACY_SCHEMA = (
     "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json"
 )
 KINDS = ("strengths", "weaknesses", "questions", "comments", "changes")
+ID_PREFIX = {
+    "strengths": "strength",
+    "weaknesses": "weakness",
+    "questions": "question",
+    "comments": "comment",
+    "changes": "change",
+}
 
 
 def upgrade_content(
@@ -32,6 +39,9 @@ def upgrade_content(
     out = copy.deepcopy(review)
     moves = paths if paths is not None else {}
     rest: dict[str, Any] = {}
+    # Fields of an addressable record are kept under its ID, not its position, so they
+    # stay with that record when findings are later added, removed or reordered.
+    owned: list[tuple[str, str, str]] = []
     occupied: set[str] = set()
     entity_ids: set[str] = set()
     generated = []
@@ -66,13 +76,18 @@ def upgrade_content(
         rest[path] = value
         moves[path] = f"extensions.ocrs_0_8.fields.{path}"
 
+    def keep_on(owner, path, key, value):
+        rest.setdefault(f"record:{owner}", {})[key] = value
+        owned.append((f"{path}.{key}", f"record:{owner}", key))
+
     def move(old, new):
         moves[old] = new
 
     claim_id_map = {}
     for claim in out.get("claim_assessments", []):
         old_id = claim["claim_id"]
-        if old_id in claim_id_map:
+        # An empty ID names nothing, so several of them are not ambiguous links.
+        if old_id and old_id in claim_id_map:
             raise ValueError("Duplicate legacy claim IDs cannot be linked unambiguously")
         if not old_id or old_id in entity_ids:
             id = identify({}, "claim")
@@ -80,19 +95,20 @@ def upgrade_content(
             keep(f"claim_original_id.{id}", old_id)
         else:
             id = old_id
-        claim_id_map[old_id] = id
+        if old_id:
+            claim_id_map[old_id] = id
 
     def point(item, path, category):
-        identify(item, category.rstrip("s"))
+        owner = identify(item, ID_PREFIX[category])
         if not item.get("text", "").strip() and item.get("title", "").strip():
-            keep(path + ".text", item.get("text", ""))
+            keep_on(owner, path, "text", item.get("text", ""))
             item["text"] = item["title"]
         if "scope" in item:
             scope = item.pop("scope")
             tags = item.setdefault("tags", [])
             if scope not in tags:
                 tags.append(scope)
-            keep(path + ".scope", scope)
+            keep_on(owner, path, "scope", scope)
         u = {k: item.pop(k) for k in ("probability", "credence") if k in item}
         if u:
             if category in ("strengths", "weaknesses", "questions", "comments"):
@@ -100,7 +116,7 @@ def upgrade_content(
                 for key in u:
                     move(path + "." + key, path + ".uncertainty." + key)
             else:
-                keep(path + ".uncertainty", u)
+                keep_on(owner, path, "uncertainty", u)
         if "claim_ids" in item:
             claim_ids = item.pop("claim_ids")
             if category != "changes":
@@ -110,7 +126,7 @@ def upgrade_content(
                 ]
                 move(path + ".claim_ids", path + ".about")
             else:
-                keep(path + ".claim_ids", claim_ids)
+                keep_on(owner, path, "claim_ids", claim_ids)
         allowed = {"id", "text", "title", "evidence_links", "tags", "group"}
         allowed |= (
             {"severity", "suggested_edits", "addresses"}
@@ -121,7 +137,7 @@ def upgrade_content(
             allowed.add("severity")
         for key in list(item):
             if key not in allowed:
-                keep(path + "." + key, item.pop(key))
+                keep_on(owner, path, key, item.pop(key))
 
     findings = out.setdefault("findings", {})
     for category, items in list(findings.items()):
@@ -135,17 +151,18 @@ def upgrade_content(
         move("opinion.contributions", "work_summary.contributions")
         for i, item in enumerate(contributions):
             path = f"work_summary.contributions[{i}]"
-            identify(item, "contribution")
+            owner = identify(item, "contribution")
             if not item.get("text", "").strip() and item.get("title", "").strip():
-                keep(path + ".text", item.get("text", ""))
+                keep_on(owner, path, "text", item.get("text", ""))
                 item["text"] = item["title"]
             for key in list(item):
                 if key not in {"id", "text", "title", "evidence_links"}:
-                    keep(path + "." + key, item.pop(key))
+                    keep_on(owner, path, key, item.pop(key))
     if "text" in opinion:
         text = opinion.pop("text")
         if "summary" in opinion:
-            keep("opinion.summary_length", len(opinion["summary"]))
+            # The old text itself, not an offset, so an edited summary is never cut apart.
+            keep("opinion.text", text)
             opinion["summary"] += "\n\n" + text
         else:
             opinion["summary"] = text
@@ -221,10 +238,10 @@ def upgrade_content(
             keep(f"claim_fields.{id}", claim)
 
     for i, check in enumerate(out.get("checks", [])):
-        identify(check, "check")
+        owner = identify(check, "check")
         path = f"checks[{i}]"
         if "label" in check:
-            keep(path + ".label", check.pop("label"))
+            keep_on(owner, path, "label", check.pop("label"))
         results = check.setdefault("results", [])
         for j, item in enumerate(check.pop("items", [])):
             result = {"status": item["status"], "evidence_links": [item["target"]]}
@@ -359,6 +376,10 @@ def upgrade_content(
                 definition["scale"] = {"type": scale["type"]}
                 if "normalized" in m:
                     keep(f"metric_assumed_normalized.{m['id']}", m.pop("normalized"))
+        if "normalized" in m and "method" not in m["normalized"]:
+            # 0.9 requires the method; 0.8 allowed a bare value. Say it is unstated.
+            m["normalized"]["method"] = "unspecified"
+            keep(f"metric_unstated_method.{m['id']}", True)
         if "aspect" in m:
             definition["dimension"] = m.pop("aspect")
         key = next((k for k, v in definitions.items() if v == definition), None)
@@ -390,8 +411,17 @@ def upgrade_content(
         out.pop("work_summary")
     if not findings:
         out.pop("findings")
-    if out.get("metrics"):
-        opinion.setdefault("metric_refs", [m["id"] for m in out["metrics"]])
+    # Only overall scores stand for the opinion; confidence or a single aspect does not.
+    overall = []
+    for m in out.get("metrics", []):
+        try:
+            definition = resolve_definition(out, m)
+        except KeyError:
+            continue
+        if "overall" in (definition.get("dimension"), definition.get("catalog_key")):
+            overall.append(m["id"])
+    if overall:
+        opinion.setdefault("metric_refs", overall)
 
     def evidence(value, path=""):
         if isinstance(value, dict):
@@ -420,9 +450,13 @@ def upgrade_content(
         fields = (
             out.setdefault("extensions", {}).setdefault("ocrs_0_8", {}).setdefault("fields", [])
         )
+        index = {}
         for path, value in rest.items():
+            index[path] = len(fields)
             moves[path] = f"extensions.ocrs_0_8.fields[{len(fields)}].value"
             fields.append({"path": path, "value": value})
+        for source, path, key in owned:
+            moves[source] = f"extensions.ocrs_0_8.fields[{index[path]}].value.{key}"
     if generated:
         out.setdefault("extensions", {}).setdefault("ocrs_0_8", {})["generated_ids"] = generated
     return out
@@ -522,14 +556,6 @@ def legacy_evidence(link: dict, artifacts: dict[str, dict] | None = None) -> dic
             else "supplement"
         )
         ref = label or artifact.get("ref") or ref
-    elif resource.get("ref", "").split(":", 1)[0] in {
-        "appendix",
-        "supplement",
-        "code",
-        "data",
-        "bibliography",
-    }:
-        kind, ref = resource["ref"].split(":", 1)
     out = {"type": kind, "ref": ref}
     if resource.get("work"):
         out["work"] = copy.deepcopy(resource["work"])
@@ -555,6 +581,8 @@ def legacy_evidence(link: dict, artifacts: dict[str, dict] | None = None) -> dic
 def legacy_view(review: dict[str, Any]) -> dict:
     """Read-only projection for source-format writers, not an alternative public schema.
     A source format may not express every 0.9 link. It must not invent judgments to do so.
+    Any valid 0.9 record projects, including one edited after migration: retained fields
+    whose records were since removed are dropped, never looked up.
     """
     out = copy.deepcopy(review)
     kept = out.get("extensions", {}).pop("ocrs_0_8", {})
@@ -564,10 +592,12 @@ def legacy_view(review: dict[str, Any]) -> dict:
     findings = out.get("findings", {})
     all_findings = {f["id"]: f for k in KINDS for f in findings.get(k, [])}
     opinion = out.setdefault("opinion", {})
-    if "opinion.summary_length" in rest:
-        n = rest["opinion.summary_length"]
-        text = opinion["summary"]
-        opinion["summary"], opinion["text"] = text[:n], text[n + 2 :]
+    if "opinion.text" in rest:
+        text = rest["opinion.text"]
+        # After an edit that removed the appended text, the summary stays whole.
+        if opinion.get("summary", "").endswith("\n\n" + text):
+            opinion["summary"] = opinion["summary"][: -len(text) - 2]
+            opinion["text"] = text
     elif rest.get("opinion.text_only"):
         opinion["text"] = opinion.pop("summary")
     if "decision" in opinion:
@@ -585,13 +615,11 @@ def legacy_view(review: dict[str, Any]) -> dict:
         opinion["summary"] = descriptive["summary"]
     if descriptive.get("contributions"):
         opinion["contributions"] = descriptive["contributions"]
-        for i, item in enumerate(opinion["contributions"]):
-            prefix = f"work_summary.contributions[{i}]."
-            item.update(
-                {p[len(prefix) :]: value for p, value in rest.items() if p.startswith(prefix)}
-            )
+        for item in opinion["contributions"]:
+            item.update(rest.get(f"record:{item['id']}", {}))
     remove_findings = set()
     if reason_ids := rest.get("opinion.reason_ids"):
+        reason_ids = [id for id in reason_ids if id in all_findings]
         opinion["high_level_reasons"] = [all_findings[id]["text"] for id in reason_ids]
         remove_findings.update(id for id in reason_ids if id in generated)
     for claim in descriptive.get("claims", []):
@@ -610,8 +638,8 @@ def legacy_view(review: dict[str, Any]) -> dict:
                 legacy["notes"] = f.get("text", "")
             remove_findings.add(info["finding_id"])
         legacy.update(rest.get(f"claim_fields.{id}", {}))
-        if belief_id := rest.get(f"claim_belief.{id}"):
-            legacy.update(all_findings[belief_id]["uncertainty"])
+        if (belief_id := rest.get(f"claim_belief.{id}")) in all_findings:
+            legacy.update(all_findings[belief_id].get("uncertainty", {}))
             remove_findings.add(belief_id)
         out.setdefault("claim_assessments", []).append(legacy)
     checks = {c["id"]: c for c in out.get("checks", [])}
@@ -619,7 +647,9 @@ def legacy_view(review: dict[str, Any]) -> dict:
     for path, info in rest.items():
         if not path.startswith("artifact_assessments["):
             continue
-        artifact = artifacts.get(info["artifact_id"], {})
+        artifact = artifacts.get(info["artifact_id"])
+        if artifact is None:
+            continue
         a = {
             "artifact_type": {"model": "models", "supplement": "appendix"}.get(
                 artifact["type"], artifact["type"]
@@ -638,6 +668,8 @@ def legacy_view(review: dict[str, Any]) -> dict:
                 a["evidence_links"] = evidence
             remove_findings.add(info["finding_id"])
         for id in info.get("check_ids", []):
+            if not checks.get(id, {}).get("results"):
+                continue
             c = checks[id]
             r = c["results"][0]
             item = {"key": c["kind"].removeprefix("artifact:"), "status": r["status"]}
@@ -655,7 +687,7 @@ def legacy_view(review: dict[str, Any]) -> dict:
         remove_findings.add(info["finding_id"])
     for category in findings:
         findings[category] = [f for f in findings[category] if f["id"] not in remove_findings]
-        for i, f in enumerate(findings[category]):
+        for f in findings[category]:
             if "uncertainty" in f:
                 f.update(f.pop("uncertainty"))
             for r in f.pop("about", []):
@@ -669,17 +701,13 @@ def legacy_view(review: dict[str, Any]) -> dict:
                             x["id"] == r["id"] for x in c.get("results", [])
                         ):
                             c.setdefault("finding_ids", []).append(f["id"])
-            path = f"findings.{category}[{i}]"
-            for p, value in rest.items():
-                if p.startswith(path + "."):
-                    key = p[len(path) + 1 :]
-                    if key == "uncertainty":
-                        f.update(value)
-                    else:
-                        f[key] = value
-    for i, c in enumerate(out.get("checks", [])):
-        if f"checks[{i}].label" in rest:
-            c["label"] = rest[f"checks[{i}].label"]
+            for key, value in rest.get(f"record:{f['id']}", {}).items():
+                if key == "uncertainty":
+                    f.update(value)
+                else:
+                    f[key] = value
+    for c in out.get("checks", []):
+        c.update(rest.get(f"record:{c['id']}", {}))
         for r in c.pop("results", []):
             data = r.get("data")
             if isinstance(data, dict) and "measurements" in data:
@@ -718,6 +746,8 @@ def legacy_view(review: dict[str, Any]) -> dict:
             metric["scale"] = rest[f"metric_assumed_scale.{metric['id']}"]
         if f"metric_assumed_normalized.{metric['id']}" in rest:
             metric["normalized"] = rest[f"metric_assumed_normalized.{metric['id']}"]
+        if rest.get(f"metric_unstated_method.{metric['id']}") and "normalized" in metric:
+            metric["normalized"].pop("method", None)
         if f"metric_uncertainty.{metric['id']}" in rest:
             metric["uncertainty"] = rest[f"metric_uncertainty.{metric['id']}"]
         if f"metric_interval.{metric['id']}" in rest:

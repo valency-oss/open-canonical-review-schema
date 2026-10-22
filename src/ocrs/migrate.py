@@ -8,7 +8,7 @@ import copy
 from typing import Any
 
 from .hierarchy import upgrade_content
-from .schema import schema_id
+from .schema import is_hierarchical, schema_id
 
 # The named text fields of 0.7's `narrative`, as the parts of 0.8's: (field, role, audience)
 NARRATIVE_FIELDS = (
@@ -32,7 +32,7 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
     already naming 0.9 is returned unchanged; migration is idempotent. It does not
     infer supporting findings or rewrite ambiguous overview text.
     """
-    if "/v0.9.0/" in review.get("$schema", ""):
+    if is_hierarchical(review.get("$schema", "")):
         return copy.deepcopy(review)
     out = copy.deepcopy(review)
     _referees(out)

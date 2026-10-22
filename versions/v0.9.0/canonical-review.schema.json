@@ -193,6 +193,7 @@
         "artifacts": {
           "description": "Identities of the work’s associated materials, stored once and referenced by ID. These records do not assert that an artifact was assessed or checked.",
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/artifact"
           }
@@ -310,7 +311,7 @@
           }
         },
         "changes": {
-          "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is and a scope that says what kind of change it is",
+          "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is; classify the kind of change with tags",
           "type": "array",
           "items": {
             "$ref": "#/$defs/change"
@@ -2871,7 +2872,7 @@
       }
     },
     "definitionRef": {
-      "description": "An exact metric definition in this review’s context.",
+      "description": "An exact metric definition in this review’s context. JSON Schema cannot check that it resolves; ocrs.validate_canonical does, and other validators must check it themselves.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -2950,7 +2951,7 @@
           "type": "string"
         },
         "dimension": {
-          "description": "Canonical concept, such as overall, correctness, review_confidence or expertise; custom namespaced concepts are allowed.",
+          "description": "Canonical concept, such as overall, correctness, confidence or expertise (the metric catalog's keys); custom namespaced concepts are allowed.",
           "type": "string",
           "minLength": 1
         },
@@ -3019,7 +3020,7 @@
       ],
       "properties": {
         "id": {
-          "description": "Review-local artifact ID, unique across all addressable records.",
+          "description": "Review-local artifact ID, unique across all addressable records. JSON Schema cannot check uniqueness across records; ocrs.validate_canonical does.",
           "type": "string",
           "minLength": 1
         },
@@ -3050,9 +3051,15 @@
           "description": "Hash identifying the exact artifact contents."
         },
         "reported_availability": {
-          "description": "Availability as the source states it. An actual access test is a check result; omission is not a claim of availability.",
+          "description": "Availability as the source states it, in the 0.8 vocabulary. An actual access test is a check result; omission is not a claim of availability.",
           "type": "string",
-          "minLength": 1
+          "enum": [
+            "public",
+            "restricted",
+            "available_on_request",
+            "not_available",
+            "unknown"
+          ]
         }
       }
     },
@@ -3214,7 +3221,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
           "type": "string",
           "minLength": 1
         },
@@ -3275,7 +3282,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
           "type": "string",
           "minLength": 1
         },
@@ -3325,7 +3332,7 @@
           "description": "Probability of this assertion, optional associated credence and rationale."
         },
         "severity": {
-          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
+          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark",
           "type": "string",
           "enum": [
             "info",
@@ -3347,7 +3354,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
           "type": "string",
           "minLength": 1
         },
@@ -3361,7 +3368,7 @@
           "description": "Short headline for the point, as the reviewer wrote it"
         },
         "severity": {
-          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
+          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark",
           "type": "string",
           "enum": [
             "info",
@@ -3423,7 +3430,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
           "type": "string",
           "minLength": 1
         },

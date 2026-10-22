@@ -26,8 +26,9 @@ def codec_map_from(*args, **kwargs):
 def codec_map_to(target, review):
     from ocrs import map_to, schema_id
     from ocrs.hierarchy import upgrade_content
+    from ocrs.schema import is_hierarchical
 
-    if "/v0.9.0/" not in review.get("$schema", ""):
+    if not is_hierarchical(review.get("$schema", "")):
         review = upgrade_content(review, unbounded_fallback=True)
         review["$schema"] = schema_id()
     return map_to(target, review)
@@ -45,8 +46,9 @@ def codec_map_with_record(*args, **kwargs):
 def codec_validate(review):
     from ocrs import schema_id, validate_canonical
     from ocrs.hierarchy import upgrade_content
+    from ocrs.schema import is_hierarchical
 
-    if "/v0.9.0/" not in review.get("$schema", ""):
+    if not is_hierarchical(review.get("$schema", "")):
         review = upgrade_content(review, unbounded_fallback=True)
         review["$schema"] = schema_id()
     validate_canonical(review)

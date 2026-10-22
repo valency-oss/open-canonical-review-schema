@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable
 from typing import Any
 
@@ -102,11 +103,11 @@ def map_from(
         out = upgrade_content(out, unbounded_fallback=scale_bounds is None)
         out["$schema"] = schema_id()
         if scale_bounds is not None and out.get("metrics"):
-            import copy
-
-            form_id = out["metrics"][0]["definition_ref"]["schema_id"]
-            form = out["review_context"]["metric_schemas"][form_id]
-            form["source"]["snapshot"] = copy.deepcopy(scale_bounds)
+            # The caller's bounds, not the venue's form: `source.snapshot` is reserved for
+            # the original rubric, so these are recorded as supplied by the caller.
+            out.setdefault("extensions", {}).setdefault("openreview", {})["caller_scale_bounds"] = (
+                copy.deepcopy(scale_bounds)
+            )
     require_content(out, source)
     validate_canonical(out)
     return out
