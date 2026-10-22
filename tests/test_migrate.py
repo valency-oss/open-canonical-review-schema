@@ -1,11 +1,11 @@
 # Copyright (c) 2026 Valency Systems Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Reviews written for OCRS 0.7 migrate to 0.8 and mean the same thing.
+"""Reviews written for OCRS 0.7 migrate to the 0.9 hierarchy.
 
 The reviews are those `test_schema_restatement` builds to compare 0.7.1 with 0.7.2: the
 examples and the README blocks as 0.7 had them, and every review one edit away from small
 reviews that use the content rule's every branch, work identifiers, the AI referee,
-probability and credence, and expertise. Every one 0.7.2 accepts must migrate to a review 0.8
+probability and credence, and expertise. Every one 0.7.2 accepts must migrate to a review 0.9
 accepts. (The reviews are compared by their JSON Schemas: some break a rule only
 `validate_canonical` states, such as a contribution naming a claim the review lacks, which 0.7
 rejected too.)
@@ -19,6 +19,7 @@ from jsonschema import Draft202012Validator
 from test_schema_restatement import BASES, one_edit_away
 
 from ocrs import load_schema, validate_canonical
+from ocrs.hierarchy import legacy_view, resolve_definition
 from ocrs.migrate import migrate
 from ocrs.schema import has_content
 from ocrs.util import narrative_text
@@ -34,7 +35,7 @@ def reviews_valid_in_072():
     return [r for r in reviews if validator.is_valid(r)]
 
 
-def test_every_072_review_migrates_to_a_valid_080_review(reviews_valid_in_072):
+def test_every_072_review_migrates_to_a_valid_090_review(reviews_valid_in_072):
     assert len(reviews_valid_in_072) > 300
     current = Draft202012Validator(load_schema())
     for review in reviews_valid_in_072:
@@ -95,9 +96,11 @@ def test_a_072_review_migrates_field_by_field():
     [referee] = review["referees"]
     assert referee["expertise"] == {"self_reported_level": "expert"}
     assert "expertise" not in referee["human_referee"]
-    assert review["decision"] == {"recommendation": "accept", "credence": 0.7}
-    assert review["opinion"]["contributions"] == [{"text": "A method.", "claim_ids": ["c1"]}]
-    change, mitigation = review["findings"]["changes"]
+    assert review["opinion"]["decision"] == {"recommendation": "accept"}
+    assert legacy_view(review)["decision"]["credence"] == 0.7
+    assert review["work_summary"]["contributions"][0]["text"] == "A method."
+    assert "claim_ids" not in review["work_summary"]["contributions"][0]
+    change, mitigation = legacy_view(review)["findings"]["changes"]
     assert change == {
         "text": "Add an ablation.",
         "severity": "major",
@@ -105,8 +108,14 @@ def test_a_072_review_migrates_field_by_field():
         "claim_ids": ["c1"],
         "addresses": ["w1"],
     }
-    assert mitigation == {"text": "Describe consent.", "severity": "minor", "scope": "ethics"}
-    assert review["ethics_and_risk"] == {"ethical_concerns": True}
+    assert mitigation == {
+        "text": "Describe consent.",
+        "severity": "minor",
+        "scope": "ethics",
+        "tags": ["ethics"],
+    }
+    assert "ethics_and_risk" not in review
+    assert any("ethics" in f.get("tags", []) for f in review["findings"]["weaknesses"])
     assert narrative_text(review, "summary") == "Summary."
     assert narrative_text(review, "review") == "The review."
     assert narrative_text(review, audience="editors") == "For the editors."
@@ -142,8 +151,17 @@ def test_a_hotcrp_expertise_scored_as_a_confidence_is_an_expertise():
     }
     migrated = migrate(review)
     validate_canonical(migrated)
-    assert migrated["metric_catalog_ref"] == "metric-catalog.core.v1.1"
-    assert [(m["key"], m["aspect"]) for m in migrated["metrics"]] == [
+    assert (
+        migrated["review_context"]["metric_schemas"]["source-form"]["source"]["catalog_ref"]
+        == "metric-catalog.core.v1.1"
+    )
+    assert [
+        (
+            resolve_definition(migrated, m)["catalog_key"],
+            resolve_definition(migrated, m)["dimension"],
+        )
+        for m in migrated["metrics"]
+    ] == [
         ("expertise", "expertise"),
         ("confidence", "confidence"),
     ]
@@ -160,7 +178,9 @@ def test_a_mitigation_with_another_scope_is_still_an_ethics_change():
         },
     }
     [_, mitigation] = migrate(review)["findings"]["changes"]
-    assert mitigation == {"text": "Rerun with consent.", "scope": "experiment", "tags": ["ethics"]}
+    assert mitigation["text"] == "Rerun with consent."
+    assert set(mitigation["tags"]) == {"ethics", "experiment"}
+    assert "scope" not in mitigation
 
 
 def test_a_jats_review_keeps_its_license():

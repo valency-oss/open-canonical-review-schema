@@ -5,8 +5,9 @@
 from pathlib import Path
 
 import pytest
+from conftest import codec_map_from, codec_map_with_record, codec_validate
 
-from ocrs import map_from, map_with_record, render_mapping_markdown, validate_canonical
+from ocrs import render_mapping_markdown
 from ocrs.anchors import Block
 from ocrs.mapping import MappingStatus, Rule
 
@@ -25,7 +26,7 @@ DATASETS = "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (P
 
 
 def mapped(report=REPORT, **run):
-    return map_with_record("deepreview", report, **{**RUN, **run})
+    return codec_map_with_record("deepreview", report, **{**RUN, **run})
 
 
 def by_id(review):
@@ -43,7 +44,7 @@ def points(result):
 
 
 def test_maps_the_whole_report(result):
-    validate_canonical(result.review)
+    codec_validate(result.review)
     assert result.record.status == MappingStatus.OK
     assert result.record.gaps.unmapped == []
     assert result.record.gaps.coerced == []
@@ -253,7 +254,7 @@ def test_run_details():
 
 
 def test_map_from_keeps_the_report():
-    review = map_from("deepreview", {"output": REPORT, **RUN}, keep_raw=True)
+    review = codec_map_from("deepreview", {"output": REPORT, **RUN}, keep_raw=True)
     assert review["provenance"]["raw_payload"] == {"text": REPORT}
 
 
@@ -425,17 +426,18 @@ def test_split_places_are_recorded_as_parsed(result):
     steps = [
         (step.target, step.rule, step.original, step.result)
         for step in result.record.steps
-        if step.source == "issues[0].tiers[0].items[0].location" and step.target.endswith(".ref")
+        if step.source == "issues[0].tiers[0].items[0].location"
+        and step.target.endswith(".location.label")
     ]
     assert steps == [
         (
-            "findings.weaknesses[4].evidence_links[0].ref",
+            "findings.weaknesses[4].evidence_links[0].location.label",
             Rule.PARSED,
             location,
             "Section 1.2, Pages 3–4",
         ),
         (
-            "findings.weaknesses[4].evidence_links[1].ref",
+            "findings.weaknesses[4].evidence_links[1].location.label",
             Rule.PARSED,
             location,
             "Section 1.5, Page 6",

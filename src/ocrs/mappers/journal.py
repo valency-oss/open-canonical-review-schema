@@ -8,8 +8,8 @@ import re
 import uuid
 from typing import Any
 
+from ..hierarchy import LEGACY_SCHEMA
 from ..identifiers import generate_canonical_work_id, parse_canonical_work_id
-from ..schema import schema_id
 from ..util import first_paragraph, narrative_text, now_iso, referee_of, section
 
 
@@ -69,7 +69,7 @@ def from_journal_narrative(
     reviewer_id = payload.get("reviewer_id")
 
     out: dict[str, Any] = {
-        "$schema": schema_id(),
+        "$schema": LEGACY_SCHEMA,
         "review_id": review_id,
         "version": "1.0.0",
         "created_at": created_at,

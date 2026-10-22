@@ -3,19 +3,17 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/ci.yml?branch=main&label=CI)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/ci.yml)
 [![Links](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/links.yml?branch=main&label=links)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/links.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/docs.yml?branch=main&label=docs)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/docs.yml)
-[![Schema version](https://img.shields.io/badge/schema-v0.8.0-blue)](CHANGELOG.md#080)
+[![Schema version](https://img.shields.io/badge/schema-v0.9.0-blue)](CHANGELOG.md#090)
 [![Status: draft](https://img.shields.io/badge/status-draft-orange)](CONTRIBUTING.md#versioning)
 [![JSON Schema draft 2020-12](https://img.shields.io/badge/JSON%20Schema-draft%202020--12-blue)](https://json-schema.org/draft/2020-12)
 [![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-**Status: v0.8.0, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
+**Status: v0.9.0, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
 
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
-<p align="center">
-  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.8.0, shown as two-way arrows">
-</p>
+
 
 ## Why OCRS?
 
@@ -57,20 +55,20 @@ Round trips are tested both ways for every system, with each system's fixtures: 
 The schema is at a permanent URL, one per version:
 
 ```
-https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json
+https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json
 ```
 
 Validate a review with any JSON Schema (draft 2020-12) validator, for example [check-jsonschema](https://github.com/python-jsonschema/check-jsonschema):
 
 ```bash
-uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json review.json
+uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json review.json
 ```
 
 A review names the version it follows in `$schema`, which the mappers set to the package's version. Editors such as VS Code use it to check the file as you write:
 
 ```json
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json"
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json"
 }
 ```
 
@@ -107,7 +105,7 @@ for review in reviews:
 
 Each review links back to the page. `provenance.source_url` opens the forum at that review, and `extensions.openreview` keeps the forum (title, authors, decision), the note as shown (heading, signature, date line) and a SHA-256 of the saved page. `extensions.openreview.source_fields` lists, for each OCRS value, the page field it came from (`findings.weaknesses[2]` from "Strengths And Weaknesses", under the heading "Minor"). Fields with no OCRS field are kept in `unmapped_fields`, and the rebuttals and replies below the review, in `replies`, each with its URL.
 
-The review's text is copied as Markdown. Its Summary becomes `opinion.summary`; the points under its Strengths, Weaknesses and Minor headings become `findings`, with the heading in `group` and `severity: minor` for Minor; Questions become `findings.questions`; Rating, Confidence and the other numeric scores become `metrics`; Final Justification becomes `decision.summary_rationale`. A page names a score's label (`5: Accept: ...`) but not its scale, so a metric keeps the value and the label as an anchor, with no `normalized` value, and the Rating's first words (`Accept`, `Borderline reject`) set `decision.recommendation`. The saved page holds rendered mathematics, not the reviewer's TeX, so formulas are rebuilt from its MathML and may differ from what the reviewer typed.
+The review's text is copied as Markdown. Its Summary becomes `opinion.summary`; the points under its Strengths, Weaknesses and Minor headings become `findings`, with the heading in `group` and `severity: minor` for Minor; Questions become `findings.questions`; Rating, Confidence and the other numeric scores become `metrics`; Final Justification becomes `opinion.decision.rationale`. A page names a score's label (`5: Accept: ...`) but not its scale, so a metric keeps the value and the label as an anchor, with no `normalized` value, and the Rating's first words (`Accept`, `Borderline reject`) set `opinion.decision.recommendation`. The saved page holds rendered mathematics, not the reviewer's TeX, so formulas are rebuilt from its MathML and may differ from what the reviewer typed.
 
 ## OpenReview notes from the API
 
@@ -118,7 +116,7 @@ The review's text is copied as Markdown. Its Summary becomes `opinion.summary`; 
 
 A note made by a `Meta_Review` or `Decision` invitation has `review_context.review_type` `meta_review` or `recommendation`; its `metareview` or `comment` text becomes the opinion and its `recommendation` or `decision` the decision.
 
-A strengths, weaknesses, questions or requested-changes field written as text is read as a saved forum page's is: a list's items are its points, a heading above them (`Major concerns:`, `**Minor**`) is their `group`, and a Minor heading makes them minor. The field's text is kept as written in `narrative`, as a part titled with the field's name, and `map_to` gives it back. The note's license becomes `provenance.license`, and the note it replies to, when that is not the submission, `related_reviews`. An ethics flag (ICLR's list of choices, COLM's Yes or No) becomes `ethics_and_risk`, and the note's last change (`tmdate` or `mdate`) `updated_at`.
+A strengths, weaknesses, questions or requested-changes field written as text is read as a saved forum page's is: a list's items are its points, a heading above them (`Major concerns:`, `**Minor**`) is their `group`, and a Minor heading makes them minor. The field's text is kept as written in `narrative`, as a part titled with the field's name, and `map_to` gives it back. The note's license becomes `provenance.license`, and the note it replies to, when that is not the submission, `related_reviews`. An ethics flag (ICLR's list of choices, COLM's Yes or No) becomes an ethics-tagged finding, and the note's last change (`tmdate` or `mdate`) `updated_at`.
 
 ```python
 from ocrs import map_from, validate_canonical
@@ -136,7 +134,7 @@ canonical = map_from(
     submission={"id": "f1", "title": "A Paper", "venue": "Example 2025"},
 )
 validate_canonical(canonical)
-assert canonical["decision"]["recommendation"] == "accept"
+assert canonical["opinion"]["decision"]["recommendation"] == "accept"
 ```
 
 ## Reviews published in JATS
@@ -209,7 +207,7 @@ result.record.gaps  # unmapped, unfilled, coerced (and unanchored, with blocks)
 render_mapping_markdown(result)  # the same record, for people
 ```
 
-DeepReview's report is Markdown. Its Strengths and Weaknesses become findings; its Weaknesses restate points made in full later, so each is marked as an overview (`summarizes`). Each point under Potential Issues And Suggestions becomes a weakness. Its part of the paper and its tier go in `group`, and the tier sets the severity: Potential Mistakes and Improvements is `major`, Minor Corrections and Typos is `minor`. The places it names become evidence links with pages and sections, the passages it quotes become evidence quotes, and the rewrites it proposes become `suggested_edits`.
+DeepReview's report is Markdown. Its Strengths and Weaknesses become findings; its Weaknesses restate points made in full later, their old overview markers are retained in migration metadata rather than introducing finding-to-finding reasoning links. Each point under Potential Issues And Suggestions becomes a weakness. Its part of the paper and its tier go in `group`, and the tier sets the severity: Potential Mistakes and Improvements is `major`, Minor Corrections and Typos is `minor`. The places it names become evidence links with pages and sections, the passages it quotes become evidence quotes, and explicit requested rewrites are retained for source-format conversion.
 
 ```python
 from ocrs import map_with_record
@@ -227,7 +225,7 @@ result = map_with_record(
 )
 ```
 
-Reviewer3's report is Markdown too. Its Overview becomes `opinion.contributions`: what the paper contributes, as the reviewer reads it, without judgment. Its AI Text Detection, Fatal Flaws and Reference Check become `checks`, with the report's own sentence as each check's `summary`; percentages become 0–1 fractions, reference counts become integers, and each unverified reference becomes an item with its citation as printed and its status in the report's words. Only Fatal Flaws states a verdict, so it is the only check with an `outcome`. Reviewer Comments become `findings.comments`, because the report does not say whether each is a weakness, a question or a remark, so they have no severity. A comment's page and excerpt become an evidence link.
+Reviewer3's report is Markdown too. Its Overview becomes `work_summary.contributions`: what the paper contributes, as the reviewer reads it, without judgment. Its AI Text Detection, Fatal Flaws and Reference Check become `checks`, with the report's own sentence as each check's `summary`; percentages become 0–1 fractions, reference counts become integers, and each unverified reference becomes an item with its citation as printed and its status in the report's words. Only Fatal Flaws states a verdict, so it is the only check with an `outcome`. Reviewer Comments become `findings.comments`, because the report does not say whether each is a weakness, a question or a remark, so they have no severity. A comment's page and excerpt become an evidence link.
 
 ```python
 from ocrs import map_with_record
@@ -269,53 +267,73 @@ A minimal canonical review in JSON:
   "version": "1.0.0",
   "created_at": "2025-01-15T14:30:00Z",
   "provenance": {
-    "source_system": "openreview",
-    "source_review_id": "or_review_abc123"
+    "source_system": "example-journal"
   },
   "referees": [
     {
       "referee_type": "human",
-      "identity_mode": "double_blind",
-      "expertise": {
-        "self_reported_level": "expert",
-        "domain_tags": ["machine-learning", "nlp"]
-      }
+      "identity_mode": "double_blind"
     }
   ],
   "target": {
-    "work_id": "internal_id:openreview_forum:xyz789",
-    "identifiers": {
-      "internal_id": {"field_name": "openreview_forum", "value": "xyz789"}
-    },
-    "work_type": "preprint",
-    "venue": "NeurIPS 2025"
+    "work_id": "unknown",
+    "work_type": "article"
   },
   "opinion": {
-    "summary": "Solid contribution with novel approach to attention mechanisms.",
-    "stance": "positive"
-  },
-  "decision": {
-    "recommendation": "weak_accept",
-    "source_label": "Weak Accept",
-    "credence": 0.8
-  },
-  "findings": {
-    "strengths": [
-      {"text": "Novel architecture with strong theoretical grounding", "severity": "major"},
-      {"text": "Comprehensive experiments across multiple benchmarks"}
+    "summary": "Promising work; the missing ablation limits the conclusion.",
+    "stance": "mixed",
+    "metric_refs": [
+      "m1"
     ],
+    "decision": {
+      "recommendation": "weak_accept",
+      "revision_requirement": "minor"
+    }
+  },
+  "review_context": {
+    "metric_schemas": {
+      "form": {
+        "source": {
+          "name": "Example review form"
+        },
+        "definitions": {
+          "overall": {
+            "label": "Overall",
+            "dimension": "overall",
+            "catalog_key": "overall",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 5
+            }
+          }
+        }
+      }
+    }
+  },
+  "metrics": [
+    {
+      "id": "m1",
+      "definition_ref": {
+        "schema_id": "form",
+        "key": "overall"
+      },
+      "value": 4,
+      "supported_by": [
+        "w1"
+      ]
+    }
+  ],
+  "findings": {
     "weaknesses": [
       {
-        "title": "No ablation for the gating module",
-        "text": "Missing ablation study for key component",
+        "id": "w1",
+        "text": "The gating module has not been ablated.",
         "severity": "minor",
-        "evidence_links": [
-          {
-            "type": "paper_section",
-            "ref": "Section 4.2",
-            "quote": "The gating module is essential to our results."
-          }
-        ]
+        "uncertainty": {
+          "probability": 0.95,
+          "credence": 0.9
+        }
       }
     ]
   }
@@ -363,28 +381,28 @@ they describe. Fields marked **required** must be present; everything else is op
 | Field | Description |
 |-------|-------------|
 | `referees` **required** | Who wrote the review: one referee, or several for a panel or collaborative review. Each is human, AI, or hybrid, with identity mode (open to triple blind), expertise, competing interests, and reproducibility settings |
-| `target` **required** | The version of the work being reviewed: `work_id` as `<type>:<value>` (e.g. `doi:10.1234/abc`), its identifiers, and `relations` to its other versions and forms |
-| `review_context` | Kind of review, stage (pre- or post-publication), round, who requested it, and time spent |
+| `target` **required** | Artifact identities in `artifacts[]`, plus the version of the work being reviewed: `work_id` as `<type>:<value>` (e.g. `doi:10.1234/abc`), its identifiers, and `relations` to its other versions and forms |
+| `review_context` | Review circumstances and reusable source forms in `metric_schemas` |
 | `related_reviews` | Other reviews this one responds to, replaces, or summarizes (a meta-review) |
 
 **Overall judgment**
 
 | Field | Description |
 |-------|-------------|
-| `opinion` **required** | Summary text, overall stance, high-level reasons, and the work's contributions |
-| `decision` | Acceptance recommendation, independent revision requirement, the source's own wording of them, and how firmly the reviewer holds the recommendation (`credence`) |
-| `metrics`, `metric_catalog_ref` | Scores, each on its own scale (soundness, clarity, novelty, etc.), and the catalog that defines their keys |
+| `opinion` **required** | Overall opinion, stance, optional decision, metric references and optional supporting findings |
+| `metrics` | Assessment values referencing definitions and original scales in `review_context.metric_schemas`; optional `supported_by` findings |
 | `calibration` | Information for comparing this reviewer's scores with other reviewers', such as leniency and historical accept rate |
 
 **Specific assessments**
 
 | Field | Description |
 |-------|-------------|
-| `findings` | Strengths, weaknesses, questions, comments, and requested changes. Each is a point of the same shape: text, severity (info to critical), scope, evidence, suggested edits, and the findings and claims it addresses. A point can say how likely it is to hold and how sure the reviewer is of that |
-| `claim_assessments` | The work's claims one by one, each with whether the evidence supports it, how likely it is true, and how sure the reviewer is of that |
-| `artifact_assessments` | Availability and adequacy of the work's code, data, models, and other materials |
-| `checks` | Systematic checks run on the work, such as reference verification or AI-text detection, including those that found nothing |
-| `ethics_and_risk` | Ethical concerns; a change they call for is a requested change with `scope: ethics` |
+| `findings` | Five separate arrays: strengths, weaknesses, questions, comments and changes. Changes may address other findings; findings may be about claims, contributions or check results |
+| `work_summary` | Neutral summary, descriptive contributions and extracted claims, with IDs |
+| `checks` | Reported human, AI or tool examinations; individual results hold raw measurements and source evidence |
+
+Ethical assessments use ordinary findings tagged `ethics`. Artifact identities live in
+`target.artifacts`; their assessments use findings and checks.
 
 **Text and documents**
 
@@ -403,147 +421,90 @@ they describe. Fields marked **required** must be present; everything else is op
 
 For AI referees, the schema supports detailed provenance including model specifications, execution traces, token usage, costs, and safety metadata. Review-run seeds, for AI and human reviewers alike, go in each referee's `reproducibility.seed` and `reproducibility.seeds`. They describe the review process, not experiments in the reviewed work, and an explicit stage seed overrides the whole-review seed for that stage.
 
-### Acceptance and revision requirements
+### The review-content hierarchy
 
-`decision.recommendation` describes acceptance, while `decision.revision_requirement`
-independently describes required revision (`none`, `minor`, `major`, or `unspecified`
-when a revision is requested without stating its extent). Omission means the source
-provided no revision requirement; it does not mean `none`.
+![Opinion and metrics are supported by findings; changes address findings; findings concern claims or checks and point to source evidence.](site/review-hierarchy.png)
 
-```json
-{
-  "decision": {
-    "recommendation": "weak_accept",
-    "revision_requirement": "minor"
-  }
-}
-```
+Links are review-local IDs, stored in one direction. Reverse views are computed:
 
-### How sure the reviewer is: probability and credence
+- `opinion.metric_refs` selects overall assessment values.
+- Optional `opinion.supported_by` and `metrics[].supported_by` name strengths,
+  weaknesses, questions or comments. The opinion and a score may have different reasons.
+- `findings.changes[].addresses` names the points the requested action would address.
+  Keep alternative remedies joined by OR in one change when any one is sufficient.
+- A finding's typed `about` references a claim, contribution, check or individual result.
+- Findings, changes, claims, contributions and check results share `evidence_links`.
 
-A review judges a work. OCRS also lets a reviewer judge its own judgements: how likely
-each point is to hold, and how firmly it holds that view. This is metacognition, a
-reviewer reporting what it knows and how well it knows it, and OCRS records it as
-numbers a program can read.
+A score without explanation remains a score; do not manufacture findings or checks to
+complete a chain. A successful check need not yield an evaluative finding. Raw counts,
+measurements and outputs belong in `checks[].results[].data`, separate from ratings.
 
-It matters most for AI reviewers. A language model writes a guess in the same fluent,
-assured prose as a point it has checked line by line, so its text does not show which is
-which. Hedges do not help a program either: one reviewer's "may" is another's "almost
-certainly". A number can be compared, and with it:
+### Acceptance, uncertainty and source scales
 
-- **an agent can triage**: an agent revising the paper fixes the points the reviewer is
-  sure of first, and checks the uncertain ones, or sends them to a person, before acting
-  on them;
-- **reviews can be combined**: points from several reviewers, human and AI, are weighed
-  by how sure each reviewer is, not by how forcefully each one writes;
-- **reviewers can be calibrated**: a stated probability can be scored once the outcome is
-  known, when the authors confirm an error, a result replicates or a claim is retracted.
-  A reviewer whose 0.9s come true nine times in ten is well calibrated; one whose 0.9s
-  come true half the time is overconfident, and readers can discount it. Confidence that
-  is never stated can never be checked;
-- **a reviewer can say it is unsure**: a low credence keeps a tentative point in the
-  review, marked as tentative, instead of forcing a choice between asserting it and
-  leaving it out.
+`opinion.decision.recommendation` records acceptance; `revision_requirement` independently
+records `none`, `minor`, `major` or `unspecified`. Omission means unstated, not `none`.
+The optional `rationale` is the source's explanation and `source_label` its original wording.
 
-Findings and claim assessments take two numbers, each from 0 to 1:
+Findings and metric scores reuse `uncertainty`: findings use `probability` for whether
+an assertion holds, while numeric scores may use `interval: {low, high}` on their original
+scale. Both can include `credence` and `rationale`. A finding's credence requires its
+associated probability. Never combine probability and interval, infer numbers from hedges,
+or substitute converter confidence for reviewer uncertainty.
 
-- `probability`: how likely the reviewer thinks the point holds. For a weakness, that the
-  problem is real; for a claim, that it is true.
-- `credence`: how firmly the reviewer holds that probability. It is about the estimate,
-  not the work: a reviewer can think a flaw likely (probability 0.9) after a quick read
-  and hold that loosely (credence 0.3), or, after checking a proof with care, judge a
-  claim a coin toss (probability 0.5) and be sure of exactly that (credence 0.9).
-  `credence` needs `probability`.
+Metrics keep their original values and reference a definition in
+`review_context.metric_schemas` through `{schema_id, key}`. Definitions retain the original
+field label, dimension, question, scale, anchors, values, bounds, step and units when given.
+Normalization is optional, with a method; it neither equates different rubrics nor turns
+a confidence rating into a probability. Local metrics need definitions too.
 
-Scores and the recommendation say how sure the reviewer is in the same way: a metric in
-`uncertainty.credence`, with an optional `interval` and `rationale` (metrics within
-claim assessments too), and the recommendation in `decision.credence`.
+### Linking passages and positional spans
 
-All of these are optional, and all are worth giving: a rough estimate tells a reader more
-than none. Review forms ask for confidence once, for the whole review, and none of the AI
-reviewers OCRS maps today gives it for each point; OCRS has a place for it so that the
-reviewers that do are read the same way.
+An evidence link names a `resource`: the reviewed `work`, original `review`, an `artifact`
+by ID in `target.artifacts`, or an `external` source. The optional `location` combines a
+free-text label, section, one-based page/page_end, figure, table, equation or code lines.
+`version` identifies the material revision; `quote` retains an exact excerpt. Interpretation
+belongs in the finding, so pointers have no supports/contradicts flag.
+
+A positional `span` identifies the exact stored text through `text_ref` and zero-based
+Unicode code-point offsets `[start, end)`. Count the original whitespace and line breaks;
+never use bytes, tokens or UTF-16 code units. Page and section do not change the origin.
+Provide `text_sources={text_ref: exact_text}` to `validate_canonical` to also check the
+span's bounds and its quote. Offline structural validation does not fetch source materials.
 
 ```json
 {
   "findings": {
-    "weaknesses": [
-      {
-        "title": "No ablation of the gating module",
-        "text": "Table 3 reports only the full model, so the gating module's effect is untested.",
-        "severity": "major",
-        "probability": 0.95,
-        "credence": 0.9
-      },
-      {
-        "title": "Theorem 2 may not hold for a decaying step size",
-        "text": "The proof of Theorem 2 assumes a fixed step size, but Algorithm 1 decays it.",
-        "severity": "critical",
-        "probability": 0.6,
-        "credence": 0.3
-      }
-    ]
-  },
-  "metrics": [
-    {
-      "key": "overall",
-      "label": "Overall",
-      "scale": {"type": "ordinal", "min": 1, "max": 5},
-      "value": 4,
-      "uncertainty": {
-        "credence": 0.6,
-        "interval": {"low": 3, "high": 5},
-        "rationale": "The score depends on whether Theorem 2 holds."
-      }
-    }
-  ],
-  "decision": {"recommendation": "weak_accept", "credence": 0.6}
-}
-```
-
-The first weakness is one the reviewer checked: almost certainly real, and held firmly.
-The second is a suspicion: critical if real, somewhat more likely than not, and held
-loosely. It is the point an agent should verify before rewriting the proof, and the
-reason the reviewer's score and recommendation carry less certainty.
-
-### Linking assessments to passages
-
-Claims, findings, metrics, and artifact assessments share `evidence_links`.
-Each link retains the required `type` and free-text `ref`; its optional `location`
-adds `section`, a one-based `page`, the referenced document's `version`, and a
-`text_anchor`. An anchor requires `exact` text and can include the immediately
-surrounding `prefix` and `suffix` to distinguish repeated sentences. Consumers
-resolve the anchor against that document version; schema validation checks the
-structure, not whether the passage exists.
-
-```json
-{
-  "artifact_assessments": [
-    {
-      "artifact_type": "code",
-      "availability": "public",
-      "assessment": "adequate",
-      "ref": "https://example.com/code",
-      "evidence_links": [
-        {
-          "type": "paper_section",
-          "ref": "Section 3.2, page 5, implementation details",
-          "location": {
-            "section": "3.2 Methods",
-            "page": 5,
-            "version": "v2",
-            "text_anchor": {
-              "exact": "We release the training code.",
-              "prefix": "Implementation details. ",
-              "suffix": " See Appendix A."
-            }
-          }
+    "comments": [{
+      "id": "f1",
+      "text": "This passage needs clarification.",
+      "evidence_links": [{
+        "resource": {"type": "work"},
+        "version": "v2",
+        "location": {
+          "page": 5,
+          "section": "3.2 Methods",
+          "span": {"text_ref": "paper-v2-extracted-text", "start": 120, "end": 185}
         }
-      ]
-    }
-  ]
+      }]
+    }]
+  }
 }
 ```
+
+### Migrating earlier reviews
+
+`ocrs.migrate.migrate(review)` returns a new 0.9 record from 0.7 or 0.8 without changing
+its input. It is idempotent. It moves decisions into opinion, metric definitions into
+context, contributions and extracted claims into work_summary, and artifact identities
+into target. Check items and measurements become results; reverse finding links become
+finding `about` references. No numerical score is treated as an inferred reason.
+
+Old fields without a faithful new home remain in `extensions.ocrs_0_8`, with compact
+migration metadata for source-format conversion. This includes claim-local scores (which
+must not become work-wide ratings) and old finding-to-finding overview links. Claim-truth
+probabilities stay attached to that proposition, separate from judgments of its support.
+Source formats may not express every 0.9 link; original prose and source fields remain
+available rather than inventing relationships.
 
 ### Written Report Upload
 

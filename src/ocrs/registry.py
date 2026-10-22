@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import AwareDatetime, validate_call
 
 from .anchors import Block
+from .hierarchy import legacy_view, upgrade_content
 from .mappers import deepreview, openaireview, reviewer3
 from .mappers.ai import AIReviewMapper, build_review
 from .mappers.cmt import from_cmt, to_cmt
@@ -20,7 +21,7 @@ from .mappers.journal import from_journal_narrative, to_journal_narrative
 from .mappers.openreview import from_openreview, to_openreview
 from .mappers.scholarone import from_scholarone, to_scholarone
 from .mapping import MappingResult
-from .schema import require_content, validate_canonical
+from .schema import require_content, schema_id, validate_canonical
 
 _FROM: dict[str, Callable[..., dict[str, Any]]] = {
     "cmt": from_cmt,
@@ -97,6 +98,15 @@ def map_from(
         out = _FROM[source](payload, keep_raw=keep_raw)
     else:
         raise ValueError(f"Unsupported source: {source}. Supported: {supported_sources()}")
+    if source not in _FROM_WITH_RECORD:
+        out = upgrade_content(out, unbounded_fallback=scale_bounds is None)
+        out["$schema"] = schema_id()
+        if scale_bounds is not None and out.get("metrics"):
+            import copy
+
+            form_id = out["metrics"][0]["definition_ref"]["schema_id"]
+            form = out["review_context"]["metric_schemas"][form_id]
+            form["source"]["snapshot"] = copy.deepcopy(scale_bounds)
     require_content(out, source)
     validate_canonical(out)
     return out
@@ -163,4 +173,4 @@ def map_to(target: str, canonical_review: dict[str, Any]) -> dict[str, Any] | st
     validate_canonical(canonical_review)
     if target not in _TO:
         raise ValueError(f"Unsupported target: {target}. Supported: {supported_targets()}")
-    return _TO[target](canonical_review)
+    return _TO[target](legacy_view(canonical_review))

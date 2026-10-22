@@ -5,10 +5,14 @@
 from __future__ import annotations
 
 import json
+import math
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, ValidationError
+
+from .hierarchy import resolve_definition
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "canonical-review.schema.json"
 
@@ -24,14 +28,22 @@ def load_schema(path: str | Path | None = None) -> dict[str, Any]:
     return _schema
 
 
-def validate_canonical(obj: dict[str, Any], *, schema_path: str | Path | None = None) -> None:
+def validate_canonical(
+    obj: dict[str, Any],
+    *,
+    schema_path: str | Path | None = None,
+    text_sources: dict[str, str] | None = None,
+) -> None:
     """Validate a canonical review object; raises ValidationError on failure."""
     global _validator
     if _validator is None or schema_path is not None:
         load_schema(schema_path)
     assert _validator is not None
     _validator.validate(obj)
-    check_references(obj)
+    if "/v0.9.0/" in _validator.schema.get("$id", "") or "/v0.9.0/" in obj.get("$schema", ""):
+        check_references(obj, text_sources=text_sources)
+    else:
+        check_legacy_references(obj)
 
 
 FINDING_KINDS = ("strengths", "weaknesses", "questions", "comments", "changes")
@@ -55,8 +67,8 @@ def schema_id() -> str:
 
 def has_content(review: dict[str, Any]) -> bool:
     """Whether a review says something about the work, by the schema's `#reviewContent`
-    rule: an opinion, a finding, a decision, a metric, a claim or artifact assessment, a
-    check, an ethical concern, narrative text or a written report. Text counts only when
+    rule: an opinion, a finding, a decision, a metric, a work summary, a check, narrative
+    text or a written report. Text counts only when
     it has a character other than whitespace."""
     schema = ocrs_schema()
     [rule] = [r for r in schema["allOf"] if r.get("$anchor") == "reviewContent"]
@@ -70,7 +82,7 @@ def require_content(review: dict[str, Any], source: str) -> None:
     if not has_content(review):
         raise ValueError(
             f"The {source} review has no review content: no opinion, finding, decision, "
-            "metric, claim or artifact assessment, check, ethical concern, narrative text "
+            "metric, work summary, check, narrative text "
             "or written report"
         )
 
@@ -101,7 +113,7 @@ def _evidence_links(value: Any, node: Any, schema: dict[str, Any]):
             yield from _evidence_links(child, node["items"], schema)
 
 
-def check_references(obj: dict[str, Any]) -> None:
+def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None = None) -> None:
     """The rules JSON Schema cannot state: point and check ids are unique, the ids that a
     point's `summarizes` and `addresses` and a check's `finding_ids` name are points in
     `findings`, the claims a point's `claim_ids` name are in `claim_assessments`, and
@@ -143,9 +155,125 @@ def check_references(obj: dict[str, Any]) -> None:
                 raise ValidationError(
                     f"checks[{index}].finding_ids names {target!r}, which is not a finding id"
                 )
-    schema = ocrs_schema()
+    schema = evidence_schema or (_validator.schema if _validator else ocrs_schema())
     for link in _evidence_links(obj, schema, schema):
         location = link.get("location", {})
         page, page_end = location.get("page"), location.get("page_end")
         if page is not None and page_end is not None and page_end < page:
             raise ValidationError(f"page_end {page_end} is before page {page}")
+
+
+def check_references(obj: dict[str, Any], *, text_sources: dict[str, str] | None = None) -> None:
+    """Review-local IDs, downward references, score scales and source ranges.
+
+    Supply exact stored text through text_sources to also check span bounds and quotes.
+    Validation never downloads or normalizes source text. The permitted link directions
+    make the semantic graph acyclic without requiring reciprocal edges.
+    """
+    types: dict[str, str] = {}
+    items = []
+
+    def register(item, kind):
+        id = item["id"]
+        if id in types:
+            raise ValidationError(f"ID {id!r} is not unique across review records")
+        types[id] = kind
+        items.append((kind, item))
+
+    for category, values in obj.get("findings", {}).items():
+        for item in values:
+            register(item, "change" if category == "changes" else "finding")
+    for name, kind in [("claims", "claim"), ("contributions", "contribution")]:
+        for item in obj.get("work_summary", {}).get(name, []):
+            register(item, kind)
+    for item in obj.get("target", {}).get("artifacts", []):
+        register(item, "artifact")
+    for item in obj.get("checks", []):
+        register(item, "check")
+        for result in item.get("results", []):
+            register(result, "check_result")
+    for item in obj.get("metrics", []):
+        register(item, "metric")
+
+    def target(id, expected, field):
+        if types.get(id) != expected:
+            raise ValidationError(f"{field} references {id!r}; expected an existing {expected}")
+
+    for kind, item in [("opinion", obj.get("opinion", {})), *items]:
+        for id in item.get("supported_by", []):
+            target(id, "finding", f"{kind}.supported_by")
+        for id in item.get("metric_refs", []):
+            target(id, "metric", "opinion.metric_refs")
+        for id in item.get("addresses", []):
+            target(id, "finding", "change.addresses")
+        for ref in item.get("about", []):
+            target(ref["id"], ref["type"], "finding.about")
+        if kind == "check" and item.get("procedure", {}).get("artifact_id"):
+            target(item["procedure"]["artifact_id"], "artifact", "check.procedure.artifact_id")
+        if kind == "metric":
+            try:
+                definition = resolve_definition(obj, item)
+            except KeyError as exc:
+                raise ValidationError(
+                    f"Metric {item['id']!r} has an unresolved definition_ref"
+                ) from exc
+            _check_metric(item, definition["scale"])
+
+    for link in _evidence_links(obj, ocrs_schema(), ocrs_schema()):
+        resource = link["resource"]
+        if resource["type"] == "artifact":
+            target(resource["id"], "artifact", "evidence.resource.id")
+        location = link.get("location", {})
+        for start, end in [("page", "page_end"), ("line_start", "line_end")]:
+            if start in location and end in location and location[end] < location[start]:
+                raise ValidationError(f"{end} is before {start}")
+        if span := location.get("span"):
+            if span["end"] <= span["start"]:
+                raise ValidationError("span.end must be greater than span.start")
+            if text_sources is not None and span["text_ref"] in text_sources:
+                text = text_sources[span["text_ref"]]
+                if span["end"] > len(text):
+                    raise ValidationError("span.end exceeds the referenced text length")
+                if "quote" in link and link["quote"] != text[span["start"] : span["end"]]:
+                    raise ValidationError("quote does not equal the selected span")
+
+
+def _check_metric(metric: dict, scale: dict) -> None:
+    """Check the observation against its referenced original scale, not a guessed scale."""
+
+    def number(v):
+        return type(v) in (int, float) and math.isfinite(v)
+
+    if "min" in scale and "max" in scale and scale["min"] > scale["max"]:
+        raise ValidationError("Scale min exceeds max")
+    values = metric["value"] if isinstance(metric["value"], list) else [metric["value"]]
+    for value in values:
+        if "values" in scale:
+            # JSON true and 1 are different allowed values, despite Python equality.
+            if not any(
+                value == allowed and isinstance(value, bool) == isinstance(allowed, bool)
+                for allowed in scale["values"]
+            ):
+                raise ValidationError(f"Metric value {value!r} is not an allowed scale value")
+        if type(value) is float and not math.isfinite(value):
+            raise ValidationError("Metric values must be finite")
+        if number(value):
+            if "min" in scale and value < scale["min"] or "max" in scale and value > scale["max"]:
+                raise ValidationError(f"Metric value {value} is outside its scale")
+            if "step" in scale and "min" in scale:
+                delta = Decimal(str(value)) - Decimal(str(scale["min"]))
+                if delta % Decimal(str(scale["step"])):
+                    raise ValidationError("Metric value does not follow the original scale step")
+    interval = metric.get("uncertainty", {}).get("interval")
+    if interval:
+        if not number(metric["value"]) or interval["low"] > interval["high"]:
+            raise ValidationError("A metric interval requires a numeric value and low ≤ high")
+        if any(
+            not number(v)
+            or "min" in scale
+            and v < scale["min"]
+            or "max" in scale
+            and v > scale["max"]
+            for v in interval.values()
+        ):
+            raise ValidationError("Metric interval is outside the original scale")

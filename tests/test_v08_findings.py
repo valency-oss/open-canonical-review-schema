@@ -4,8 +4,7 @@
 
 import pytest
 from jsonschema import ValidationError
-
-from ocrs import validate_canonical
+from v08_schema import validate_canonical
 
 
 def _review(finding):

@@ -265,59 +265,12 @@
         "$ref": "#/$defs/reviewRelation"
       }
     },
-    "metric_catalog_ref": {
-      "description": "Identifier of the metric catalog that defines the metric keys used here (e.g., 'metric-catalog.core.v1')",
-      "type": "string"
-    },
     "metrics": {
       "description": "Scores the reviewer gave, each on its own scale (e.g., soundness 3 of 4, overall 6 of 10)",
       "type": "array",
       "minItems": 0,
       "items": {
         "$ref": "#/$defs/metricAssessment"
-      }
-    },
-    "decision": {
-      "description": "The reviewer's recommendation to the editor or committee",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "recommendation": {
-          "description": "Recommended acceptance outcome, independent of any required revision",
-          "type": "string",
-          "enum": [
-            "strong_accept",
-            "accept",
-            "weak_accept",
-            "borderline",
-            "weak_reject",
-            "reject",
-            "strong_reject"
-          ]
-        },
-        "revision_requirement": {
-          "description": "Revision required independently of the acceptance recommendation: none, minor, major, or unspecified when revision is requested without its extent. Omit when unknown or not provided",
-          "type": "string",
-          "enum": [
-            "none",
-            "minor",
-            "major",
-            "unspecified"
-          ]
-        },
-        "credence": {
-          "$ref": "#/$defs/credence",
-          "description": "How firmly the reviewer holds the recommendation, from 0 (a guess) to 1 (certain of it)"
-        },
-        "summary_rationale": {
-          "description": "Why the reviewer recommends this, in brief",
-          "type": "string"
-        },
-        "source_label": {
-          "description": "The recommendation in the source's own words, verbatim, when the source gives it in words (e.g., 'Accept (Oral)', F1000's 'Approved with Reservations'). A recommendation given as a score keeps its label on that score's metric instead. `recommendation` and `revision_requirement` are OCRS's reading of it",
-          "type": "string",
-          "minLength": 1
-        }
       }
     },
     "opinion": {
@@ -332,82 +285,36 @@
           "description": "What the work does well",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "$ref": "#/$defs/finding"
           }
         },
         "weaknesses": {
           "description": "Problems in the work: errors, gaps, unsupported claims",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "$ref": "#/$defs/weakness"
           }
         },
         "questions": {
           "description": "Questions for the authors",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "$ref": "#/$defs/finding"
           }
         },
         "comments": {
           "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "$ref": "#/$defs/finding"
           }
         },
         "changes": {
           "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is and a scope that says what kind of change it is",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
+            "$ref": "#/$defs/change"
           }
-        }
-      }
-    },
-    "claim_assessments": {
-      "description": "The work's claims, one by one, each with whether the evidence supports it",
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/claimAssessment"
-      }
-    },
-    "artifact_assessments": {
-      "description": "Assessments of the work's code, data, models and other materials",
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/artifactAssessment"
-      }
-    },
-    "ethics_and_risk": {
-      "description": "Ethical concerns the reviewer raises. The changes it asks for to address them are findings.changes with scope 'ethics'",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "ethical_concerns": {
-          "description": "Whether the reviewer has any ethical concern",
-          "type": "boolean"
-        },
-        "concern_categories": {
-          "description": "Kinds of ethical concern raised",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "human_subjects",
-              "privacy",
-              "bias_fairness",
-              "dual_use",
-              "security",
-              "environmental",
-              "misinformation",
-              "other"
-            ]
-          }
-        },
-        "notes": {
-          "description": "The reviewer's ethical concerns, in their own words",
-          "type": "string"
         }
       }
     },
@@ -505,288 +412,421 @@
     },
     "written_report": {
       "$ref": "#/$defs/writtenReport"
+    },
+    "work_summary": {
+      "description": "The reviewer’s descriptive account of the work, separate from their opinion.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "description": "Neutral synopsis of what the work does.",
+          "type": "string",
+          "minLength": 1
+        },
+        "contributions": {
+          "description": "Descriptive contributions.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contribution",
+            "description": "One contribution."
+          }
+        },
+        "claims": {
+          "description": "Extracted propositions with IDs for findings to reference.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/claim",
+            "description": "One extracted claim."
+          }
+        }
+      }
     }
   },
   "allOf": [
     {
       "$anchor": "reviewContent",
-      "description": "A review says something about the work. It has at least one of: an opinion summary, text, stance, reason or contribution; a finding; a recommendation, revision requirement, decision rationale or the source's own verdict; a metric, claim assessment, artifact assessment or check; an ethical concern, its notes or categories; narrative text; or a written report. Text counts only when it has a character other than whitespace",
+      "description": "The record contains source-stated review content; identities and rubric definitions alone are not review content.",
       "anyOf": [
         {
-          "required": [
-            "opinion"
-          ],
           "properties": {
             "opinion": {
-              "anyOf": [
-                {
-                  "required": [
-                    "summary"
-                  ],
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "pattern": "\\S"
+                }
+              },
+              "required": [
+                "summary"
+              ]
+            }
+          },
+          "required": [
+            "opinion"
+          ]
+        },
+        {
+          "properties": {
+            "opinion": {
+              "properties": {
+                "decision": {
                   "properties": {
-                    "summary": {
-                      "$ref": "#/$defs/nonBlank"
+                    "source_label": {
+                      "type": "string",
+                      "pattern": "\\S"
                     }
-                  }
-                },
-                {
+                  },
                   "required": [
-                    "text"
-                  ],
-                  "properties": {
-                    "text": {
-                      "$ref": "#/$defs/nonBlank"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "stance"
+                    "source_label"
                   ]
-                },
-                {
-                  "required": [
-                    "high_level_reasons"
-                  ],
-                  "properties": {
-                    "high_level_reasons": {
-                      "contains": {
-                        "$ref": "#/$defs/nonBlank"
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "contributions"
-                  ],
-                  "properties": {
-                    "contributions": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
-                    }
-                  }
                 }
+              },
+              "required": [
+                "decision"
               ]
             }
-          }
+          },
+          "required": [
+            "opinion"
+          ]
         },
         {
-          "required": [
-            "findings"
-          ],
           "properties": {
-            "findings": {
-              "anyOf": [
-                {
-                  "required": [
-                    "strengths"
-                  ],
+            "opinion": {
+              "properties": {
+                "decision": {
                   "properties": {
-                    "strengths": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
+                    "rationale": {
+                      "type": "string",
+                      "pattern": "\\S"
                     }
-                  }
-                },
-                {
+                  },
                   "required": [
-                    "weaknesses"
-                  ],
-                  "properties": {
-                    "weaknesses": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "questions"
-                  ],
-                  "properties": {
-                    "questions": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "comments"
-                  ],
-                  "properties": {
-                    "comments": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "changes"
-                  ],
-                  "properties": {
-                    "changes": {
-                      "contains": {
-                        "$ref": "#/$defs/hasTitleOrText"
-                      }
-                    }
-                  }
+                    "rationale"
+                  ]
                 }
+              },
+              "required": [
+                "decision"
               ]
             }
-          }
+          },
+          "required": [
+            "opinion"
+          ]
         },
         {
-          "required": [
-            "decision"
-          ],
           "properties": {
-            "decision": {
-              "anyOf": [
-                {
+            "work_summary": {
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "pattern": "\\S"
+                }
+              },
+              "required": [
+                "summary"
+              ]
+            }
+          },
+          "required": [
+            "work_summary"
+          ]
+        },
+        {
+          "properties": {
+            "opinion": {
+              "properties": {
+                "decision": {
+                  "properties": {
+                    "recommendation": {}
+                  },
                   "required": [
                     "recommendation"
                   ]
-                },
-                {
+                }
+              },
+              "required": [
+                "decision"
+              ]
+            }
+          },
+          "required": [
+            "opinion"
+          ]
+        },
+        {
+          "properties": {
+            "opinion": {
+              "properties": {
+                "decision": {
+                  "properties": {
+                    "revision_requirement": {}
+                  },
                   "required": [
                     "revision_requirement"
                   ]
-                },
-                {
-                  "required": [
-                    "summary_rationale"
-                  ],
-                  "properties": {
-                    "summary_rationale": {
-                      "$ref": "#/$defs/nonBlank"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "source_label"
-                  ],
-                  "properties": {
-                    "source_label": {
-                      "$ref": "#/$defs/nonBlank"
-                    }
-                  }
                 }
+              },
+              "required": [
+                "decision"
               ]
             }
-          }
+          },
+          "required": [
+            "opinion"
+          ]
         },
         {
+          "properties": {
+            "findings": {
+              "properties": {
+                "strengths": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "strengths"
+              ]
+            }
+          },
           "required": [
-            "metrics"
-          ],
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "findings": {
+              "properties": {
+                "weaknesses": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "weaknesses"
+              ]
+            }
+          },
+          "required": [
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "findings": {
+              "properties": {
+                "questions": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "questions"
+              ]
+            }
+          },
+          "required": [
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "findings": {
+              "properties": {
+                "comments": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "comments"
+              ]
+            }
+          },
+          "required": [
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "findings": {
+              "properties": {
+                "changes": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "changes"
+              ]
+            }
+          },
+          "required": [
+            "findings"
+          ]
+        },
+        {
+          "properties": {
+            "work_summary": {
+              "properties": {
+                "claims": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "claims"
+              ]
+            }
+          },
+          "required": [
+            "work_summary"
+          ]
+        },
+        {
+          "properties": {
+            "work_summary": {
+              "properties": {
+                "contributions": {
+                  "contains": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "pattern": "\\S"
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "contributions"
+              ]
+            }
+          },
+          "required": [
+            "work_summary"
+          ]
+        },
+        {
           "properties": {
             "metrics": {
               "minItems": 1
             }
-          }
+          },
+          "required": [
+            "metrics"
+          ]
         },
         {
-          "required": [
-            "claim_assessments"
-          ],
-          "properties": {
-            "claim_assessments": {
-              "minItems": 1
-            }
-          }
-        },
-        {
-          "required": [
-            "artifact_assessments"
-          ],
-          "properties": {
-            "artifact_assessments": {
-              "minItems": 1
-            }
-          }
-        },
-        {
-          "required": [
-            "checks"
-          ],
           "properties": {
             "checks": {
               "minItems": 1
             }
-          }
+          },
+          "required": [
+            "checks"
+          ]
         },
         {
-          "required": [
-            "ethics_and_risk"
-          ],
-          "properties": {
-            "ethics_and_risk": {
-              "anyOf": [
-                {
-                  "required": [
-                    "ethical_concerns"
-                  ],
-                  "properties": {
-                    "ethical_concerns": {
-                      "const": true
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "notes"
-                  ],
-                  "properties": {
-                    "notes": {
-                      "$ref": "#/$defs/nonBlank"
-                    }
-                  }
-                },
-                {
-                  "required": [
-                    "concern_categories"
-                  ],
-                  "properties": {
-                    "concern_categories": {
-                      "minItems": 1
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        },
-        {
-          "required": [
-            "narrative"
-          ],
           "properties": {
             "narrative": {
               "contains": {
-                "required": [
-                  "content"
-                ],
                 "properties": {
                   "content": {
-                    "$ref": "#/$defs/nonBlank"
+                    "type": "string",
+                    "pattern": "\\S"
                   }
-                }
+                },
+                "required": [
+                  "content"
+                ]
               }
             }
-          }
+          },
+          "required": [
+            "narrative"
+          ]
         },
         {
+          "properties": {
+            "written_report": {}
+          },
           "required": [
             "written_report"
+          ]
+        },
+        {
+          "properties": {
+            "opinion": {
+              "properties": {
+                "stance": {}
+              },
+              "required": [
+                "stance"
+              ]
+            }
+          },
+          "required": [
+            "opinion"
           ]
         }
       ]
@@ -1255,23 +1295,19 @@
       }
     },
     "opinion": {
-      "description": "The reviewer's overall view of the work",
+      "description": "The reviewer’s overall sentiment and optional decision; not a summary of the work.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "summary": {
-          "description": "The reviewer's view in brief, usually a summary of the work and its main contribution",
-          "type": "string",
-          "minLength": 1
-        },
-        "text": {
-          "description": "The reviewer's full overall assessment",
+          "description": "Summary of the reviewer’s opinion.",
           "type": "string",
           "minLength": 1
         },
         "stance": {
-          "description": "Whether the overall view is positive, mixed, negative or unclear",
+          "description": "Overall sentiment, independent of the recommendation.",
           "type": "string",
+          "minLength": 1,
           "enum": [
             "positive",
             "mixed",
@@ -1279,19 +1315,29 @@
             "unclear"
           ]
         },
-        "high_level_reasons": {
-          "description": "The main reasons for the reviewer's view, one per item",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "decision": {
+          "$ref": "#/$defs/decision",
+          "description": "Optional explicit acceptance or revision recommendation."
         },
-        "contributions": {
-          "description": "What the work contributes, as the reviewer reads it. Neutral: neither strengths nor assessed claims",
+        "metric_refs": {
+          "description": "Optional overall metric IDs selected for this opinion. No reciprocal reference is stored.",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/point"
-          }
+            "description": "An existing review-local ID.",
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "supported_by": {
+          "description": "Optional finding IDs supporting the overall opinion or decision, independently of each score’s support.",
+          "type": "array",
+          "items": {
+            "description": "An existing review-local ID.",
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -2184,45 +2230,12 @@
           "$ref": "#/$defs/metricValue"
         },
         "uncertainty": {
-          "description": "How sure the reviewer is of the score",
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "credence": {
-              "$ref": "#/$defs/credence",
-              "description": "Overall confidence in the score given from 0 to 1, with 0 being not at all confident, and 1 being certain"
-            },
-            "interval": {
-              "description": "Range the score could fall in",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "low": {
-                  "description": "Lowest likely value",
-                  "type": "number"
-                },
-                "high": {
-                  "description": "Highest likely value",
-                  "type": "number"
-                }
-              }
-            },
-            "rationale": {
-              "description": "Why the reviewer is unsure",
-              "type": "string"
-            }
-          }
+          "$ref": "#/$defs/metricUncertainty",
+          "description": "Reviewer uncertainty on the original score scale."
         },
         "justification": {
           "description": "Why the reviewer gave this score",
           "type": "string"
-        },
-        "evidence_links": {
-          "description": "Places in the work that support the score",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
         },
         "normalized": {
           "description": "Optional rescaling of the original value, with its method. This does not establish equivalent meaning across rubrics or make a confidence score a probability.",
@@ -2261,6 +2274,16 @@
         },
         "source_value": {
           "description": "Original source answer, including its original label or representation when needed for faithful conversion."
+        },
+        "supported_by": {
+          "description": "Optional strength, weakness, question or comment IDs explaining the score. Checks and raw measurements reach metrics through findings. A bare source score remains valid.",
+          "type": "array",
+          "items": {
+            "description": "An existing review-local ID.",
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -2385,178 +2408,13 @@
       "minimum": 0,
       "maximum": 1
     },
-    "point": {
-      "description": "One point the reviewer makes: a strength, a weakness, a question, a comment, a change it asks for, or one of the work's contributions as the reviewer reads it",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "text"
-      ],
-      "properties": {
-        "id": {
-          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
-          "type": "string",
-          "minLength": 1
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Short headline for the point, as the reviewer wrote it"
-        },
-        "text": {
-          "description": "The point in full, as the reviewer wrote it",
-          "type": "string"
-        },
-        "severity": {
-          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
-          "type": "string",
-          "enum": [
-            "info",
-            "trivial",
-            "minor",
-            "major",
-            "critical"
-          ]
-        },
-        "scope": {
-          "description": "For a change, the kind of change",
-          "type": "string",
-          "enum": [
-            "typo",
-            "clarification",
-            "analysis",
-            "experiment",
-            "theory",
-            "writing",
-            "figure",
-            "references",
-            "artifact",
-            "ethics",
-            "other"
-          ]
-        },
-        "tags": {
-          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "group": {
-          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "evidence_links": {
-          "description": "Places in the work the point refers to",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
-        },
-        "suggested_edits": {
-          "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/suggestedEdit"
-          }
-        },
-        "probability": {
-          "$ref": "#/$defs/probability",
-          "description": "How likely the reviewer thinks the point holds (for a weakness, that the problem is real), from 0 (certainly not) to 1 (certainly). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
-        },
-        "credence": {
-          "$ref": "#/$defs/credence"
-        },
-        "summarizes": {
-          "description": "Ids of the points this one restates in brief. A point that summarizes others is an overview: leave it out when counting points. An empty list marks an overview whose source does not say which points it covers",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "addresses": {
-          "description": "Ids of the points this one answers: for a change, the weaknesses or questions it would resolve",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "claim_ids": {
-          "description": "The claims this point concerns, by claim_id in claim_assessments",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
-      },
-      "dependentRequired": {
-        "credence": [
-          "probability"
-        ]
-      }
-    },
     "check": {
-      "description": "One systematic check run on the work, and what it found. Record an outcome only when the source states one",
+      "description": "A reported human, AI or tool examination. Do not invent an examination from a reviewer assertion.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind"
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "outcome"
-          ]
-        },
-        {
-          "required": [
-            "summary"
-          ]
-        },
-        {
-          "required": [
-            "measurements"
-          ]
-        },
-        {
-          "required": [
-            "items"
-          ]
-        }
-      ],
       "properties": {
-        "id": {
-          "description": "Identifier of this check, unique among the review's checks and points",
-          "type": "string",
-          "minLength": 1
-        },
         "kind": {
-          "description": "What the check looks for: text written by AI, references that cannot be verified, fatal flaws, text similar to other works, manipulated images, statistical errors, retracted citations, or something else",
-          "type": "string",
-          "enum": [
-            "ai_text_detection",
-            "reference_verification",
-            "fatal_flaw_screen",
-            "similarity",
-            "image_integrity",
-            "statistics",
-            "retraction",
-            "other"
-          ]
-        },
-        "label": {
-          "description": "The check's name as the source shows it (e.g., 'Reference Check')",
+          "description": "Check kind, such as reference_verification, statistics, availability or artifact_execution; custom namespaced kinds are allowed.",
           "type": "string",
           "minLength": 1
         },
@@ -2564,9 +2422,6 @@
           "description": "The tool or service that ran the check. When absent, the referee ran it",
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "name"
-          ],
           "properties": {
             "name": {
               "description": "Name of the tool or service (e.g., 'Pangram')",
@@ -2582,8 +2437,14 @@
               "description": "Where to learn about it",
               "type": "string",
               "format": "uri"
+            },
+            "referee_id": {
+              "description": "Identifier of the human or AI referee performing the check.",
+              "type": "string",
+              "minLength": 1
             }
-          }
+          },
+          "minProperties": 1
         },
         "outcome": {
           "description": "The check's verdict, as the source states it: no issues, issues found, inconclusive, or not run. Leave out when the source gives only results",
@@ -2600,111 +2461,101 @@
           "type": "string",
           "minLength": 1
         },
-        "measurements": {
-          "description": "Numbers or values the check reports (e.g., references checked, share of text detected as AI-written)",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/checkMeasurement"
-          }
-        },
-        "items": {
-          "description": "Results for the individual things checked that the source lists, such as each reference it could not verify",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/checkItem"
-          }
-        },
-        "finding_ids": {
-          "description": "Findings that report this check's problems as points, by id",
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
-      }
-    },
-    "checkMeasurement": {
-      "description": "One value a check reports. A proportion is a fraction from 0 to 1 with unit 'fraction' (33% is 0.33); a count is an integer",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "key",
-        "value"
-      ],
-      "properties": {
-        "key": {
-          "description": "What is measured (e.g., 'checked', 'not_found', 'ai_generated')",
+        "id": {
+          "description": "Unique review-local check ID.",
           "type": "string",
           "minLength": 1
         },
-        "label": {
-          "description": "The measurement's name as the source shows it",
-          "type": "string",
-          "minLength": 1
+        "procedure": {
+          "description": "Reported examination method and optional script artifact reference.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "description": "How the examination was performed.",
+              "type": "string",
+              "minLength": 1
+            },
+            "artifact_id": {
+              "description": "ID of a procedure or script in target.artifacts.",
+              "type": "string",
+              "minLength": 1
+            },
+            "settings": {
+              "description": "Original checker settings.",
+              "type": "object"
+            },
+            "acceptance_criteria": {
+              "description": "Source-stated criteria for success.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "minProperties": 1
         },
-        "value": {
-          "description": "The value",
-          "type": [
-            "number",
-            "string",
-            "boolean"
+        "execution_status": {
+          "description": "Execution status, separate from the content’s correctness.",
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "completed",
+            "failed",
+            "skipped",
+            "partial",
+            "unknown"
           ]
         },
-        "unit": {
-          "description": "Unit of the value: 'fraction' for a proportion from 0 to 1, otherwise as the source gives it",
+        "run_ref": {
+          "description": "Reference to logs or detailed run provenance.",
           "type": "string",
           "minLength": 1
-        }
-      },
-      "if": {
-        "properties": {
-          "unit": {
-            "const": "fraction"
-          }
         },
-        "required": [
-          "unit"
-        ]
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
+        "results_coverage": {
+          "description": "What the result list covers; absence does not mean every item was checked.",
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "complete",
+            "exceptions_only",
+            "partial",
+            "unknown"
+          ]
+        },
+        "results": {
+          "description": "Individual observations, with evidence stored here rather than repeated on the check.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/checkResult",
+            "description": "One observed result."
           }
         }
-      }
-    },
-    "checkItem": {
-      "description": "A check's result for one thing it checked",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "target",
-        "status"
+      },
+      "anyOf": [
+        {
+          "required": [
+            "execution_status"
+          ]
+        },
+        {
+          "required": [
+            "outcome"
+          ]
+        },
+        {
+          "required": [
+            "summary"
+          ]
+        },
+        {
+          "required": [
+            "results"
+          ]
+        }
       ],
-      "properties": {
-        "target": {
-          "$ref": "#/$defs/evidenceLink",
-          "description": "What was checked (e.g., a bibliography entry)"
-        },
-        "status": {
-          "description": "The result, in the source's own words (e.g., 'Not Found')",
-          "type": "string",
-          "minLength": 1
-        },
-        "flagged": {
-          "description": "Whether the source presents this result as a failure. A flagged reference is one the check could not verify, not necessarily one that is wrong",
-          "type": "boolean"
-        },
-        "notes": {
-          "description": "Anything else the source says about this result",
-          "type": "string"
-        }
-      }
+      "required": [
+        "id",
+        "kind"
+      ]
     },
     "suggestedEdit": {
       "description": "A rewrite the reviewer proposes for a passage of the work",
@@ -2824,79 +2675,35 @@
       }
     },
     "evidenceLink": {
-      "description": "A place in the work, or elsewhere, that a point refers to",
+      "description": "One plain source pointer, embedded where needed; interpretation belongs in the finding, not a support/contradiction flag.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type",
-        "ref"
-      ],
       "properties": {
-        "type": {
-          "description": "Kind of place",
+        "resource": {
+          "$ref": "#/$defs/resourceRef",
+          "description": "Source material being referenced."
+        },
+        "version": {
+          "description": "Source document version, artifact commit or dataset revision.",
           "type": "string",
-          "enum": [
-            "paper_section",
-            "figure",
-            "table",
-            "equation",
-            "appendix",
-            "supplement",
-            "code",
-            "data",
-            "bibliography",
-            "external"
-          ]
-        },
-        "ref": {
-          "description": "Where it is, in the reviewer's words (e.g., 'p.10, Table 6')",
-          "type": "string"
-        },
-        "quote": {
-          "description": "Text quoted from that place",
-          "type": "string"
+          "minLength": 1
         },
         "location": {
           "$ref": "#/$defs/evidenceLocation",
-          "description": "Structured location in a specific version of the referenced work or artifact"
+          "description": "Optional named or positional source location."
         },
-        "work": {
-          "description": "The work the place refers to when it is another work, such as a citation the reviewer says is missing",
-          "type": "object",
-          "additionalProperties": false,
-          "minProperties": 1,
-          "properties": {
-            "title": {
-              "description": "Title of the work",
-              "type": "string",
-              "minLength": 1
-            },
-            "authors": {
-              "description": "Authors, as the reviewer names them",
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "year": {
-              "description": "Year of publication",
-              "type": "integer"
-            },
-            "citation": {
-              "description": "The reference as printed, copied verbatim (e.g., an entry in the work's bibliography)",
-              "type": "string",
-              "minLength": 1
-            },
-            "identifiers": {
-              "$ref": "#/$defs/workIdentifiers"
-            }
-          }
+        "quote": {
+          "description": "Optional exact source excerpt; if a span is supplied, it equals the selected slice.",
+          "type": "string",
+          "minLength": 1
         }
-      }
+      },
+      "required": [
+        "resource"
+      ]
     },
     "evidenceLocation": {
-      "description": "A section, page, or exact text anchor in the referenced document; page numbers start at 1",
+      "description": "Optional named locations and ranges, combinable with a positional span; page and section never change a span’s origin.",
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
@@ -2916,10 +2723,48 @@
           "type": "integer",
           "minimum": 1
         },
-        "version": {
-          "description": "Version of the referenced work or artifact to which the location applies",
+        "label": {
+          "description": "Location in the source’s own words, including named pages or Roman page labels.",
+          "type": "string"
+        },
+        "figure": {
+          "description": "Figure name or identifier.",
           "type": "string",
           "minLength": 1
+        },
+        "table": {
+          "description": "Table name or identifier.",
+          "type": "string",
+          "minLength": 1
+        },
+        "equation": {
+          "description": "Equation name or identifier.",
+          "type": "string",
+          "minLength": 1
+        },
+        "prefix": {
+          "description": "Text immediately before quote, to disambiguate repeated passages.",
+          "type": "string",
+          "minLength": 1
+        },
+        "suffix": {
+          "description": "Text immediately after quote, to disambiguate repeated passages.",
+          "type": "string",
+          "minLength": 1
+        },
+        "line_start": {
+          "description": "One-based inclusive first line in the referenced source.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "line_end": {
+          "description": "One-based inclusive last line in the referenced source.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "span": {
+          "$ref": "#/$defs/textSpan",
+          "description": "Exact positional span in a fixed text representation."
         },
         "text_anchor": {
           "description": "Exact text with optional immediately surrounding text to distinguish repeated passages",
@@ -2948,172 +2793,10 @@
       "dependentRequired": {
         "page_end": [
           "page"
+        ],
+        "line_end": [
+          "line_start"
         ]
-      }
-    },
-    "claimAssessment": {
-      "description": "One claim the work makes, and whether its evidence supports it",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "claim_id",
-        "claim_text",
-        "status"
-      ],
-      "properties": {
-        "claim_id": {
-          "description": "Identifier of the claim within this review",
-          "type": "string"
-        },
-        "claim_text": {
-          "description": "The claim, as stated in the work",
-          "type": "string"
-        },
-        "status": {
-          "description": "Whether the work's evidence supports the claim",
-          "type": "string",
-          "enum": [
-            "supported",
-            "partially_supported",
-            "unclear",
-            "unsupported",
-            "not_evaluated"
-          ]
-        },
-        "metrics": {
-          "description": "Scores for the claim",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/metricAssessment"
-          }
-        },
-        "notes": {
-          "description": "The reviewer's view of the claim",
-          "type": "string"
-        },
-        "evidence_links": {
-          "description": "Places in the work the assessment refers to",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
-        },
-        "probability": {
-          "$ref": "#/$defs/probability",
-          "description": "How likely the reviewer thinks the claim is true, from 0 (certainly false) to 1 (certainly true). Optional, but we strongly encourage it: even a rough estimate helps readers know how much weight to give the point"
-        },
-        "credence": {
-          "$ref": "#/$defs/credence"
-        }
-      },
-      "dependentRequired": {
-        "credence": [
-          "probability"
-        ]
-      }
-    },
-    "artifactAssessment": {
-      "description": "Assessment of one of the work's materials: code, data, models and so on",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "artifact_type",
-        "availability",
-        "assessment"
-      ],
-      "properties": {
-        "artifact_type": {
-          "description": "Kind of material",
-          "type": "string",
-          "enum": [
-            "code",
-            "data",
-            "models",
-            "appendix",
-            "protocol",
-            "other"
-          ]
-        },
-        "availability": {
-          "description": "Whether readers can get the material",
-          "type": "string",
-          "enum": [
-            "public",
-            "restricted",
-            "available_on_request",
-            "not_available",
-            "unknown"
-          ]
-        },
-        "ref": {
-          "description": "Where the material is",
-          "type": "string"
-        },
-        "assessment": {
-          "description": "The reviewer's overall judgment of the material",
-          "type": "string",
-          "enum": [
-            "excellent",
-            "good",
-            "adequate",
-            "poor",
-            "not_applicable",
-            "not_evaluated"
-          ]
-        },
-        "evidence_links": {
-          "description": "Places in the work or artifact the assessment refers to",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/evidenceLink"
-          }
-        },
-        "reproducibility_notes": {
-          "description": "What the reviewer found when trying to reproduce results with it",
-          "type": "string"
-        },
-        "checks": {
-          "description": "Specific checks the reviewer made",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "key",
-              "status"
-            ],
-            "properties": {
-              "key": {
-                "description": "Which check",
-                "type": "string",
-                "enum": [
-                  "builds",
-                  "runs",
-                  "tests_pass",
-                  "data_complete",
-                  "instructions_clear",
-                  "licenses_present",
-                  "deterministic",
-                  "computational_cost_reported"
-                ]
-              },
-              "status": {
-                "description": "Result of the check",
-                "type": "string",
-                "enum": [
-                  "pass",
-                  "fail",
-                  "partial",
-                  "unknown"
-                ]
-              },
-              "notes": {
-                "description": "Details of the result",
-                "type": "string"
-              }
-            }
-          }
-        }
       }
     },
     "writtenReport": {
@@ -3264,8 +2947,7 @@
       "properties": {
         "label": {
           "description": "Metric name as the source displays it.",
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "dimension": {
           "description": "Canonical concept, such as overall, correctness, review_confidence or expertise; custom namespaced concepts are allowed.",
@@ -3373,6 +3055,618 @@
           "minLength": 1
         }
       }
+    },
+    "decision": {
+      "description": "The reviewer's recommendation to the editor or committee",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recommendation": {
+          "description": "Recommended acceptance outcome, independent of any required revision",
+          "type": "string",
+          "enum": [
+            "strong_accept",
+            "accept",
+            "weak_accept",
+            "borderline",
+            "weak_reject",
+            "reject",
+            "strong_reject"
+          ]
+        },
+        "revision_requirement": {
+          "description": "Revision required independently of the acceptance recommendation: none, minor, major, or unspecified when revision is requested without its extent. Omit when unknown or not provided",
+          "type": "string",
+          "enum": [
+            "none",
+            "minor",
+            "major",
+            "unspecified"
+          ]
+        },
+        "source_label": {
+          "description": "The recommendation in the source's own words, verbatim, when the source gives it in words (e.g., 'Accept (Oral)', F1000's 'Approved with Reservations'). A recommendation given as a score keeps its label on that score's metric instead. `recommendation` and `revision_requirement` are OCRS's reading of it",
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "description": "Why the reviewer recommends this, in brief",
+          "type": "string"
+        }
+      }
+    },
+    "uncertainty": {
+      "description": "Reviewer uncertainty, not extraction confidence. Findings use probability; metric scores may use interval. Never use both.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "probability": {
+          "$ref": "#/$defs/probability",
+          "description": "Probability that this finding’s assertion holds."
+        },
+        "credence": {
+          "description": "Confidence in assigning this probability or metric estimate.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "interval": {
+          "description": "Plausible interval on the original metric scale.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "description": "Lowest plausible value.",
+              "type": "number"
+            },
+            "high": {
+              "description": "Highest plausible value.",
+              "type": "number"
+            }
+          },
+          "required": [
+            "low",
+            "high"
+          ]
+        },
+        "rationale": {
+          "description": "Source explanation, including qualitative uncertainty without an invented number.",
+          "type": "string"
+        }
+      },
+      "minProperties": 1,
+      "not": {
+        "required": [
+          "probability",
+          "interval"
+        ]
+      }
+    },
+    "findingUncertainty": {
+      "description": "Shared uncertainty on a finding: probability, optional associated credence and rationale; no interval.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/uncertainty",
+          "description": "The shared uncertainty fields."
+        },
+        {
+          "not": {
+            "required": [
+              "interval"
+            ]
+          }
+        },
+        {
+          "dependentRequired": {
+            "credence": [
+              "probability"
+            ]
+          }
+        }
+      ]
+    },
+    "metricUncertainty": {
+      "description": "Shared uncertainty on a metric: interval, credence and rationale; no finding probability.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/uncertainty",
+          "description": "The shared uncertainty fields."
+        },
+        {
+          "not": {
+            "required": [
+              "probability"
+            ]
+          }
+        }
+      ]
+    },
+    "contentRef": {
+      "description": "A typed reference to derived material within this review.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "description": "Kind of referenced record.",
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "claim",
+            "contribution",
+            "check",
+            "check_result"
+          ]
+        },
+        "id": {
+          "description": "An existing review-local ID of the indicated type.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ]
+    },
+    "finding": {
+      "description": "One source-stated strength, weakness, question or comment. Do not create a point solely to justify a rating.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "about": {
+          "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentRef",
+            "description": "One interpreted record."
+          },
+          "uniqueItems": true
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/findingUncertainty",
+          "description": "Probability of this assertion, optional associated credence and rationale."
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "weakness": {
+      "description": "One problem or limitation, with optional seriousness independent of its probability.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "about": {
+          "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentRef",
+            "description": "One interpreted record."
+          },
+          "uniqueItems": true
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/findingUncertainty",
+          "description": "Probability of this assertion, optional associated credence and rationale."
+        },
+        "severity": {
+          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
+          "type": "string",
+          "enum": [
+            "info",
+            "trivial",
+            "minor",
+            "major",
+            "critical"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "change": {
+      "description": "One requested action. Keep OR alternatives in one item when any one is sufficient; split independently requested actions.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "severity": {
+          "description": "How serious the point is: critical, it invalidates the work's main conclusions, such as a fatal flaw in the method or results that do not hold; major, it substantially weakens the conclusions or how well they are supported, such as a missing analysis or an unjustified claim; minor, it does not affect the main conclusions, such as a missing reference or a small error that leaves the results unchanged; trivial, it is cosmetic, such as typos, clarity issues, formatting or wording; info, it reports no problem, such as a remark. For a strength, how much it matters, on the same scale",
+          "type": "string",
+          "enum": [
+            "info",
+            "trivial",
+            "minor",
+            "major",
+            "critical"
+          ]
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "suggested_edits": {
+          "description": "Rewrites the reviewer proposes for the work's text. Alternatives for the same text are separate items",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/suggestedEdit"
+          }
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        },
+        "addresses": {
+          "description": "Optional IDs of strengths, weaknesses, questions or comments this change addresses. No inverse list is stored.",
+          "type": "array",
+          "items": {
+            "description": "An existing review-local ID.",
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "contribution": {
+      "description": "A descriptive contribution, not an evaluative strength.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among the review's points and checks, so that other points can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "claim": {
+      "description": "A proposition attributed to the work. Extraction does not endorse its truth.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique review-local claim ID.",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The proposition attributed to the work.",
+          "type": "string"
+        },
+        "representation": {
+          "description": "Whether the claim is quoted or paraphrased.",
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "quotation",
+            "paraphrase"
+          ]
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ]
+    },
+    "checkResult": {
+      "description": "One raw observation. A result need not produce an evaluative finding.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique review-local result ID.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "Result in the source’s own words.",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "Source observation or notes.",
+          "type": "string",
+          "minLength": 1
+        },
+        "data": {
+          "description": "Raw source measurements or outputs, with units and original structure. These are separate from assessment metrics."
+        },
+        "evidence_links": {
+          "description": "Source materials or recorded outputs associated with this result.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceLink",
+            "description": "One plain source pointer."
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "status"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "data"
+          ]
+        }
+      ],
+      "required": [
+        "id"
+      ]
+    },
+    "resourceRef": {
+      "description": "The referenced source material. Work and review refer to this record; artifact IDs resolve in target.artifacts.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "description": "Kind of source material.",
+          "type": "string",
+          "minLength": 1,
+          "enum": [
+            "work",
+            "review",
+            "artifact",
+            "external"
+          ]
+        },
+        "id": {
+          "description": "Artifact ID, required when type is artifact.",
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "description": "External URI or source-described reference.",
+          "type": "string",
+          "minLength": 1
+        },
+        "work": {
+          "description": "The work the place refers to when it is another work, such as a citation the reviewer says is missing",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "title": {
+              "description": "Title of the work",
+              "type": "string",
+              "minLength": 1
+            },
+            "authors": {
+              "description": "Authors, as the reviewer names them",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "year": {
+              "description": "Year of publication",
+              "type": "integer"
+            },
+            "citation": {
+              "description": "The reference as printed, copied verbatim (e.g., an entry in the work's bibliography)",
+              "type": "string",
+              "minLength": 1
+            },
+            "identifiers": {
+              "$ref": "#/$defs/workIdentifiers"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "artifact"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "external"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "ref"
+                ]
+              },
+              {
+                "required": [
+                  "work"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "required": [
+        "type"
+      ]
+    },
+    "textSpan": {
+      "description": "A zero-based Unicode code-point range [start, end) in one exact stored text representation. Whitespace and line breaks count without normalization. Offsets are not bytes, tokens or UTF-16 code units.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text_ref": {
+          "description": "Resolvable URI or source ID pinning the exact text version or content hash. Count from the beginning of this entire text, never from a page or section.",
+          "type": "string",
+          "minLength": 1
+        },
+        "start": {
+          "description": "First included Unicode code-point index.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "description": "Index immediately after the last included code point; greater than start and no greater than text length.",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "text_ref",
+        "start",
+        "end"
+      ]
     }
   }
 }

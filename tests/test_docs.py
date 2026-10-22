@@ -19,6 +19,7 @@ import pytest
 
 from ocrs import schema_id, validate_canonical
 from ocrs.catalog import load_catalog
+from ocrs.hierarchy import resolve_definition
 
 ROOT = Path(__file__).parent.parent
 DOCS = ["README.md", "CONTRIBUTING.md"]
@@ -85,8 +86,10 @@ def test_example_review_validates(path):
 )
 def test_example_metrics_use_catalog_keys(path):
     keys = {metric["key"] for metric in load_catalog()["metrics"]}
-    for metric in json.loads(path.read_text()).get("metrics", []):
-        assert metric["key"] in keys
+    review = json.loads(path.read_text())
+    for metric in review.get("metrics", []):
+        definition = resolve_definition(review, metric)
+        assert definition["catalog_key"] in keys
 
 
 @pytest.mark.parametrize(

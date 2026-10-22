@@ -6,9 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import narrative_fields
+from conftest import codec_map_from, codec_map_to, codec_validate, narrative_fields
 
-from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.scholarone import from_scholarone, to_scholarone
 from ocrs.util import narrative_text
 
@@ -26,8 +25,8 @@ def load_fixture(name: str) -> dict:
 def test_scholarone_minimal():
     """Test minimal ScholarOne review conversion."""
     payload = load_fixture("minimal_review.json")
-    canon = map_from("scholarone", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("scholarone", payload)
+    codec_validate(canon)
 
     assert canon["provenance"]["source_system"] == "scholarone"
     assert canon["target"]["work_id"] == "internal_id:documentId:DOC-123456"
@@ -38,8 +37,8 @@ def test_scholarone_minimal():
 def test_scholarone_realistic():
     """Test realistic ScholarOne review with all fields."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("scholarone", payload, keep_raw=True)
-    validate_canonical(canon)
+    canon = codec_map_from("scholarone", payload, keep_raw=True)
+    codec_validate(canon)
 
     # Check basic structure
     assert canon["provenance"]["source_system"] == "scholarone"
@@ -86,7 +85,7 @@ def test_scholarone_recommendation_codes():
             "commentsToAuthor": "Test comments.",
         }
         canon = from_scholarone(payload)
-        validate_canonical(canon)
+        codec_validate(canon)
         assert canon["decision"] == expected
 
 
@@ -106,7 +105,7 @@ def test_scholarone_text_recommendation():
             "commentsToAuthor": "Test comments.",
         }
         canon = from_scholarone(payload)
-        validate_canonical(canon)
+        codec_validate(canon)
         assert canon["decision"] == {**expected, "source_label": label}
 
 
@@ -123,7 +122,7 @@ def test_scholarone_criteria_normalization():
         ],
     }
     canon = from_scholarone(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     # Check normalization
     quality_metric = next((m for m in canon["metrics"] if m["label"] == "Quality"), None)
@@ -147,7 +146,7 @@ def test_scholarone_review_id_construction():
         "commentsToAuthor": "Good paper.",
     }
     canon = from_scholarone(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     # Review ID should include document ID and reviewer number
     assert canon["review_id"] == "s1_DOC-123_r3"
@@ -183,10 +182,10 @@ def test_scholarone_competing_interests():
 def test_scholarone_to_and_back():
     """Test roundtrip conversion (lossy)."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("scholarone", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("scholarone", payload)
+    codec_validate(canon)
 
-    back = map_to("scholarone", canon)
+    back = codec_map_to("scholarone", canon)
 
     # Verify basic structure preserved
     assert back["documentId"] == "DOC-2024-789012"
@@ -264,13 +263,13 @@ def test_scholarone_reviewer_id_fallbacks():
         ({"reviewer_id": 99}, "99"),
         ({"reviewerOrcid": "0000-0002-1825-0097"}, "0000-0002-1825-0097"),
     ]:
-        canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", **extra})
+        canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1", **extra})
         assert canon["referees"][0]["referee_id"] == expected
 
 
 def test_scholarone_no_reviewer_id():
     """Test referee_id is omitted when the payload has no reviewer fields."""
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1"})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1"})
     assert "referee_id" not in canon["referees"][0]
     assert canon["referees"][0]["human_referee"] == {}
 
@@ -278,7 +277,7 @@ def test_scholarone_no_reviewer_id():
 def test_scholarone_work_id_fallbacks():
     """Test document ID falls back through the alternative ID keys."""
     for key in ("document_id", "submissionId", "submission_id", "ms_id"):
-        canon = map_from("scholarone", {**TEXT, key: "MS-77"})
+        canon = codec_map_from("scholarone", {**TEXT, key: "MS-77"})
         assert canon["target"]["identifiers"]["internal_id"] == {
             "field_name": "documentId",
             "value": "MS-77",
@@ -289,12 +288,12 @@ def test_scholarone_work_id_fallbacks():
 def test_scholarone_empty_payload():
     """Test an empty payload is refused: a review must say something."""
     with pytest.raises(ValueError, match="has no review content"):
-        map_from("scholarone", {})
+        codec_map_from("scholarone", {})
 
 
 def test_scholarone_text_only_payload():
     """Test a payload with only comments to the author maps with defaults."""
-    canon = map_from("scholarone", TEXT)
+    canon = codec_map_from("scholarone", TEXT)
     assert canon["target"]["identifiers"] == {}
     assert canon["target"]["work_id"] == "unknown"
     assert canon["opinion"] == {"summary": "A summary."}
@@ -309,27 +308,27 @@ def test_scholarone_text_only_payload():
 def test_scholarone_created_at_keys():
     """Test created_at is read from the alternative date keys."""
     for key in ("dateReviewReceived", "date_review_received", "reviewDate", "created_at"):
-        canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", key: "2024-12-20"})
+        canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1", key: "2024-12-20"})
         assert canon["created_at"] == "2024-12-20T00:00:00Z"
 
 
 def test_scholarone_doi_identifier():
     """Test a valid DOI becomes the primary identifier; an invalid one is ignored."""
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "doi": "10.1234/abc.5"})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1", "doi": "10.1234/abc.5"})
     assert canon["target"]["identifiers"]["doi"] == {
         "value": "10.1234/abc.5",
         "hyperlink": "https://doi.org/10.1234/abc.5",
     }
     assert canon["target"]["work_id"] == "doi:10.1234/abc.5"
 
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "doi": "not-a-doi"})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1", "doi": "not-a-doi"})
     assert "doi" not in canon["target"]["identifiers"]
     assert canon["target"]["work_id"] == "internal_id:documentId:DOC-1"
 
 
 def test_scholarone_human_referee_fields():
     """Test ORCID, name and affiliation populate human_referee."""
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {
             **TEXT,
@@ -346,7 +345,7 @@ def test_scholarone_human_referee_fields():
     }
 
     # snake_case / short alternative keys
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {
             **TEXT,
@@ -365,23 +364,23 @@ def test_scholarone_human_referee_fields():
 
 def test_scholarone_invalid_orcid_dropped():
     """Test an ORCID that does not normalize is left out of human_referee."""
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "orcid": "1234"})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-1", "orcid": "1234"})
     assert canon["referees"][0]["human_referee"] == {}
 
 
 def test_scholarone_review_id_variants():
     """Test review ID from submission ID + reviewer number, and document ID alone."""
-    canon = map_from("scholarone", {**TEXT, "submissionId": "SUB-9", "reviewerNumber": 4})
+    canon = codec_map_from("scholarone", {**TEXT, "submissionId": "SUB-9", "reviewerNumber": 4})
     assert canon["review_id"] == "s1_SUB-9_r4"
 
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-9"})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "DOC-9"})
     assert canon["review_id"] == "s1_DOC-9"
     assert canon["provenance"]["source_review_id"] == "DOC-9"
 
 
 def test_scholarone_narrative_variants():
     """Test narrative uses the first non-blank source and snake_case keys."""
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {
             "documentId": "DOC-1",
@@ -402,7 +401,7 @@ def test_scholarone_narrative_variants():
 
 def test_scholarone_narrative_first_key_wins():
     """Test commentsToAuthor takes precedence over comments_to_author."""
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {"documentId": "DOC-1", "commentsToAuthor": "Camel.", "comments_to_author": "Snake."},
     )
@@ -411,13 +410,13 @@ def test_scholarone_narrative_first_key_wins():
 
 def test_scholarone_opinion_from_summary():
     """Test opinion summary falls back to the summary field."""
-    canon = map_from("scholarone", {"documentId": "DOC-1", "summary": "Only a summary."})
+    canon = codec_map_from("scholarone", {"documentId": "DOC-1", "summary": "Only a summary."})
     assert canon["opinion"]["summary"] == "Only a summary."
 
 
 def test_scholarone_string_recommendation_code():
     """Test a non-numeric overallRecommendation adds no overall metric."""
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {
             "documentId": "DOC-1",
@@ -431,7 +430,7 @@ def test_scholarone_string_recommendation_code():
 
 def test_scholarone_overall_metric_justification():
     """Test the overall metric is inverted-normalized and carries the label."""
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {"documentId": "DOC-1", "overallRecommendation": 1, "overallRecommendationLabel": "Yes"},
     )
@@ -455,7 +454,7 @@ def test_scholarone_criteria_edge_cases():
             {"criterionName": "Bananas", "response": 2},
         ],
     }
-    canon = map_from("scholarone", payload)
+    canon = codec_map_from("scholarone", payload)
     metrics = {m["label"]: m for m in canon["metrics"]}
     assert list(metrics) == ["Novelty", "Writing Quality Score", "Bananas"]
 
@@ -478,7 +477,9 @@ def test_scholarone_criteria_edge_cases():
 
 def test_scholarone_competing_interests_none():
     """Test a bare "None" competing-interests statement is not a declaration."""
-    canon = map_from("scholarone", {**TEXT, "documentId": "DOC-1", "competingInterests": "None"})
+    canon = codec_map_from(
+        "scholarone", {**TEXT, "documentId": "DOC-1", "competingInterests": "None"}
+    )
     assert canon["referees"][0]["competing_interests_declared"] is False
     assert "competing_interests_statement" not in canon["referees"][0]
 
@@ -509,7 +510,7 @@ def _minimal_canonical(**overrides) -> dict:
 
 def test_scholarone_to_minimal():
     """Test to_scholarone on a minimal review omits optional fields."""
-    back = map_to("scholarone", _minimal_canonical())
+    back = codec_map_to("scholarone", _minimal_canonical())
     assert back == {
         "documentId": "DOC-X",
         "dateReviewReceived": "2024-12-25",
@@ -520,38 +521,42 @@ def test_scholarone_to_minimal():
 def test_scholarone_to_review_id_without_reviewer_number():
     """Test review IDs without a numeric _r suffix produce no reviewerNumber."""
     for rid in ("DOC-X", "s1_DOC_rough"):
-        back = map_to("scholarone", _minimal_canonical(review_id=rid))
+        back = codec_map_to("scholarone", _minimal_canonical(review_id=rid))
         assert "reviewerNumber" not in back
         assert back["documentId"] == "DOC-X"
 
 
 def test_scholarone_to_review_id_unprefixed_reviewer_number():
     """Test a reviewer number is parsed from a review ID without the s1_ prefix."""
-    back = map_to("scholarone", _minimal_canonical(review_id="DOC-X_r3"))
+    back = codec_map_to("scholarone", _minimal_canonical(review_id="DOC-X_r3"))
     assert back["reviewerNumber"] == 3
 
 
 def test_scholarone_to_opinion_text_fallback():
     """Test commentsToAuthor falls back to opinion.text before opinion.summary."""
     canon = _minimal_canonical(opinion={"summary": "Summary text.", "text": "Full opinion."})
-    assert map_to("scholarone", canon)["commentsToAuthor"] == "Full opinion."
+    assert codec_map_to("scholarone", canon)["commentsToAuthor"] == "Full opinion."
 
 
 def test_scholarone_to_decision_variants():
     """Test revision requirements and unmapped recommendations in to_scholarone."""
     # A review from ScholarOne without an overall score had no code: its recommendation came
     # from the label, so the label is written, and reading it gives no score it did not have
-    back = map_to("scholarone", _minimal_canonical(decision={"revision_requirement": "minor"}))
+    back = codec_map_to(
+        "scholarone", _minimal_canonical(decision={"revision_requirement": "minor"})
+    )
     assert "overallRecommendation" not in back
     assert back["overallRecommendationLabel"] == "Minor Revision"
     # From elsewhere the code says it; a label is written only when no code applies
     other = _minimal_canonical(decision={"revision_requirement": "minor"})
     other["provenance"] = {**other["provenance"], "source_system": "openreview"}
-    back = map_to("scholarone", other)
+    back = codec_map_to("scholarone", other)
     assert back["overallRecommendation"] == 2
     assert "overallRecommendationLabel" not in back
 
-    back = map_to("scholarone", _minimal_canonical(decision={"recommendation": "weak_accept"}))
+    back = codec_map_to(
+        "scholarone", _minimal_canonical(decision={"recommendation": "weak_accept"})
+    )
     assert "overallRecommendation" not in back
     assert back["overallRecommendationLabel"] == "Weak Accept"
 
@@ -581,13 +586,15 @@ def test_scholarone_to_no_comments():
 def test_scholarone_code_outside_1_to_5_is_no_recommendation():
     """The codes are lower-is-better; one outside 1-5 is unknown, not accept or reject."""
     for code in (0, 9):
-        canon = map_from("scholarone", {**TEXT, "documentId": "D", "overallRecommendation": code})
+        canon = codec_map_from(
+            "scholarone", {**TEXT, "documentId": "D", "overallRecommendation": code}
+        )
         assert "decision" not in canon
         assert canon["metrics"] == []
 
 
 def test_scholarone_unknown_code_falls_back_to_the_label():
-    canon = map_from(
+    canon = codec_map_from(
         "scholarone",
         {"documentId": "D", "overallRecommendation": 9, "overallRecommendationLabel": "Reject"},
     )
@@ -601,7 +608,7 @@ def test_scholarone_empty_or_short_criterion_names_are_other():
         {"criterionName": "a", "response": 3},
         {"criterionName": "Originality of the work", "response": 0},
     ]
-    canon = map_from("scholarone", {"documentId": "D", "criteriaResponses": criteria})
+    canon = codec_map_from("scholarone", {"documentId": "D", "criteriaResponses": criteria})
     assert [(m["key"], m["value"]) for m in canon["metrics"]] == [
         ("other", 3),
         ("other", 3),
@@ -610,10 +617,10 @@ def test_scholarone_empty_or_short_criterion_names_are_other():
 
 
 def test_scholarone_reviewer_number_zero_is_kept():
-    canon = map_from("scholarone", {**TEXT, "documentId": "D", "reviewerNumber": 0})
+    canon = codec_map_from("scholarone", {**TEXT, "documentId": "D", "reviewerNumber": 0})
     assert canon["referees"][0]["referee_id"] == "reviewer_0"
     assert canon["review_id"].endswith("D_r0")
-    assert map_to("scholarone", canon)["reviewerNumber"] == 0
+    assert codec_map_to("scholarone", canon)["reviewerNumber"] == 0
 
 
 def test_a_recommendation_ocrs_cannot_name_goes_back_in_its_words():

@@ -6,9 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import narrative_fields
+from conftest import codec_map_from, codec_map_to, codec_validate, narrative_fields
 
-from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.cmt import from_cmt, to_cmt
 from ocrs.util import narrative_text
 
@@ -26,8 +25,8 @@ def load_fixture(name: str) -> dict:
 def test_cmt_minimal():
     """Test minimal CMT review conversion."""
     payload = load_fixture("minimal_review.json")
-    canon = map_from("cmt", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("cmt", payload)
+    codec_validate(canon)
 
     assert canon["provenance"]["source_system"] == "cmt"
     assert canon["target"]["work_id"] == "internal_id:paperId:42"
@@ -37,8 +36,8 @@ def test_cmt_minimal():
 def test_cmt_realistic():
     """Test realistic CMT review with all fields."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("cmt", payload, keep_raw=True)
-    validate_canonical(canon)
+    canon = codec_map_from("cmt", payload, keep_raw=True)
+    codec_validate(canon)
 
     # Check basic structure
     assert canon["provenance"]["source_system"] == "cmt"
@@ -75,7 +74,7 @@ def test_cmt_identifiers_extraction():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     # Check identifiers are populated
     identifiers = canon["target"]["identifiers"]
@@ -97,7 +96,7 @@ def test_cmt_identifiers_without_doi():
         "commentsToAuthors": "Good paper.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     identifiers = canon["target"]["identifiers"]
     assert "doi" not in identifiers
@@ -115,7 +114,7 @@ def test_cmt_identifiers_invalid_doi():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     identifiers = canon["target"]["identifiers"]
     assert "doi" not in identifiers
@@ -134,7 +133,7 @@ def test_cmt_human_referee_orcid():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["orcid"] == "0000-0001-5000-0007"
@@ -152,7 +151,7 @@ def test_cmt_human_referee_orcid_url_format():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["orcid"] == "0000-0001-5000-0007"
@@ -169,7 +168,7 @@ def test_cmt_human_referee_invalid_orcid():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     human_referee = canon["referees"][0]["human_referee"]
     assert "orcid" not in human_referee  # Invalid ORCID should be excluded
@@ -187,7 +186,7 @@ def test_cmt_human_referee_alternative_field_names():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     human_referee = canon["referees"][0]["human_referee"]
     assert human_referee["name"] == "Prof. John Doe"
@@ -203,7 +202,7 @@ def test_cmt_work_id_from_submission_id():
         "commentsToAuthors": "Test review.",
     }
     canon = from_cmt(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     assert canon["target"]["work_id"] == "internal_id:paperId:SUB-2024-001"
     assert canon["target"]["identifiers"]["internal_id"]["value"] == "SUB-2024-001"
@@ -212,10 +211,10 @@ def test_cmt_work_id_from_submission_id():
 def test_cmt_to_and_back():
     """Test roundtrip conversion (lossy)."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("cmt", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("cmt", payload)
+    codec_validate(canon)
 
-    back = map_to("cmt", canon)
+    back = codec_map_to("cmt", canon)
 
     # Verify basic structure preserved
     assert back.get("paperId") == 2847  # a number, as CMT gives it
@@ -262,12 +261,12 @@ def test_cmt_to_stub():
 def test_cmt_without_paper_id_or_text():
     """Test that a CMT row with no text, recommendation or scores is refused."""
     with pytest.raises(ValueError, match="has no review content"):
-        map_from("cmt", {"reviewId": "r1"})
+        codec_map_from("cmt", {"reviewId": "r1"})
 
 
 def test_cmt_without_paper_id():
     """Test a CMT row with only a summary: no paper ID, decision or metrics."""
-    canon = map_from("cmt", {"reviewId": "r1", "summary": "A summary."})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "summary": "A summary."})
 
     assert canon["target"]["identifiers"] == {}
     assert canon["target"]["work_id"] == "unknown"
@@ -280,7 +279,7 @@ def test_cmt_without_paper_id():
 
 def test_cmt_id_and_created_at_fallbacks():
     """Test the id fallback for the review ID and a non-string createdAt."""
-    canon = map_from(
+    canon = codec_map_from(
         "cmt", {"id": 7, "paperId": 1, "createdAt": 1735689600, "reviewerId": 99, **TEXT}
     )
 
@@ -299,7 +298,7 @@ def test_cmt_review_text_fallback_sets_opinion():
         "reviewText": "  First paragraph.\n\nSecond paragraph.  ",
         "commentsToChairs": " Possible overlap with prior work. ",
     }
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
 
     assert canon["opinion"]["summary"] == "First paragraph."
     assert narrative_fields(canon) == {
@@ -311,35 +310,39 @@ def test_cmt_review_text_fallback_sets_opinion():
 def test_cmt_summary_wins_over_review_text_for_opinion():
     """Test that the summary, not the review text, is the opinion when both exist."""
     payload = {"reviewId": "r1", "paperId": 1, "summary": "Short.", "commentsToAuthors": "Long."}
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
     assert canon["opinion"]["summary"] == "Short."
     assert narrative_text(canon, "review") == "Long."
 
 
 def test_cmt_text_recommendation():
     """Test that a text-only recommendation maps without an overall metric."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Weak Reject"})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Weak Reject"})
     assert canon["decision"] == {"recommendation": "weak_reject", "source_label": "Weak Reject"}
     assert canon["metrics"] == []
 
 
 def test_cmt_unrecognized_text_recommendation_is_borderline():
     """Test that unmapped recommendation text defaults to borderline."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Unsure"})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": "Unsure"})
     # The words are kept, though they say no recommendation OCRS knows
     assert canon["decision"] == {"recommendation": "borderline", "source_label": "Unsure"}
 
 
 def test_cmt_non_text_recommendation_is_ignored():
     """Test that a recommendation that is neither a number nor text adds no decision."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "recommendation": ["Accept"], **TEXT})
+    canon = codec_map_from(
+        "cmt", {"reviewId": "r1", "paperId": 1, "recommendation": ["Accept"], **TEXT}
+    )
     assert "decision" not in canon
     assert canon["metrics"] == []
 
 
 def test_cmt_recommendation_text_wins_over_number():
     """Test that the label after the score decides the CMT recommendation."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": "3: Reject"})
+    canon = codec_map_from(
+        "cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": "3: Reject"}
+    )
     assert canon["decision"]["recommendation"] == "reject"
     overall = canon["metrics"][0]
     assert overall["value"] == 3
@@ -348,13 +351,13 @@ def test_cmt_recommendation_text_wins_over_number():
 
 def test_cmt_bare_number_recommendation():
     """Test that a bare score maps through the numeric rubric."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": 9})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": 9})
     assert canon["decision"]["recommendation"] == "strong_accept"
 
 
 def test_cmt_unmappable_number_recommendation_is_borderline():
     """Test that a score on an unknown scale is borderline with an unnormalized metric."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": 42})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "paperId": 1, "overallEvaluation": 42})
     assert canon["decision"]["recommendation"] == "borderline"
     overall = canon["metrics"][0]
     assert overall["scale"] == {"type": "interval"}
@@ -364,14 +367,14 @@ def test_cmt_unmappable_number_recommendation_is_borderline():
 def test_cmt_revision_recommendation_is_a_revision_requirement():
     """Test that a revision recommendation becomes a revision requirement."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Major revision"}
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
     assert canon["decision"] == {"revision_requirement": "major", "source_label": "Major revision"}
 
 
 def test_cmt_confidence_ratio():
     """Test that a 0-1 confidence becomes the decision's credence."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Accept", "confidence": 0.8}
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
     assert canon["decision"] == {
         "recommendation": "accept",
         "source_label": "Accept",
@@ -384,7 +387,7 @@ def test_cmt_confidence_ratio():
 
 def test_cmt_non_numeric_confidence_is_ignored():
     """Test that text-only confidence adds neither a metric nor a decision."""
-    canon = map_from("cmt", {"reviewId": "r1", "paperId": 1, "confidence": "high", **TEXT})
+    canon = codec_map_from("cmt", {"reviewId": "r1", "paperId": 1, "confidence": "high", **TEXT})
     assert canon["metrics"] == []
     assert "decision" not in canon
 
@@ -392,7 +395,7 @@ def test_cmt_non_numeric_confidence_is_ignored():
 def test_cmt_unbounded_confidence_has_no_decision_confidence():
     """Test that confidence on an unknown scale is kept only as a raw metric."""
     payload = {"reviewId": "r1", "paperId": 1, "recommendation": "Accept", "confidence": 50}
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
     assert canon["decision"] == {"recommendation": "accept", "source_label": "Accept"}
     conf = canon["metrics"][0]
     assert conf["value"] == 50
@@ -408,7 +411,7 @@ def test_cmt_extra_metrics():
         "word_count": 1200,
         "ethicsFlag": "No",
     }
-    canon = map_from("cmt", payload)
+    canon = codec_map_from("cmt", payload)
     by_label = {m["label"]: m for m in canon["metrics"]}
 
     assert by_label["originality"]["key"] == "novelty"
@@ -441,7 +444,7 @@ def cmt_canonical(**fields) -> dict:
         "opinion": {"summary": "Good paper."},
     }
     canon.update(fields)
-    validate_canonical(canon)
+    codec_validate(canon)
     return canon
 
 
@@ -487,7 +490,7 @@ def test_to_cmt_metrics():
     assert back["confidence"] == 3
     # A review read from CMT gives its other scores under their own names
     assert back["Novelty"] == 2
-    assert map_from("cmt", back)["decision"]["recommendation"] == "accept"
+    assert codec_map_from("cmt", back)["decision"]["recommendation"] == "accept"
 
 
 def test_to_cmt_revision_requirement_labels_the_score():
@@ -504,14 +507,14 @@ def test_to_cmt_revision_requirement_labels_the_score():
     assert "recommendation" not in back
     assert back["overallEvaluation"] == "6: Minor Revision"
 
-    again = map_from("cmt", back)
+    again = codec_map_from("cmt", back)
     assert again["decision"] == {"revision_requirement": "minor"}
     assert again["metrics"][0]["value"] == 6
 
 
 def test_cmt_identifiers_and_dates_are_not_scores():
     """A DOI, an ORCID or a paper ID starts with digits but is never a metric."""
-    canon = map_from(
+    canon = codec_map_from(
         "cmt",
         {
             "reviewId": "r",
@@ -526,19 +529,19 @@ def test_cmt_identifiers_and_dates_are_not_scores():
 
 
 def test_cmt_a_zero_score_is_a_score():
-    canon = map_from("cmt", {"reviewId": 0, "paperId": 1, "overallEvaluation": 0})
+    canon = codec_map_from("cmt", {"reviewId": 0, "paperId": 1, "overallEvaluation": 0})
     assert canon["review_id"] == "0"
     assert canon["provenance"]["source_review_id"] == "0"
     assert [m["value"] for m in canon["metrics"] if m["key"] == "overall"] == [0]
 
 
 def test_cmt_booleans_are_not_scores():
-    canon = map_from("cmt", {"reviewId": "r", "paperId": 1, "conflict": True, **TEXT})
+    canon = codec_map_from("cmt", {"reviewId": "r", "paperId": 1, "conflict": True, **TEXT})
     assert canon["metrics"] == []
 
 
 def test_cmt_timestamps_are_not_scores():
-    canon = map_from(
+    canon = codec_map_from(
         "cmt",
         {
             "reviewId": "r",
@@ -554,7 +557,7 @@ def test_cmt_timestamps_are_not_scores():
 
 
 def test_cmt_field_names_match_aliases_by_whole_words():
-    canon = map_from("cmt", {"reviewId": "r", "paperId": 1, "soundness_score": 3, "ab": 2})
+    canon = codec_map_from("cmt", {"reviewId": "r", "paperId": 1, "soundness_score": 3, "ab": 2})
     assert [(m["label"], m["key"]) for m in canon["metrics"]] == [
         ("soundness score", "correctness"),
         ("ab", "other"),
@@ -562,7 +565,7 @@ def test_cmt_field_names_match_aliases_by_whole_words():
 
 
 def test_cmt_a_boolean_score_does_not_hide_the_recommendation():
-    canon = map_from(
+    canon = codec_map_from(
         "cmt",
         {"reviewId": "r", "paperId": 1, "overallEvaluation": False, "recommendation": "Accept"},
     )
@@ -570,7 +573,7 @@ def test_cmt_a_boolean_score_does_not_hide_the_recommendation():
 
 
 def test_cmt_ids_and_times_set_off_by_separators_are_not_scores():
-    canon = map_from(
+    canon = codec_map_from(
         "cmt",
         {"reviewId": "r", "paperId": 1, "paper-id": 5, "Paper ID": 6, "CREATED_AT": 7, "valid": 3},
     )
@@ -578,7 +581,7 @@ def test_cmt_ids_and_times_set_off_by_separators_are_not_scores():
 
 
 def test_text_for_the_other_reviewers_is_not_sent_to_the_authors():
-    canon = map_from("cmt", load_fixture("minimal_review.json"))
+    canon = codec_map_from("cmt", load_fixture("minimal_review.json"))
     canon["narrative"] = [
         {"role": "review", "audience": "reviewers", "content": "Between us reviewers."},
         {"role": "review", "content": "For the authors."},
@@ -587,7 +590,7 @@ def test_text_for_the_other_reviewers_is_not_sent_to_the_authors():
 
 
 def test_every_part_that_is_the_review_goes_in_the_comments():
-    canon = map_from("cmt", load_fixture("minimal_review.json"))
+    canon = codec_map_from("cmt", load_fixture("minimal_review.json"))
     canon["narrative"] = [
         {"role": "review", "content": "First report."},
         {"role": "review", "audience": "public", "content": "Second report."},

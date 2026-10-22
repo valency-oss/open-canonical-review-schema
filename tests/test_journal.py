@@ -7,9 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from conftest import narrative_fields
+from conftest import codec_map_from, codec_map_to, narrative_fields
 
-from ocrs import map_from, map_to
 from ocrs.mappers.journal import to_journal_narrative
 from ocrs.util import narrative_text
 
@@ -30,7 +29,7 @@ class TestFromJournalNarrative:
     def test_minimal_fixture(self):
         """The fixture maps DOI, venue, opinion and narrative."""
         payload = load_fixture("minimal_review.json")
-        canon = map_from("journal_narrative", payload)
+        canon = codec_map_from("journal_narrative", payload)
         assert canon["provenance"]["source_system"] == "journal_narrative"
         assert canon["target"]["work_id"] == "doi:10.5555/12345678"
         assert canon["target"]["venue"] == "Journal of Tests"
@@ -52,7 +51,7 @@ class TestFromJournalNarrative:
             "venue": "Example Letters",
             "full_text": "  Short review.  ",
         }
-        canon = map_from("journal_narrative", payload, keep_raw=True)
+        canon = codec_map_from("journal_narrative", payload, keep_raw=True)
         assert canon["review_id"] == "rev-1"
         assert canon["created_at"] == "2024-03-01T12:00:00Z"
         assert canon["provenance"]["source_review_id"] == "src-1"
@@ -67,19 +66,19 @@ class TestFromJournalNarrative:
 
     def test_id_fallback(self):
         """id is used for review_id and source_review_id when they are missing."""
-        canon = map_from("journal_narrative", {**TEXT, "id": 42, "journal": "J"})
+        canon = codec_map_from("journal_narrative", {**TEXT, "id": 42, "journal": "J"})
         assert canon["review_id"] == "42"
         assert canon["provenance"]["source_review_id"] == "42"
 
     def test_no_ids_generates_review_id(self):
         """Without any id a UUID review_id is generated."""
-        canon = map_from("journal_narrative", {**TEXT, "journal": "J"})
+        canon = codec_map_from("journal_narrative", {**TEXT, "journal": "J"})
         assert len(canon["review_id"]) == 36
         assert canon["provenance"]["source_review_id"] == ""
 
     def test_work_id_fallback_and_invalid_doi(self):
         """An invalid DOI is ignored and a non-string work_id becomes internal_id."""
-        canon = map_from(
+        canon = codec_map_from(
             "journal_narrative", {**TEXT, "doi": "nope", "work_id": 17, "journal": "J"}
         )
         assert canon["target"]["identifiers"] == {
@@ -89,14 +88,14 @@ class TestFromJournalNarrative:
 
     def test_no_identifiers(self):
         """Without DOI, manuscript_id or work_id the work is unknown."""
-        canon = map_from("journal_narrative", {**TEXT, "journal": "J"})
+        canon = codec_map_from("journal_narrative", {**TEXT, "journal": "J"})
         assert canon["target"]["identifiers"] == {}
         assert canon["target"]["work_id"] == "unknown"
 
     def test_blank_text_and_non_string_fields(self):
         """Blank text is no review content, so the review is refused."""
         with pytest.raises(ValueError, match="has no review content"):
-            map_from(
+            codec_map_from(
                 "journal_narrative",
                 {"journal": "J", "created_at": 1700000000, "full_text": "  \n  "},
             )
@@ -104,14 +103,16 @@ class TestFromJournalNarrative:
     def test_non_string_created_at_is_replaced(self):
         """A non-string created_at is replaced with the import time."""
         before = datetime.now(UTC)
-        canon = map_from("journal_narrative", {**TEXT, "journal": "J", "created_at": 1700000000})
+        canon = codec_map_from(
+            "journal_narrative", {**TEXT, "journal": "J", "created_at": 1700000000}
+        )
         created = datetime.fromisoformat(canon["created_at"].replace("Z", "+00:00"))
         assert before <= created <= datetime.now(UTC)
 
     def test_non_string_full_text_ignored(self):
         """A non-string full_text is treated as empty, so the review is refused."""
         with pytest.raises(ValueError, match="has no review content"):
-            map_from("journal_narrative", {"journal": "J", "full_text": ["a"]})
+            codec_map_from("journal_narrative", {"journal": "J", "full_text": ["a"]})
 
 
 class TestToJournalNarrative:
@@ -172,7 +173,7 @@ class TestToJournalNarrative:
     def test_roundtrip(self):
         """DOI, venue, review_id and text survive a from/to round trip."""
         payload = load_fixture("minimal_review.json") | {"review_id": "rt-1"}
-        back = map_to("journal_narrative", map_from("journal_narrative", payload))
+        back = codec_map_to("journal_narrative", codec_map_from("journal_narrative", payload))
         assert back["doi"] == payload["doi"]
         assert back["journal"] == payload["journal"]
         assert back["review_id"] == "rt-1"
@@ -180,10 +181,12 @@ class TestToJournalNarrative:
 
 
 def test_without_a_journal_there_is_no_venue():
-    canon = map_from("journal_narrative", {"doi": "10.1234/abc", "full_text": "Fine."})
+    canon = codec_map_from("journal_narrative", {"doi": "10.1234/abc", "full_text": "Fine."})
     assert "venue" not in canon["target"]
 
 
 def test_a_numeric_reviewer_id_is_kept_as_text():
-    canon = map_from("journal_narrative", {"journal": "J", "reviewer_id": 5, "full_text": "Ok."})
+    canon = codec_map_from(
+        "journal_narrative", {"journal": "J", "reviewer_id": 5, "full_text": "Ok."}
+    )
     assert canon["referees"][0]["referee_id"] == "5"

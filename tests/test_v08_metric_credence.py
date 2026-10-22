@@ -5,8 +5,7 @@
 import jsonschema
 import pytest
 from jsonschema import Draft202012Validator
-
-from ocrs import load_schema
+from v08_schema import load_schema
 
 
 def validate_metric(uncertainty):

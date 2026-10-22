@@ -4,8 +4,7 @@
 
 import jsonschema
 import pytest
-
-from ocrs import map_from, map_to, validate_canonical
+from conftest import codec_map_from, codec_map_to, codec_validate
 
 
 @pytest.fixture
@@ -26,24 +25,24 @@ def test_acceptance_and_revision_are_independent(review, revision):
     review["decision"] = {"recommendation": "weak_accept"}
     if revision is not None:
         review["decision"]["revision_requirement"] = revision
-    validate_canonical(review)
+    codec_validate(review)
     if revision is not None:
         review["decision"].pop("recommendation")
-        validate_canonical(review)
+        codec_validate(review)
 
 
 @pytest.mark.parametrize("recommendation", ["revise", "minor_revision", "major_revision"])
 def test_revision_is_no_longer_an_acceptance_recommendation(review, recommendation):
     review["decision"] = {"recommendation": recommendation}
     with pytest.raises(jsonschema.ValidationError):
-        validate_canonical(review)
+        codec_validate(review)
 
 
 @pytest.mark.parametrize("revision", ["no_revision", "unknown", "minor_revision", False])
 def test_invalid_revision_requirement_is_rejected(review, revision):
     review["decision"] = {"revision_requirement": revision}
     with pytest.raises(jsonschema.ValidationError):
-        validate_canonical(review)
+        codec_validate(review)
 
 
 @pytest.mark.parametrize(
@@ -64,11 +63,11 @@ def test_revision_only_decisions_roundtrip(system, field, label, revision):
     payload = {field: label}
     if system == "openreview":
         payload = {"content": payload}
-    canonical = map_from(system, payload)
-    validate_canonical(canonical)
+    canonical = codec_map_from(system, payload)
+    codec_validate(canonical)
     assert canonical["decision"] == {"revision_requirement": revision, "source_label": label}
-    restored = map_from(system, map_to(system, canonical))
-    validate_canonical(restored)
+    restored = codec_map_from(system, codec_map_to(system, canonical))
+    codec_validate(restored)
     assert restored["decision"] == canonical["decision"]
 
 
@@ -85,7 +84,7 @@ def test_single_field_export_prioritizes_requested_revision(review, system):
             "value": 4,
         }
     ]
-    restored = map_from(system, map_to(system, review))
+    restored = codec_map_from(system, codec_map_to(system, review))
     assert restored["decision"]["revision_requirement"] == "minor"
 
 
@@ -94,5 +93,5 @@ def test_single_field_export_prioritizes_requested_revision(review, system):
 )
 def test_no_revision_export_retains_acceptance(review, system):
     review["decision"] = {"recommendation": "accept", "revision_requirement": "none"}
-    restored = map_from(system, map_to(system, review))
+    restored = codec_map_from(system, codec_map_to(system, review))
     assert restored["decision"]["recommendation"] == "accept"

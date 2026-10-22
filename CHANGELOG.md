@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.9.0
+
+A breaking release that organizes review content as a hierarchy. Opinion and metrics
+summarize the review; findings give its points; claims and check results give derived
+material; shared evidence pointers identify source passages. Links are review-local IDs,
+stored in one direction. Published earlier schemas remain unchanged.
+
+### Schema and migration
+
+- `review_context.metric_schemas` stores source forms and metric definitions once.
+  A metric has an `id`, `definition_ref: {schema_id, key}` and original `value`, with
+  optional normalization, uncertainty, source answer and `supported_by` finding IDs.
+  Move the old `key`, `label`, `aspect` and `scale` into a definition; `aspect` becomes
+  `dimension`. The old catalog reference belongs to the source form. Do not invent
+  missing rubric metadata or normalize without recording the method.
+- `target.artifacts[]` identifies associated materials with IDs, types and optional
+  locations, versions, hashes and reported availability. Examinations belong in checks;
+  evaluations belong in findings. An unavailable artifact needs no invented URL.
+- `opinion` holds `summary`, `stance`, optional `decision`, `metric_refs` and optional
+  `supported_by`. Move top-level `decision` here and rename `summary_rationale` to
+  `rationale`. Direct opinion support is independent of each metric's support.
+- `findings` retains five separate arrays: strengths, weaknesses, questions, comments
+  and changes. Addressable records require IDs. Weaknesses and changes share severity;
+  classify topics, including ethics, with `tags` instead of `scope`. Changes may
+  `addresses` other points; OR alternatives that are sufficient individually stay in
+  one change. Findings use typed `about` references to claims, contributions, checks or
+  individual results. There are no finding-to-finding reasoning links or inverse lists.
+- `work_summary` holds a neutral `summary`, descriptive `contributions` and extracted
+  `claims`. Move opinion contributions here. Claim assessments become extracted claims
+  and source-stated findings; extraction alone does not endorse a claim. Claim-truth
+  probabilities must not become probabilities of an unsupportedness judgment.
+- Checks separate execution from outcome. `results[]` holds source statuses, notes,
+  raw `data` and evidence pointers. Move old items and measurements here; reverse
+  `finding_ids` become finding `about` references. Checks have no metric references or
+  second evidence list. Raw measurements remain separate from assessment metrics.
+- Shared `uncertainty` has finding `probability` or metric `interval`, never both,
+  with optional `credence` and `rationale`. Finding credence requires its probability.
+  Bounds and intervals are checked on the original metric scale. Reviewer confidence
+  is distinct from converter confidence.
+- Shared evidence links use `resource`, optional `version`, `location` and `quote`.
+  Resource kinds are work, review, artifact and external. Locations include named
+  pages, page ranges, sections, figures, tables, equations, line ranges and text anchors.
+  Positional `span: {text_ref, start, end}` uses zero-based Unicode code points with an
+  exclusive end, relative to one exact stored text representation. Page and section
+  never reset the origin. Pass `text_sources` to validation to check bounds and quotes.
+- Dedicated `claim_assessments`, `artifact_assessments` and `ethics_and_risk` sections
+  are replaced by the common records above. No ethics finding is not a declaration
+  that the reviewer found no concerns.
+
+`ocrs.migrate.migrate(review)` converts 0.7 and 0.8 records without changing its input,
+assigns the current `$schema` and is idempotent. Fields without a faithful new home stay
+in `extensions.ocrs_0_8`, with compact source-conversion metadata. In particular,
+claim-local ratings do not silently become work-wide metrics, and numeric scores do
+not cause invented supporting findings. Ambiguous old overview text is retained
+verbatim; migration does not semantically rewrite a review.
+
+### Python package
+
+- Public imports and exports use 0.9 records. Existing source-specific codecs use a
+  private compatibility projection; mapping records point into the current hierarchy.
+- Validation checks global IDs, reference types, definition resolution, original scale
+  values and bounds, intervals, source ranges and optional text-span resolution.
+  Allowed link directions make the semantic graph acyclic without reciprocal edges.
+- Tests cover the discussed adversarial cases, current-record round trips through the
+  real-review corpus, migration, Unicode spans, original source fields and examples.
+  Historical 0.8 field-contract tests remain against its immutable published schema.
+- The package, versioned schema, examples, README and citation are updated together.
+
 ## 0.8.0
 
 A breaking release that makes the schema simpler. One shape of point replaces three, the

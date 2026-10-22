@@ -32,6 +32,7 @@ from pydantic import JsonValue
 
 from ..anchors import Block, BlockKind, find_quote
 from ..gaps import count_unmapped, generic_path, leftover, unfilled_paths
+from ..hierarchy import remap_path, upgrade_content
 from ..identifiers import generate_canonical_work_id
 from ..mapping import (
     Coercion,
@@ -619,6 +620,13 @@ def finish(
     left = leftover(output, recorder.read, ignored, generic)
     if left:
         review["extensions"] = {framework: left}
+    moves: dict[str, str] = {}
+    review = upgrade_content(review, moves)
+
+    for step in recorder.steps:
+        step.target = remap_path(step.target, moves)
+    for coercion in recorder.coerced:
+        coercion.target = remap_path(coercion.target, moves)
     require_content(review, framework)
     validate_canonical(review)
     gaps = Gaps(

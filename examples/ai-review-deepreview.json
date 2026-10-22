@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
   "review_id": "deepreview-cold-storage-1",
   "version": "1.0.0",
   "created_at": "2026-10-15T18:05:00Z",
@@ -52,51 +52,53 @@
     "weaknesses": [
       {
         "id": "weakness-1",
-        "text": "The alternating even/odd calendar-day data split places 71 of the 93 scored test days directly between adjacent development days (and interleaves validation days with test days), which risks leakage across multi-day heat waves and weekly delivery cycles; the authors might evaluate a contiguous multi-week block split with buffer days removed at its edges, or stratify test results by how many neighboring days sit in the development pool.",
-        "summarizes": [
-          "issue-2.1.2"
-        ]
+        "text": "The alternating even/odd calendar-day data split places 71 of the 93 scored test days directly between adjacent development days (and interleaves validation days with test days), which risks leakage across multi-day heat waves and weekly delivery cycles; the authors might evaluate a contiguous multi-week block split with buffer days removed at its edges, or stratify test results by how many neighboring days sit in the development pool."
       },
       {
         "id": "weakness-2",
-        "text": "There are internal inconsistencies and missing definitions in the preprocessing and evaluation descriptions—most notably two incompatible accounts of the CTA Gaussian smoothing ($\\sigma = 2.5$ bay pitches on only the final sweep and the target versus $\\sigma = 6$ grid cells on every sweep), disagreements between the prose and Table 1 on yard-feed normalizations, and a missing $L_1$ formula for the mean absolute recovery-energy error (MARE), whose place in Equation 11 is taken by a repeat of the $L_2$ training loss.",
-        "summarizes": []
+        "text": "There are internal inconsistencies and missing definitions in the preprocessing and evaluation descriptions—most notably two incompatible accounts of the CTA Gaussian smoothing ($\\sigma = 2.5$ bay pitches on only the final sweep and the target versus $\\sigma = 6$ grid cells on every sweep), disagreements between the prose and Table 1 on yard-feed normalizations, and a missing $L_1$ formula for the mean absolute recovery-energy error (MARE), whose place in Equation 11 is taken by a repeat of the $L_2$ training loss."
       },
       {
         "id": "weakness-3",
-        "text": "In the 30–60 minute ablations (Table 4), removing the ceiling array entirely (`No CTA`) gives a slightly lower missed-warm rate and load MSE than the full model, which suggests that tying the shared decoder to the last observed bay temperature $\\theta_0$ carries stale local state once the warm air has moved on; the model also loses to plain persistence in quiet periods, and a lead-dependent decay on $\\theta_0$ or a better-conditioned gate could help.",
-        "summarizes": [
-          "issue-4.1.1"
-        ]
+        "text": "In the 30–60 minute ablations (Table 4), removing the ceiling array entirely (`No CTA`) gives a slightly lower missed-warm rate and load MSE than the full model, which suggests that tying the shared decoder to the last observed bay temperature $\\theta_0$ carries stale local state once the warm air has moved on; the model also loses to plain persistence in quiet periods, and a lead-dependent decay on $\\theta_0$ or a better-conditioned gate could help."
       },
       {
         "id": "weakness-4",
         "text": "Several architectural and training details needed for reproducibility and a fair comparison with baselines are underspecified, including missing citations for the graph and thermal models the method builds on (Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018; Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020), withholding the coordinate and difference channels from the `GraphGRU` and `StackTCN` baselines, reading decoder query metadata from a matched future 20-minute target sweep, and leaving out the promised \"shift-balanced sampler\" and \"setpoint-prior initialization.\"",
         "evidence_links": [
           {
-            "type": "external",
-            "ref": "Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018",
-            "work": {
-              "title": "Message Passing on Floor-Plan Graphs for Indoor Climate Prediction",
-              "authors": [
-                "Halvorsen et al."
-              ],
-              "year": 2018
+            "resource": {
+              "type": "external",
+              "ref": "Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018",
+              "work": {
+                "title": "Message Passing on Floor-Plan Graphs for Indoor Climate Prediction",
+                "authors": [
+                  "Halvorsen et al."
+                ],
+                "year": 2018
+              }
+            },
+            "location": {
+              "label": "Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018"
             }
           },
           {
-            "type": "external",
-            "ref": "Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020",
-            "work": {
-              "title": "Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration",
-              "authors": [
-                "Vasquez-Thorne et al."
-              ],
-              "year": 2020
+            "resource": {
+              "type": "external",
+              "ref": "Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020",
+              "work": {
+                "title": "Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration",
+                "authors": [
+                  "Vasquez-Thorne et al."
+                ],
+                "year": 2020
+              }
+            },
+            "location": {
+              "label": "Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020"
             }
           }
-        ],
-        "summarizes": []
+        ]
       },
       {
         "id": "issue-1.1.1",
@@ -108,35 +110,42 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Section 1.2, Pages 3–4",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 3,
               "page_end": 4,
-              "section": "1.2"
+              "section": "1.2",
+              "label": "Section 1.2, Pages 3–4"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "Section 1.5, Page 6",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 6,
-              "section": "1.5"
+              "section": "1.5",
+              "label": "Section 1.5, Page 6"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "For doors $2\\text{–}9\\text{ m}$ wide, the warm plume reaches about $6\\text{–}20\\text{ m}$ past the scored-zone boundary. At front speeds of $3.0\\text{–}4.2\\text{ m min}^{-1}$ it crosses that zone in about $2\\text{–}6\\text{ min}$."
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "Measured from the door line instead, the same plumes reach about $4\\text{–}27\\text{ m}$ into the hall."
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "Past the scored-zone boundary the reach is about $2.2$ times the door width. Over the logged weeks the median door width in use is $2.8\\text{ m}$, with the 10th–90th percentile at $1.4\\text{–}9.0\\text{ m}$. The reach past the boundary is then about $6\\text{–}20\\text{ m}$. From the door line, where the factor is $3.0$, the same doors give about $4\\text{–}27\\text{ m}$."
           }
         ],
@@ -151,16 +160,19 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Abstract (Page 1)",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 1,
-              "section": "Abstract"
+              "section": "Abstract",
+              "label": "Abstract (Page 1)"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "We estimate the optimistic order-of-magnitude saving in BCSD refrigeration energy to be between $0.4\\%$ and $2.1\\%$,"
           }
         ],
@@ -175,25 +187,20 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Section 1.3 (Page 5)",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 5,
-              "section": "1.3"
+              "section": "1.3",
+              "label": "Section 1.3 (Page 5)"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "The rule-based door controller now used by DockPlan, described in,$^{21}$ applies a similar event-triggered load model,"
-          }
-        ],
-        "suggested_edits": [
-          {
-            "replacement": "described in Ref. 21,"
-          },
-          {
-            "replacement": "described by Marchetti,$^{21}$"
           }
         ],
         "severity": "minor"
@@ -208,12 +215,22 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Sections 2.1, 2.3, 3.1, 4.2, and 5"
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.1, 2.3, 3.1, 4.2, and 5",
+              "section": "Sections 2.1, 2.3, 3.1, 4.2, and 5"
+            }
           },
           {
-            "type": "paper_section",
-            "ref": "Pages 8–12, 25–26, 32–33"
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 8–12, 25–26, 32–33",
+              "section": "Pages 8–12, 25–26, 32–33"
+            }
           }
         ],
         "severity": "major"
@@ -227,22 +244,20 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Page 12, Section 2.3",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 12,
-              "section": "2.3"
+              "section": "2.3",
+              "label": "Page 12, Section 2.3"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "...humidity is scaled by $[0, 100]/100$..."
-          }
-        ],
-        "suggested_edits": [
-          {
-            "replacement": "clipped to $[0, 100]$ and divided by $100$"
           }
         ],
         "severity": "minor"
@@ -257,45 +272,54 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Section 3.1, pp. 25–27",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 25,
               "page_end": 27,
-              "section": "3.1"
+              "section": "3.1",
+              "label": "Section 3.1, pp. 25–27"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "Section 3.2, pp. 28–30, Table 4",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 28,
               "page_end": 30,
-              "section": "3.2"
+              "section": "3.2",
+              "label": "Section 3.2, pp. 28–30, Table 4"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "Section 4.2, pp. 31–32",
+            "resource": {
+              "type": "work"
+            },
             "location": {
               "page": 31,
               "page_end": 32,
-              "section": "4.2"
+              "section": "4.2",
+              "label": "Section 4.2, pp. 31–32"
             }
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "the ceiling array can raise the long-lead error"
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "forcing the decoder through a one-hour sensor history."
           },
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "a quiet bay can stay on its measured temperature."
           }
         ],
@@ -327,5 +351,50 @@
         }
       }
     }
-  ]
+  ],
+  "extensions": {
+    "ocrs_0_8": {
+      "fields": [
+        {
+          "path": "findings.weaknesses[0].summarizes",
+          "value": [
+            "issue-2.1.2"
+          ]
+        },
+        {
+          "path": "findings.weaknesses[1].summarizes",
+          "value": []
+        },
+        {
+          "path": "findings.weaknesses[2].summarizes",
+          "value": [
+            "issue-4.1.1"
+          ]
+        },
+        {
+          "path": "findings.weaknesses[3].summarizes",
+          "value": []
+        },
+        {
+          "path": "findings.weaknesses[6].suggested_edits",
+          "value": [
+            {
+              "replacement": "described in Ref. 21,"
+            },
+            {
+              "replacement": "described by Marchetti,$^{21}$"
+            }
+          ]
+        },
+        {
+          "path": "findings.weaknesses[8].suggested_edits",
+          "value": [
+            {
+              "replacement": "clipped to $[0, 100]$ and divided by $100$"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }

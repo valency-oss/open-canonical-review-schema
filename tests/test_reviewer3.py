@@ -5,8 +5,9 @@
 from pathlib import Path
 
 import pytest
+from conftest import codec_map_from, codec_map_with_record, codec_validate
 
-from ocrs import map_from, map_with_record, supported_sources, validate_canonical
+from ocrs import supported_sources
 from ocrs.mapping import MappingStatus, Rule
 
 REPORT = (Path(__file__).parent / "fixtures" / "ai" / "reviewer3_report.md").read_text()
@@ -21,7 +22,7 @@ RUN = {
 
 
 def mapped(report=REPORT, **run):
-    return map_with_record("reviewer3", report, **{**RUN, **run})
+    return codec_map_with_record("reviewer3", report, **{**RUN, **run})
 
 
 def section(heading, body):
@@ -49,7 +50,7 @@ def comments(result):
 
 
 def test_maps_the_whole_report(result):
-    validate_canonical(result.review)
+    codec_validate(result.review)
     record = result.record
     assert record.status == MappingStatus.OK
     assert record.source_format == "reviewer3"
@@ -155,7 +156,7 @@ def test_parsed_values_are_recorded(result):
     }
     assert ("ai_text_detection", "checks[0].performed_by.name") in parsed
     assert ("fatal_flaws.text", "checks[1].outcome") in parsed
-    assert ("comments[2].excerpt", "findings.comments[2].evidence_links[0].type") in parsed
+    assert ("comments[2].excerpt", "findings.comments[2].evidence_links[0].resource.type") in parsed
     assert ("comments[1].page", "findings.comments[1].evidence_links[0].location.page") in parsed
 
 
@@ -166,7 +167,7 @@ def test_listed_fatal_flaws_are_critical_weaknesses():
         "- The baseline is tuned on the test set.",
     )
     result = mapped(report)
-    validate_canonical(result.review)
+    codec_validate(result.review)
     [check] = result.review["checks"]
     weaknesses = result.review["findings"]["weaknesses"]
     assert check["outcome"] == "issues_found"
@@ -230,7 +231,7 @@ def test_quotes_are_checked_against_the_paper(comments):
 
 
 def test_keep_raw_keeps_the_markdown():
-    out = map_from("reviewer3", {"output": REPORT, **RUN}, keep_raw=True)
+    out = codec_map_from("reviewer3", {"output": REPORT, **RUN}, keep_raw=True)
     assert out["provenance"]["raw_payload"] == {"text": REPORT}
 
 
@@ -265,7 +266,7 @@ def test_extra_table_columns_are_kept_in_extensions():
 
 def test_reference_check_of_prose_only():
     result = mapped(section("Reference Check", "No references to check."))
-    validate_canonical(result.review)
+    codec_validate(result.review)
     [check] = result.review["checks"]
     assert check["summary"] == "No references to check."
     assert "measurements" not in check and "items" not in check
@@ -274,7 +275,7 @@ def test_reference_check_of_prose_only():
 def test_a_comment_without_explanation_is_skipped_and_kept():
     body = "1. **Missing baseline**\n\n2. **Other point** — Page 3\n\nThe explanation."
     result = mapped(section("Reviewer Comments", body))
-    validate_canonical(result.review)
+    codec_validate(result.review)
     [comment] = result.review["findings"]["comments"]
     assert comment["id"] == "comment-2"
     assert result.record.status == MappingStatus.PARTIAL
@@ -324,7 +325,7 @@ def test_a_code_block_alone_under_a_point_keeps_its_indentation():
 def test_repeated_list_numbers_get_unique_ids():
     body = "1. **First**\n\nOne.\n\n1. **Second**\n\nTwo.\n\n1. **Third**\n\nThree."
     result = mapped(section("Reviewer Comments", body))
-    validate_canonical(result.review)
+    codec_validate(result.review)
     ids = [c["id"] for c in result.review["findings"]["comments"]]
     assert ids == ["comment-1", "comment-2", "comment-3"]
 
@@ -364,7 +365,7 @@ def test_a_reference_check_with_nothing_usable_is_left_out():
         section("Reference Check", body) + "\n### Reviewer Comments\n\n1. **A point**\n\nText.\n"
     )
     result = mapped(report)
-    validate_canonical(result.review)
+    codec_validate(result.review)
     assert "checks" not in result.review
     assert (
         result.review["extensions"]["reviewer3"]["reference_check"]["entries"][0]["number"] == "3"

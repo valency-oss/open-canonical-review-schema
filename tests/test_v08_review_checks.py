@@ -7,8 +7,7 @@ import copy
 
 import jsonschema
 import pytest
-
-from ocrs import validate_canonical
+from v08_schema import validate_canonical
 
 REVIEW = {
     "review_id": "review-1",

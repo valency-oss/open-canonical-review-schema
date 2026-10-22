@@ -11,6 +11,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from ocrs import load_schema, map_from, map_with_record, schema_id, validate_canonical
+from ocrs.migrate import migrate
 from ocrs.schema import has_content
 
 
@@ -156,16 +157,22 @@ def test_crossref_identifier_types_reject_malformed_values(identifiers: dict) ->
 
 
 def _review_with(finding: dict, claim: dict) -> dict:
+    finding = dict(finding)
+    claim = dict(claim)
+    uncertainty = {k: finding.pop(k) for k in ("probability", "credence") if k in finding}
+    if uncertainty:
+        finding["uncertainty"] = uncertainty
+    belief = {
+        "id": "f2",
+        "text": claim["claim_text"],
+        "about": [{"type": "claim", "id": claim["claim_id"]}],
+    }
+    if any(k in claim for k in ("probability", "credence")):
+        belief["uncertainty"] = {k: claim[k] for k in ("probability", "credence") if k in claim}
     return {
-        "review_id": "review-1",
-        "version": "1.0.0",
-        "created_at": "2026-10-07T12:00:00Z",
-        "provenance": {"source_system": "example-journal"},
-        "referees": [{"referee_type": "human", "identity_mode": "double_blind"}],
-        "target": {"work_id": "internal_id:manuscript_id:paper-1", "work_type": "article"},
-        "opinion": {"summary": "A sound paper."},
-        "findings": {"weaknesses": [finding]},
-        "claim_assessments": [claim],
+        **MINIMAL_REVIEW,
+        "findings": {"weaknesses": [{"id": "f1", **finding}], "comments": [belief]},
+        "work_summary": {"claims": [{"id": claim["claim_id"], "text": claim["claim_text"]}]},
     }
 
 
@@ -400,8 +407,8 @@ def _review_saying(**content) -> dict:
         {"written_report": {"content_type": "pdf", "filename": "review.pdf"}},
     ],
 )
-def test_a_review_with_any_assessment_has_content(content: dict) -> None:
-    review = _review_saying(**content)
+def test_a_migrated_review_with_any_assessment_has_content(content: dict) -> None:
+    review = migrate(_review_saying(**content))
     validate_canonical(review)
     assert has_content(review)
 
@@ -418,6 +425,7 @@ def test_a_review_of_only_the_citations_is_a_review(flagged: bool) -> None:
         review_context={"review_type": "citation_review"},
         checks=[{"kind": "reference_verification", "items": [reference]}],
     )
+    review = migrate(review)
     validate_canonical(review)
     assert has_content(review)
 

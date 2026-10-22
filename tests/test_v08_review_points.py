@@ -8,8 +8,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-
-from ocrs import load_schema, validate_canonical
+from v08_schema import load_schema, validate_canonical
 
 MINIMAL_REVIEW = {
     "review_id": "review-1",
@@ -235,7 +234,7 @@ def test_page_end_is_checked_wherever_the_link_is():
 )
 def test_custom_schemas_still_get_page_checks(tmp_path, wrap):
     canonical = json.loads(
-        (Path(__file__).parent.parent / "src/ocrs/schemas/canonical-review.schema.json").read_text()
+        (Path(__file__).parent.parent / "versions/v0.8.0/canonical-review.schema.json").read_text()
     )
     path = tmp_path / "custom.schema.json"
     path.write_text(json.dumps(wrap(canonical)))

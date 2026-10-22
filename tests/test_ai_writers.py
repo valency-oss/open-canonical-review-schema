@@ -7,8 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import codec_map_from, codec_map_to, codec_map_with_record, codec_validate
 
-from ocrs import map_from, map_to, map_with_record, supported_targets, validate_canonical
+from ocrs import supported_targets
 from ocrs.mappers import deepreview, reviewer3
 from ocrs.mappers.ai import extension, findings_of, indented, overall_texts, reviewer_model
 from ocrs.mappers.openaireview import to_openaireview
@@ -31,7 +32,7 @@ RUN = {
 
 
 def mapped(source, output):
-    return map_with_record(source, copy.deepcopy(output), **RUN).review
+    return codec_map_with_record(source, copy.deepcopy(output), **RUN).review
 
 
 def same_review(first, second):
@@ -43,7 +44,7 @@ def same_review(first, second):
 
 
 def human_review():
-    return map_from(
+    return codec_map_from(
         "openreview", json.loads((FIXTURES / "openreview/realistic_review.json").read_text())
     )
 
@@ -154,36 +155,36 @@ class TestOpenAIReview:
         expected["methods"] = {
             k: v for k, v in OPENAIREVIEW["methods"].items() if k.startswith("progressive__")
         }
-        assert map_to("openaireview", mapped("openaireview", OPENAIREVIEW)) == expected
+        assert codec_map_to("openaireview", mapped("openaireview", OPENAIREVIEW)) == expected
 
     def test_round_trip(self):
         review = mapped("openaireview", OPENAIREVIEW)
-        assert same_review(mapped("openaireview", map_to("openaireview", review)), review)
+        assert same_review(mapped("openaireview", codec_map_to("openaireview", review)), review)
 
     def test_skipped_comment_goes_back_where_it_was(self):
         output = copy.deepcopy(OPENAIREVIEW)
         [key] = [k for k in output["methods"] if k.startswith("progressive__")]
         comments = output["methods"][key]["comments"]
         comments[1]["explanation"] = ""
-        back = map_to("openaireview", mapped("openaireview", output))
+        back = codec_map_to("openaireview", mapped("openaireview", output))
         assert back["methods"][key]["comments"] == comments
 
     def test_comments_without_extensions_follow_kept_ones(self):
         review = mapped("openaireview", OPENAIREVIEW)
         review["findings"]["weaknesses"].append({"text": "One more."})
-        [method] = map_to("openaireview", review)["methods"].values()
+        [method] = codec_map_to("openaireview", review)["methods"].values()
         assert method["comments"][-1] == {"explanation": "One more."}
 
     def test_a_review_from_elsewhere(self):
         review = human_review()
-        paper = map_to("openaireview", review)
+        paper = codec_map_to("openaireview", review)
         [(key, method)] = paper["methods"].items()
         assert key == "progressive__unspecified"
         assert method["overall_feedback"] == review["opinion"]["summary"]
         points = [*findings_of(review, "weaknesses"), *findings_of(review, "questions")]
         assert [c["explanation"] for c in method["comments"]] == [p["text"] for p in points]
-        again = map_with_record("openaireview", paper, **RUN).review
-        validate_canonical(again)
+        again = codec_map_with_record("openaireview", paper, **RUN).review
+        codec_validate(again)
         assert len(again["findings"]["weaknesses"]) == len(points)
 
     def test_model_title_tags_quote_and_tokens(self):
@@ -219,28 +220,28 @@ class TestOpenAIReview:
         review = human_review()
         review["opinion"] = {"text": "Full view."}
         review.pop("narrative")
-        [method] = map_to("openaireview", review)["methods"].values()
+        [method] = codec_map_to("openaireview", review)["methods"].values()
         assert method["overall_feedback"] == "Full view."
 
 
 class TestDeepReview:
     @pytest.mark.parametrize("report", [DEEPREVIEW, DEEPREVIEW_EDGES], ids=["fixture", "edges"])
     def test_writes_back_the_same_report(self, report):
-        written = map_to("deepreview", mapped("deepreview", report))
+        written = codec_map_to("deepreview", mapped("deepreview", report))
         assert isinstance(written, str)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
 
     @pytest.mark.parametrize("report", [DEEPREVIEW, DEEPREVIEW_EDGES], ids=["fixture", "edges"])
     def test_round_trip(self, report):
         review = mapped("deepreview", report)
-        assert same_review(mapped("deepreview", map_to("deepreview", review)), review)
+        assert same_review(mapped("deepreview", codec_map_to("deepreview", review)), review)
 
     def test_a_review_from_elsewhere(self):
         review = human_review()
         review["opinion"]["contributions"] = [{"title": "Idea", "text": "A method."}]
         review["findings"]["comments"] = [{"text": "A remark."}]
         review["checks"] = [{"kind": "statistics", "label": "Stats", "summary": "Fine."}]
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         report = deepreview.parse_report(written)
         assert report["summary"] == review["opinion"]["summary"]
         assert [p["text"] for p in report["strengths"]] == [
@@ -254,7 +255,7 @@ class TestDeepReview:
         assert report["other"]["Comments"] == "* A remark."
         assert report["other"]["Stats"] == "Fine."
         assert "Questions" in report["other"]
-        validate_canonical(map_with_record("deepreview", written, **RUN).review)
+        codec_validate(codec_map_with_record("deepreview", written, **RUN).review)
 
     def test_severity_and_group_place_a_point_under_potential_issues(self):
         review = human_review()
@@ -268,7 +269,7 @@ class TestDeepReview:
                 {"text": "Plain."},
             ]
         }
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         assert [p["text"] for p in report["weaknesses"]] == ["Overview.", "Plain."]
         tiers = {
             (part["heading"], tier["heading"]): [item["text"] for item in tier["items"]]
@@ -281,7 +282,7 @@ class TestDeepReview:
             ("[Results]", "Minor Corrections and Typos"): ["Grouped."],
             ("[Results]", "Odd Tier"): ["Two levels."],
         }
-        mapped_back = map_with_record("deepreview", map_to("deepreview", review), **RUN)
+        mapped_back = codec_map_with_record("deepreview", codec_map_to("deepreview", review), **RUN)
         severities = [w.get("severity") for w in mapped_back.review["findings"]["weaknesses"]]
         assert severities == [None, None, "major", "minor", "minor", None]
 
@@ -339,20 +340,20 @@ class TestReviewer3:
 
     @pytest.mark.parametrize("report", [REVIEWER3, REVIEWER3_EDGES], ids=["fixture", "edges"])
     def test_writes_back_the_same_report(self, report):
-        written = map_to("reviewer3", mapped("reviewer3", report))
+        written = codec_map_to("reviewer3", mapped("reviewer3", report))
         assert isinstance(written, str)
         assert self.plain_report(written) == self.plain_report(report)
 
     @pytest.mark.parametrize("report", [REVIEWER3, REVIEWER3_EDGES], ids=["fixture", "edges"])
     def test_round_trip(self, report):
         review = mapped("reviewer3", report)
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
     def test_a_review_from_elsewhere(self):
         review = human_review()
         review["target"]["title"] = "The Paper"
         review["checks"] = [{"kind": "similarity", "label": "Similarity", "summary": "Low."}]
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         report = reviewer3.parse_report(written)
         assert report["title"] == "The Paper"
         points = [*findings_of(review, "weaknesses"), *findings_of(review, "questions")]
@@ -362,8 +363,8 @@ class TestReviewer3:
         assert report["other"]["Review"] == narrative_text(review, "review")
         assert report["other"]["Similarity"] == "Low."
         assert "Strengths" in report["other"]
-        again = map_with_record("reviewer3", written, **RUN).review
-        validate_canonical(again)
+        again = codec_map_with_record("reviewer3", written, **RUN).review
+        codec_validate(again)
         assert len(again["findings"]["comments"]) == len(points)
 
     def test_checks_without_their_own_sentences(self):
@@ -396,14 +397,14 @@ class TestReviewer3:
                 ],
             },
         ]
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert (
             "12.5% AI-generated text detected. flag: True. See the full Pangram report." in written
         )
         assert "Checked 3 references: 1 not found." in written
         assert "| 4 | T | Unverified |" in written
         assert "- Leak." in written
-        again = map_with_record("reviewer3", written, **RUN).review
+        again = codec_map_with_record("reviewer3", written, **RUN).review
         checks = {check["kind"]: check for check in again["checks"]}
         assert checks["ai_text_detection"]["performed_by"] == {"name": "Pangram"}
         assert checks["ai_text_detection"]["measurements"][0]["value"] == 0.125
@@ -427,7 +428,7 @@ class TestReviewer3:
     def test_sentence_made_from_a_check(self, check, expected):
         review = human_review()
         review["checks"] = [check]
-        assert expected in map_to("reviewer3", review)
+        assert expected in codec_map_to("reviewer3", review)
 
     def test_detector_without_measurements(self):
         check = {"kind": "ai_text_detection", "performed_by": {"name": "Detector"}}
@@ -439,7 +440,7 @@ class TestReviewer3:
             {"kind": "reference_verification", "measurements": [{"key": "found", "value": 1}]},
             {"kind": "other", "outcome": "not_run"},
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["reference_check"] == {"text": "- found: 1"}
         assert report["other"]["other"] == "Outcome: not run"
 
@@ -463,7 +464,7 @@ class TestReviewer3:
     def test_headings_in_a_comment_stay_in_it(self):
         review = human_review()
         review["findings"] = {"comments": [{"title": "T", "text": "Intro.\n\n### Detail\n\nMore."}]}
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         [comment] = reviewer3.parse_report(written)["comments"]
         assert comment["text"] == "Intro.\n\n#### Detail\n\nMore."
 
@@ -515,7 +516,7 @@ class TestKeptAndMissing:
             "### [B]\n#### Potential Mistakes and Improvements\n\n1. **Empty (Page 3):**\n"
         )
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert "## Summary" not in written
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
 
@@ -523,13 +524,13 @@ class TestKeptAndMissing:
         review = mapped("openaireview", OPENAIREVIEW)
         review["findings"]["weaknesses"] = review["findings"]["weaknesses"][:1]
         review["opinion"] = {}
-        [method] = map_to("openaireview", review)["methods"].values()
+        [method] = codec_map_to("openaireview", review)["methods"].values()
         assert len(method["comments"]) == 1 and "overall_feedback" not in method
 
     def test_reviewer3_comment_removed_after_mapping(self):
         review = mapped("reviewer3", REVIEWER3_EDGES)
         review["findings"]["comments"] = review["findings"]["comments"][:1]
-        comments = reviewer3.parse_report(map_to("reviewer3", review))["comments"]
+        comments = reviewer3.parse_report(codec_map_to("reviewer3", review))["comments"]
         assert [comment["title"] for comment in comments] == ["Typo", "No explanation"]
 
     def test_reviewer3_ai_text_without_a_detector(self):
@@ -549,14 +550,14 @@ class TestWhereThingsGoBack:
         }
         review = mapped("openaireview", output)
         assert review["opinion"]["summary"] == "P."
-        back = map_to("openaireview", review)
+        back = codec_map_to("openaireview", review)
         assert back["methods"] == output["methods"]
         assert same_review(mapped("openaireview", back), review)
 
     def test_openaireview_skipped_comment_with_no_known_fields(self):
         comments = [{"paragraph_index": 0}, {"explanation": "Actual.", "paragraph_index": 1}]
         output = {"methods": {"progressive__m": {"comments": comments}}}
-        [method] = map_to("openaireview", mapped("openaireview", output))["methods"].values()
+        [method] = codec_map_to("openaireview", mapped("openaireview", output))["methods"].values()
         assert method["comments"] == [
             {"paragraph_index": 0, "explanation": ""},
             {"paragraph_index": 1, "explanation": "Actual."},
@@ -567,7 +568,7 @@ class TestWhereThingsGoBack:
         mistakes = ["[Methods] (Pages: 1-2)", "Potential Mistakes and Improvements"]
         new = {"text": "A new point.", "group": mistakes}
         review["findings"]["weaknesses"].insert(0, new)
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         [tier] = [
             tier
             for part in report["issues"]
@@ -584,14 +585,14 @@ class TestWhereThingsGoBack:
         report = f"# Review Report\n\nA paper\n\n---\n\n{overview}### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
         assert "checks" not in review
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
 
     def test_reviewer3_keeps_comment_numbers(self):
         report = REVIEWER3_EDGES.replace("1. **Typo**", "7. **Typo**")
         review = mapped("reviewer3", report)
         review["findings"]["comments"].append({"title": "New", "text": "Added."})
-        again = mapped("reviewer3", map_to("reviewer3", review))
+        again = mapped("reviewer3", codec_map_to("reviewer3", review))
         ids = [comment["id"] for comment in again["findings"]["comments"]]
         assert ids == ["comment-7", "comment-2", "comment-8"]
 
@@ -599,7 +600,7 @@ class TestWhereThingsGoBack:
         review = human_review()
         text = "Intro.\n\n1. **First item**\n\nDetails."
         review["findings"] = {"comments": [{"title": "T", "text": text}]}
-        [comment] = reviewer3.parse_report(map_to("reviewer3", review))["comments"]
+        [comment] = reviewer3.parse_report(codec_map_to("reviewer3", review))["comments"]
         assert comment["text"] == "Intro.\n\n 1. **First item**\n\nDetails."
 
     def test_reviewer3_measurements_keep_their_units(self):
@@ -619,7 +620,7 @@ class TestWhereThingsGoBack:
             {"kind": "statistics", "summary": "First."},
             {"kind": "statistics", "summary": "Second."},
         ]
-        written = map_to(target, review)
+        written = codec_map_to(target, review)
         assert "First.\n\nSecond." in written
 
     def test_reviewer3_extra_column_is_one_column(self):
@@ -634,7 +635,7 @@ class TestCopilotRound:
         review["narrative"] = [
             {"role": "review", "content": "Intro.\n\n```md\n## Example\n```\n\n## Real"}
         ]
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert "```md\n## Example\n```" in written
         report = deepreview.parse_report(written)
         assert report["other"]["Review"] == "Intro.\n\n```md\n## Example\n```\n\n### Real"
@@ -647,13 +648,13 @@ class TestCopilotRound:
         review = human_review()
         summary = "Screen result.\n\n### Evidence\n\nAdditional details."
         review["checks"] = [{"kind": "fatal_flaw_screen", "summary": summary}]
-        [check] = mapped("reviewer3", map_to("reviewer3", review))["checks"]
+        [check] = mapped("reviewer3", codec_map_to("reviewer3", review))["checks"]
         assert check["summary"] == "Screen result.\n\n#### Evidence\n\nAdditional details."
 
     def test_openaireview_deleted_comment_takes_its_fields_with_it(self):
         review = mapped("openaireview", OPENAIREVIEW)
         del review["findings"]["weaknesses"][0]
-        [method] = map_to("openaireview", review)["methods"].values()
+        [method] = codec_map_to("openaireview", review)["methods"].values()
         [key] = [k for k in OPENAIREVIEW["methods"] if k.startswith("progressive__")]
         original = OPENAIREVIEW["methods"][key]["comments"]
         assert [c["id"] for c in method["comments"]] == [c["id"] for c in original[1:]]
@@ -664,7 +665,7 @@ class TestCopilotRound:
     def test_openaireview_new_weakness_follows_the_reports_own(self):
         review = mapped("openaireview", OPENAIREVIEW)
         review["findings"]["weaknesses"].insert(0, {"text": "New."})
-        [method] = map_to("openaireview", review)["methods"].values()
+        [method] = codec_map_to("openaireview", review)["methods"].values()
         assert method["comments"][-1] == {"explanation": "New."}
         assert len(method["comments"]) == 4
 
@@ -676,7 +677,9 @@ class TestKeptIdentity:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
         del review["checks"][0]["items"][0]
-        [entry] = reviewer3.parse_report(map_to("reviewer3", review))["reference_check"]["entries"]
+        [entry] = reviewer3.parse_report(codec_map_to("reviewer3", review))["reference_check"][
+            "entries"
+        ]
         assert entry == {
             "number": "2",
             "citation": "B (2021).",
@@ -692,13 +695,13 @@ class TestKeptIdentity:
         review = mapped("deepreview", report)
         ids = [point["id"] for point in review["findings"]["weaknesses"]]
         assert ids == ["issue-1.1.1", "issue-1.1.3"]
-        assert same_review(mapped("deepreview", map_to("deepreview", review)), review)
+        assert same_review(mapped("deepreview", codec_map_to("deepreview", review)), review)
 
 
 def test_deepreview_untitled_point_keeps_its_code_indentation():
     review = human_review()
     review["findings"] = {"strengths": [{"text": "Intro.\n\n    code_line()"}]}
-    [point] = deepreview.parse_report(map_to("deepreview", review))["strengths"]
+    [point] = deepreview.parse_report(codec_map_to("deepreview", review))["strengths"]
     assert point == {"text": "Intro.\n\n    code_line()"}
 
 
@@ -709,7 +712,7 @@ def test_reviewer3_contributions_opening_with_code_keep_what_follows():
         {"text": "```\ny\n```"},
         {"text": "Second."},
     ]
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["overview"] == review["opinion"]["contributions"]
     assert "Overview" not in report.get("other", {})
 
@@ -718,7 +721,7 @@ def test_openaireview_new_weakness_follows_even_when_nothing_was_kept():
     output = {"methods": {"progressive__m": {"comments": [{"explanation": "Original."}]}}}
     review = mapped("openaireview", output)
     review["findings"]["weaknesses"].insert(0, {"text": "New."})
-    [method] = map_to("openaireview", review)["methods"].values()
+    [method] = codec_map_to("openaireview", review)["methods"].values()
     assert [c["explanation"] for c in method["comments"]] == ["Original.", "New."]
 
 
@@ -726,7 +729,7 @@ class TestEdgesOfTheFormat:
     def test_reviewer3_explanation_opening_with_a_quote_stays_the_explanation(self):
         review = human_review()
         review["findings"] = {"comments": [{"title": "T", "text": "> The baseline is inadequate."}]}
-        again = mapped("reviewer3", map_to("reviewer3", review))
+        again = mapped("reviewer3", codec_map_to("reviewer3", review))
         [comment] = again["findings"]["comments"]
         assert comment["text"] == "> The baseline is inadequate."
         assert "evidence_links" not in comment
@@ -736,7 +739,7 @@ class TestEdgesOfTheFormat:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reviewer Comments\n\n{body}\n"
         review = mapped("reviewer3", report)
         assert [c["id"] for c in review["findings"]["comments"]] == ["comment-1", "comment-3"]
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
     def test_deepreview_empty_point_at_the_very_end_is_kept(self):
         report = (
@@ -744,7 +747,7 @@ class TestEdgesOfTheFormat:
             "#### Minor Corrections and Typos\n\n* **One:** First.\n* \n"
         )
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
         assert same_review(mapped("deepreview", written), review)
 
@@ -754,9 +757,9 @@ class TestEdgesOfTheFormat:
         review = human_review()
         review["findings"]["strengths"] = [{"title": "Code", "text": text}]
         review["opinion"]["contributions"] = [{"title": "Code", "text": text}]
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         assert len(report["weaknesses"]) == len(findings_of(human_review(), "weaknesses"))
-        r3 = reviewer3.parse_report(map_to("reviewer3", review))
+        r3 = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert len(r3["comments"]) == len(findings_of(human_review(), "weaknesses")) + len(
             findings_of(human_review(), "questions")
         )
@@ -767,13 +770,13 @@ class TestFifthReview:
         report = "## Strengths\n* \n* Useful result.\n## Weaknesses\n* \n* Real weakness.\n"
         review = mapped("deepreview", report)
         assert [p["id"] for p in review["findings"]["strengths"]] == ["strength-1", "strength-2"]
-        assert same_review(mapped("deepreview", map_to("deepreview", review)), review)
+        assert same_review(mapped("deepreview", codec_map_to("deepreview", review)), review)
 
     def test_reviewer3_empty_fatal_flaw_keeps_the_checks_finding_ids(self):
         body = "- **Leak** — Test data leaks.\n- \n- **Bias** — Selection bias."
         report = f"# Review Report\n\nA paper\n\n---\n\n### Fatal Flaws\n\n{body}\n"
         review = mapped("reviewer3", report)
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
     def test_reviewer3_standalone_indented_fence_still_hides_headings(self):
         appendix = "  ```\n### Fatal Flaws\n- **Fake** — Not a flaw.\n  ```"
@@ -793,7 +796,7 @@ class TestFifthReview:
         body += "| 7 | A (2020). | Verified | |\n| 7 | B (2021). | Not Found | second |\n"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
 
 
@@ -802,13 +805,13 @@ class TestCopilotFourthRound:
         report = "## Strengths\n* **Clear\n  exposition:** Well written.\n"
         review = mapped("deepreview", report)
         assert review["findings"]["strengths"][0]["title"] == "Clear\nexposition"
-        assert same_review(mapped("deepreview", map_to("deepreview", review)), review)
+        assert same_review(mapped("deepreview", codec_map_to("deepreview", review)), review)
 
     def test_reviewer3_wrapped_titles(self):
         review = human_review()
         review["opinion"]["contributions"] = [{"title": "Two\nlines", "text": "A method."}]
         review["findings"] = {"comments": [{"title": "Also\ntwo", "text": "Why."}]}
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["overview"] == [{"title": "Two\nlines", "text": "A method."}]
         assert report["comments"][0]["title"] == "Also two"
 
@@ -817,7 +820,7 @@ class TestCopilotFourthRound:
         body += "| 7 | A. | Verified | |\n| 7 | A. | Not Found | second |\n"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -842,10 +845,10 @@ class TestSixthReview:
         text = "- ```py\n  x\n  ```\n\nResult:\n\n## Result\nImportant result."
         review["opinion"] = {"summary": text}
         review.pop("narrative")
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         assert report["summary"] == text.replace("## Result", "### Result")
         review["opinion"] = {"summary": text.replace("## Result", "### Result")}
-        r3 = reviewer3.parse_report(map_to("reviewer3", review))
+        r3 = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert r3["other"]["Summary"] == text.replace("## Result", "#### Result")
 
     def test_reviewer3_comments_numbered_down_with_a_skipped_one_keep_their_order(self):
@@ -853,7 +856,7 @@ class TestSixthReview:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reviewer Comments\n\n{body}\n"
         review = mapped("reviewer3", report)
         assert [c["id"] for c in review["findings"]["comments"]] == ["comment-3", "comment-1"]
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -863,7 +866,7 @@ class TestSixthReview:
         review["findings"] = {
             "comments": [{"title": "A", "text": text}, {"title": "B", "text": "Next."}]
         }
-        comments = reviewer3.parse_report(map_to("reviewer3", review))["comments"]
+        comments = reviewer3.parse_report(codec_map_to("reviewer3", review))["comments"]
         assert [(c["title"], c["text"]) for c in comments] == [("A", text), ("B", "Next.")]
 
     def test_reviewer3_fence_after_a_list_marker_before_a_reference_table(self):
@@ -876,7 +879,7 @@ class TestSixthReview:
                 "items": [{"target": {"type": "bibliography", "ref": "4"}, "status": "Not Found"}],
             }
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["reference_check"]["entries"] == [{"number": "4", "status": "Not Found"}]
 
 
@@ -887,7 +890,7 @@ class TestPanelGate:
         review["findings"] = {
             "weaknesses": [{"text": "T.", "severity": "minor", "evidence_links": links}]
         }
-        again = mapped("deepreview", map_to("deepreview", review))
+        again = mapped("deepreview", codec_map_to("deepreview", review))
         [point] = again["findings"]["weaknesses"]
         assert "title" not in point
         assert [link["ref"] for link in point["evidence_links"]] == ["Page 2", "Figure 1"]
@@ -925,7 +928,7 @@ class TestRepeatedChecks:
                 "measurements": [{"key": "p", "value": 0.04}],
             },
         ]
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         report = reviewer3.parse_report(written)
         assert report["fatal_flaws"]["items"] == [{"text": "First flaw."}]
         assert report["other"]["Fatal Flaws (2)"] == "- Second flaw."
@@ -951,7 +954,7 @@ class TestRepeatedChecks:
                 ],
             }
         ]
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         assert report["other"]["References"] == (
             "Checked.\n\nPerformed by: Tool\n\n- 4: Not Found (flagged) — No DOI"
         )
@@ -964,7 +967,7 @@ class TestSecondGate:
         review["findings"] = {
             "comments": [{"title": "A", "text": text}, {"title": "B", "text": "Next."}]
         }
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         report = reviewer3.parse_report(written)
         assert [c["title"] for c in report["comments"]] == ["A", "B"]
         shifted = "Steps:\n\n 1. **Prepare**\n    ```py\n    x = 1\n    ```\n\nDone."
@@ -985,7 +988,7 @@ class TestSecondGate:
             {"kind": kind, "outcome": "inconclusive"},
             {"kind": kind, "outcome": "not_run"},
         ]
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert "Outcome: inconclusive" in written
         assert "Outcome: not run" in written
 
@@ -996,7 +999,7 @@ class TestCopilotSummaries:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Fatal Flaws\n\n{body}\n"
         review = mapped("reviewer3", report)
         assert review["checks"][0]["finding_ids"] == ["fatal-flaw-2"]
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
     def test_reviewer3_reference_item_notes_are_written(self):
         review = human_review()
@@ -1012,7 +1015,9 @@ class TestCopilotSummaries:
                 ],
             }
         ]
-        [entry] = reviewer3.parse_report(map_to("reviewer3", review))["reference_check"]["entries"]
+        [entry] = reviewer3.parse_report(codec_map_to("reviewer3", review))["reference_check"][
+            "entries"
+        ]
         assert entry["notes"] == "The DOI resolves to a different paper."
 
     def test_reviewer3_zero_padded_numbers_keep_their_ids(self):
@@ -1020,7 +1025,7 @@ class TestCopilotSummaries:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reviewer Comments\n\n{body}\n"
         review = mapped("reviewer3", report)
         assert [c["id"] for c in review["findings"]["comments"]] == ["comment-01", "comment-03"]
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
     @pytest.mark.parametrize("section", ["Overview", "Fatal Flaws"])
     def test_reviewer3_bullet_opening_a_fence_is_a_point(self, section):
@@ -1054,7 +1059,7 @@ class TestThirdGate:
                 "measurements": [{"key": "ai", "label": "AI", "value": 0.3, "unit": "fraction"}],
             },
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["fatal_flaws"]["text"] == "Screen ran.\n\nOutcome: inconclusive"
         assert report["ai_text_detection"] == (
             "Mostly human.\n\nPerformed by: Detector\n\n- AI: 0.3 fraction"
@@ -1062,7 +1067,7 @@ class TestThirdGate:
 
     def test_reviewer3_nothing_is_added_when_the_section_says_it_all(self):
         review = mapped("reviewer3", REVIEWER3)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert "Outcome:" not in written and "Performed by:" not in written
 
 
@@ -1083,7 +1088,7 @@ class TestFinalCopilotRound:
         report = f"# Review Report\n\nA paper\n\n---\n\n### Fatal Flaws\n\n{body}\n"
         review = mapped("reviewer3", report)
         assert review["checks"][0]["finding_ids"] == ["fatal-flaw-2"]
-        assert same_review(mapped("reviewer3", map_to("reviewer3", review)), review)
+        assert same_review(mapped("reviewer3", codec_map_to("reviewer3", review)), review)
 
 
 def test_reviewer3_a_huge_flaw_id_lists_no_places():
@@ -1096,7 +1101,7 @@ def test_reviewer3_a_huge_flaw_id_lists_no_places():
             "finding_ids": ["fatal-flaw-1000000000"],
         }
     ]
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["fatal_flaws"] == {"text": "Screened.", "items": [{"text": "Leak."}]}
 
 
@@ -1115,7 +1120,7 @@ class TestPR47Followups:
     def test_deepreview_summary_ending_in_open_code_stays_last(self):
         report = "## Strengths\n* Useful.\n\n## Summary\nText.\n\n```py\nx"
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
         assert same_review(mapped("deepreview", written), review)
 
@@ -1123,7 +1128,7 @@ class TestPR47Followups:
         review = human_review()
         review["opinion"] = {"summary": "Text.\n\n```py\nx"}
         review.pop("narrative")
-        report = deepreview.parse_report(map_to("deepreview", review))
+        report = deepreview.parse_report(codec_map_to("deepreview", review))
         assert len(report["strengths"]) == len(findings_of(review, "strengths"))
         assert report["summary"] == "Text.\n\n```py\nx"
 
@@ -1131,7 +1136,7 @@ class TestPR47Followups:
         body = "- **A** — First.\n- **B** — Second.\n\n```py\nunclosed"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Overview\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1146,7 +1151,7 @@ class TestPR47Followups:
                 {"title": "B", "text": "Next."},
             ],
         }
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert [c["title"] for c in report["comments"]] == ["A", "B"]
         assert report["comments"][0]["text"] == "Ends in code:\n\n```py\nx\n```"
         assert report["other"]["Strengths"] == "- Good."
@@ -1158,7 +1163,7 @@ class TestPR47Followups:
         review["checks"] = [
             {"kind": "fatal_flaw_screen", "summary": "Screened.", "finding_ids": ["fatal-flaw-0"]}
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["fatal_flaws"] == {"text": "Screened.", "items": [{"text": "Leak."}]}
 
     def test_deepreview_skipped_point_of_places_alone_keeps_them_as_places(self):
@@ -1167,7 +1172,7 @@ class TestPR47Followups:
             "#### Minor Corrections and Typos\n\n* **One:** First.\n* **(Page 2; Figure 1):**\n"
         )
         review = mapped("deepreview", report)
-        assert same_review(mapped("deepreview", map_to("deepreview", review)), review)
+        assert same_review(mapped("deepreview", codec_map_to("deepreview", review)), review)
 
 
 class TestPR48Review:
@@ -1180,7 +1185,7 @@ class TestPR48Review:
         body = "No references to check.\n\n```py\nx"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1189,7 +1194,9 @@ class TestPR48Review:
         review["findings"] = {
             "comments": [{"title": "A", "text": "   ```py\n   x"}, {"title": "B", "text": "Next."}]
         }
-        report = reviewer3.parse_report(map_to("reviewer3", review) + "\n### Appendix\n\nX.\n")
+        report = reviewer3.parse_report(
+            codec_map_to("reviewer3", review) + "\n### Appendix\n\nX.\n"
+        )
         assert [c["title"] for c in report["comments"]] == ["A", "B"]
         assert report["comments"][0]["text"] == "   ```py\n   x\n   ```"
         assert report["other"]["Appendix"] == "X."
@@ -1199,7 +1206,7 @@ class TestPR48Review:
         overview = "### Overview\n\n- **A contribution** — Text.\n\n"
         report = f"# Review Report\n\nA paper\n\n---\n\n{overview}### Reviewer Comments\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1225,7 +1232,7 @@ def test_reviewer3_reference_table_then_open_ended_prose_round_trips():
     body += "Notes.\n\n```py\nx"
     report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
     review = mapped("reviewer3", report)
-    written = map_to("reviewer3", review)
+    written = codec_map_to("reviewer3", review)
     assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
     assert same_review(mapped("reviewer3", written), review)
 
@@ -1236,7 +1243,7 @@ def test_reviewer3_indented_open_summary_stays_out_of_the_flaws(indent):
     review["findings"] = {"weaknesses": [{"id": "w1", "text": "Leak."}]}
     summary = f"{indent}```py\n{indent}x"
     review["checks"] = [{"kind": "fatal_flaw_screen", "summary": summary, "finding_ids": ["w1"]}]
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["fatal_flaws"]["items"] == [{"text": "Leak."}]
     assert report["fatal_flaws"]["text"] == f"{summary}\n{indent}```"
 
@@ -1248,7 +1255,7 @@ def test_reviewer3_overview_of_only_indented_open_code_round_trips(indent):
     overview = f"### Overview\n\n{indent}```py\n{indent}x"
     report = f"# Review Report\n\nA paper\n\n---\n\n{flaws}{overview}"
     review = mapped("reviewer3", report)
-    written = map_to("reviewer3", review)
+    written = codec_map_to("reviewer3", review)
     assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
     assert same_review(mapped("reviewer3", written), review)
 
@@ -1257,7 +1264,7 @@ def test_reviewer3_overview_of_only_indented_open_code_round_trips(indent):
 def test_deepreview_kept_text_opening_code_before_points_round_trips(heading):
     report = f"## {heading}\nNotes.\n```py\n  x\n* Useful.\n\n## Summary\nShort."
     review = mapped("deepreview", report)
-    written = map_to("deepreview", review)
+    written = codec_map_to("deepreview", review)
     assert deepreview.parse_report(written) == deepreview.parse_report(report)
     assert same_review(mapped("deepreview", written), review)
 
@@ -1266,7 +1273,7 @@ def test_deepreview_kept_text_opening_code_before_points_round_trips(heading):
 def test_reviewer3_point_opening_with_a_thematic_break_keeps_the_next_point(text):
     review = human_review()
     review["opinion"]["contributions"] = [{"text": text}, {"text": "Second."}]
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["overview"][-1] == {"text": "Second."}
     assert len(report["overview"]) == 2
 
@@ -1279,7 +1286,7 @@ def test_reviewer3_closer_added_to_a_comment_opens_no_section_fence():
             {"title": "B", "text": "Before.\n\n```\n### Fake\n```\n\nAfter."},
         ]
     }
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert "Fake" not in report.get("other", {})
     assert [c["title"] for c in report["comments"]] == ["A", "B"]
     assert report["comments"][1]["text"] == "Before.\n\n```\n### Fake\n```\n\nAfter."
@@ -1306,7 +1313,7 @@ def test_reviewer3_final_comment_left_open_swallows_no_section_after_it():
     review["opinion"] = {"summary": "Short summary."}
     review.pop("narrative")
     review["findings"] = {"comments": [{"title": "A", "text": "   ```py\n   x"}]}
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["other"]["Summary"] == "Short summary."
     # Reviewer Comments, left open, goes last, so its last explanation keeps its open code
     assert report["comments"][0]["text"] == "   ```py\n   x"
@@ -1328,7 +1335,7 @@ class TestCommentReader:
         body = f"1. **A**\n\n{self.NESTED}\n\n2. **B**\n\nNext."
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reviewer Comments\n\n{body}\n"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1337,7 +1344,7 @@ class TestCommentReader:
         review["opinion"] = {"summary": "S.\n\n```py\ny"}
         review.pop("narrative")
         review["findings"] = {"comments": [{"title": "A", "text": "   ```py\nx\n   ```"}]}
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["comments"][0]["text"] == "   ```py\nx\n   ```"
         assert report["other"]["Summary"] == "S.\n\n```py\ny"
 
@@ -1349,7 +1356,7 @@ class TestThematicBreaksAndRepeats:
         parsed = reviewer3.parse_report(report)
         assert "Fake" not in parsed.get("other", {})
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == parsed
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1359,7 +1366,7 @@ class TestThematicBreaksAndRepeats:
         assert "Fake" not in parsed.get("other", {})
         assert parsed["strengths"] == [{"text": "A."}]
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == parsed
         assert same_review(mapped("deepreview", written), review)
 
@@ -1367,7 +1374,7 @@ class TestThematicBreaksAndRepeats:
         review = human_review()
         text = "- - -\r\n\r\n  ```py\r\n  x\r\n```"
         review["opinion"]["contributions"] = [{"text": text}, {"text": "Second."}]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["overview"][-1] == {"text": "Second."}
         assert len(report["overview"]) == 2
 
@@ -1377,7 +1384,7 @@ class TestThematicBreaksAndRepeats:
             "### Reviewer Comments\n\nPending.\n```py\nx"
         )
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1387,7 +1394,7 @@ def test_deepreview_point_whose_marker_line_would_be_a_break_round_trips(text):
     report = f"## Strengths\n- {text}\n- Useful result.\n"
     review = mapped("deepreview", report)
     assert len(review["findings"]["strengths"]) == 2
-    written = map_to("deepreview", review)
+    written = codec_map_to("deepreview", review)
     assert deepreview.parse_report(written) == deepreview.parse_report(report)
     assert same_review(mapped("deepreview", written), review)
 
@@ -1398,7 +1405,7 @@ def test_reviewer3_reference_table_then_indented_open_code_round_trips(indent):
     body = f"{table}\n\n{indent}```py\n{indent}x"
     report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
     review = mapped("reviewer3", report)
-    written = map_to("reviewer3", review)
+    written = codec_map_to("reviewer3", review)
     assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
     assert same_review(mapped("reviewer3", written), review)
 
@@ -1407,7 +1414,7 @@ def test_reviewer3_reference_fence_whose_info_string_reads_as_counts_round_trips
     body = "```text Checked 2 references\nexample"
     report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
     review = mapped("reviewer3", report)
-    written = map_to("reviewer3", review)
+    written = codec_map_to("reviewer3", review)
     assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
     assert same_review(mapped("reviewer3", written), review)
 
@@ -1419,7 +1426,7 @@ class TestOutdentedBreaks:
         assert parsed["strengths"] == [{"text": "A."}]
         assert "Fake" not in parsed.get("other", {})
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == parsed
         assert same_review(mapped("deepreview", written), review)
 
@@ -1430,7 +1437,7 @@ class TestOutdentedBreaks:
         assert parsed["overview"] == [{"text": "A."}]
         assert "Fake" not in parsed.get("other", {})
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == parsed
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1439,7 +1446,7 @@ class TestOutdentedBreaks:
         body = f"{table}\n\n```text Checked 2 references\nexample"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Reference Check\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1450,7 +1457,7 @@ class TestScopeAndOrder:
             "## Strengths\n* Useful.\nContinuation.\n  ```py\n  x\n## Summary\nShort.\n\n```py\ny"
         )
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
         assert same_review(mapped("deepreview", written), review)
 
@@ -1473,7 +1480,7 @@ class TestScopeAndOrder:
         review = mapped("reviewer3", report)
         [check] = review["checks"]
         check["summary"] = summary
-        again = mapped("reviewer3", map_to("reviewer3", review))
+        again = mapped("reviewer3", codec_map_to("reviewer3", review))
         [again_check] = again["checks"]
         assert again_check["kind"] == check["kind"]
         assert again["extensions"]["reviewer3"]["other"][heading] == "Repeat."
@@ -1493,7 +1500,7 @@ def test_deepreview_prose_after_a_point_that_ended_stays_out_of_it(strengths):
     parsed = deepreview.parse_report(report)
     assert parsed["other"]["Strengths"] == "Outside the list."
     review = mapped("deepreview", report)
-    written = map_to("deepreview", review)
+    written = codec_map_to("deepreview", review)
     assert deepreview.parse_report(written) == parsed
 
 
@@ -1551,7 +1558,7 @@ class TestLastCopilotCorners:
         parsed = reviewer3.parse_report(report)
         assert parsed["overview"][0]["text"] == "A.\n# Heading"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == parsed
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1565,14 +1572,14 @@ class TestLastCopilotCorners:
         review["findings"] = {
             "comments": [{"title": "A", "text": text}, {"title": "B", "text": "Next."}]
         }
-        comments = reviewer3.parse_report(map_to("reviewer3", review))["comments"]
+        comments = reviewer3.parse_report(codec_map_to("reviewer3", review))["comments"]
         assert [c["title"] for c in comments] == ["A", "B"]
 
     def test_reviewer3_open_tail_after_an_outdented_break_round_trips(self):
         body = "- A.\n - - -\n   ```py\n   x"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Overview\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1590,7 +1597,7 @@ def test_reviewer3_summary_led_by_an_item_indented_break_stays_out_of_the_flaws(
     review["findings"] = {"weaknesses": [{"id": "w1", "text": "Leak."}]}
     summary = f"{indent}- - -\n{indent}```py\n{indent}x"
     review["checks"] = [{"kind": "fatal_flaw_screen", "summary": summary, "finding_ids": ["w1"]}]
-    report = reviewer3.parse_report(map_to("reviewer3", review))
+    report = reviewer3.parse_report(codec_map_to("reviewer3", review))
     assert report["fatal_flaws"]["items"] == [{"text": "Leak."}]
     assert report["fatal_flaws"]["text"].startswith(summary)
 
@@ -1615,14 +1622,14 @@ class TestQuotesAndHeldCode:
     def test_deepreview_break_like_line_inside_code_keeps_the_block_whole(self):
         report = "## Strengths\n* A.\n ```\n - - -\n ```\n"
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
         assert same_review(mapped("deepreview", written), review)
 
     def test_reviewer3_break_like_line_inside_code_keeps_the_block_whole(self):
         report = "# Review Report\n\nA paper\n\n---\n\n### Overview\n\n- A.\n ```\n - - -\n ```\n"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1649,7 +1656,7 @@ class TestAncestorsTabsQuotedFences:
         review["checks"] = [
             {"kind": "fatal_flaw_screen", "summary": summary, "finding_ids": ["w1"]}
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["fatal_flaws"]["items"] == [{"text": "Leak."}]
 
     def test_prose_after_a_quoted_fence_is_not_lazy(self):
@@ -1662,7 +1669,7 @@ class TestPreludeAndTail:
         body = "  Notes.\n\n- A.\n - - -\n   ```py\n   x"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Overview\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
@@ -1670,14 +1677,14 @@ class TestPreludeAndTail:
         body = "  Notes.\n\n- **Leak** — Test data leaks.\n - - -\n   ```py\n   x"
         report = f"# Review Report\n\nA paper\n\n---\n\n### Fatal Flaws\n\n{body}"
         review = mapped("reviewer3", report)
-        written = map_to("reviewer3", review)
+        written = codec_map_to("reviewer3", review)
         assert reviewer3.parse_report(written) == reviewer3.parse_report(report)
         assert same_review(mapped("reviewer3", written), review)
 
     def test_deepreview_rule_inside_a_points_code_keeps_the_block_whole(self):
         report = "## Strengths\n* A.\n ```py\n ---\n ```\n"
         review = mapped("deepreview", report)
-        written = map_to("deepreview", review)
+        written = codec_map_to("deepreview", review)
         assert deepreview.parse_report(written) == deepreview.parse_report(report)
         assert same_review(mapped("deepreview", written), review)
 
@@ -1687,7 +1694,7 @@ class TestPreludeAndTail:
         review["checks"] = [
             {"kind": "fatal_flaw_screen", "summary": "\tNotes.\n\n```py\nx", "finding_ids": ["w1"]}
         ]
-        report = reviewer3.parse_report(map_to("reviewer3", review))
+        report = reviewer3.parse_report(codec_map_to("reviewer3", review))
         assert report["fatal_flaws"]["items"] == [{"text": "Leak."}]
 
 
@@ -1699,7 +1706,7 @@ def test_deepreview_prose_after_a_tab_indented_heading_in_a_point_is_not_lazy():
 def test_deepreview_rule_and_code_inside_a_points_fence_keep_the_block_whole():
     report = "## Strengths\n* A.\n ```text\n ---\n example()\n ```\n"
     review = mapped("deepreview", report)
-    written = map_to("deepreview", review)
+    written = codec_map_to("deepreview", review)
     assert deepreview.parse_report(written) == deepreview.parse_report(report)
     assert same_review(mapped("deepreview", written), review)
 

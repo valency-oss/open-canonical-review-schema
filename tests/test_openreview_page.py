@@ -13,8 +13,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from conftest import codec_validate
 
 from ocrs import validate_canonical
+from ocrs.hierarchy import legacy_view
 from ocrs.mappers.openreview_page import (
     Field,
     Note,
@@ -22,11 +24,21 @@ from ocrs.mappers.openreview_page import (
     _findings,
     _Links,
     parse_forum_page,
-    reviews_from_forum_page,
     to_markdown,
     utc_iso,
 )
+from ocrs.mappers.openreview_page import (
+    reviews_from_forum_page as current_reviews_from_forum_page,
+)
 from ocrs.util import narrative_text
+
+
+def reviews_from_forum_page(*args, **kwargs):
+    reviews = current_reviews_from_forum_page(*args, **kwargs)
+    for review in reviews:
+        validate_canonical(review)
+    return [legacy_view(review) for review in reviews]
+
 
 ROOT = Path(__file__).parent.parent
 PAGE = ROOT / "tests" / "fixtures" / "openreview" / "forum_page.html"
@@ -94,7 +106,7 @@ def test_replies_keep_their_threads(html):
 def test_one_review_per_official_review_and_each_validates(reviews):
     assert [r["review_id"] for r in reviews] == ["REV00000001", "REV00000002"]
     for review in reviews:
-        validate_canonical(review)
+        codec_validate(review)
         assert review["provenance"]["source_system"] == "openreview"
         assert review["referees"][0] == {
             "referee_type": "human",
@@ -121,7 +133,7 @@ def test_review_links_back_to_its_note(reviews, html):
     links = {(e["ocrs"], e["field"]): e for e in ext["source_fields"]}
     assert links[("opinion.summary", "Summary")]["how"] == "copied"
     assert links[("findings.weaknesses[2]", "Strengths And Weaknesses")]["heading"] == "Minor"
-    assert links[("decision.recommendation", "Rating")]["how"] == "lookup"
+    assert links[("opinion.decision.recommendation", "Rating")]["how"] == "lookup"
     assert links[("findings.questions[1]", "Questions")]["how"] == "copied"
 
 
@@ -246,7 +258,7 @@ def test_keep_raw_keeps_the_parsed_note(html):
 
     assert raw["id"] == "REV00000002"
     assert raw["content"]["Rating"] == "2: Reject: For instance, a paper with technical flaws."
-    validate_canonical(review)
+    codec_validate(review)
 
 
 def test_a_page_that_is_not_a_forum_is_refused():
@@ -371,7 +383,7 @@ def test_script_writes_one_valid_file_per_review(tmp_path):
     assert result.returncode == 0, result.stderr
     assert sorted(p.name for p in tmp_path.iterdir()) == ["REV00000001.json", "REV00000002.json"]
     review = json.loads((tmp_path / "REV00000001.json").read_text(encoding="utf-8"))
-    validate_canonical(review)
+    codec_validate(review)
     assert review["created_at"] == "2025-07-03T09:28:00Z"
     assert f"{FORUM_URL}&noteId=REV00000001" in result.stdout
     assert "2 reviews" in result.stderr
@@ -611,7 +623,7 @@ def test_a_bare_number_is_a_score_but_a_sentence_that_starts_with_one_is_not():
         "3 years of experience"
     )
     assert "recommendation" not in review["decision"]
-    validate_canonical(review)
+    codec_validate(review)
 
 
 def test_text_under_references_is_not_a_finding():
@@ -722,7 +734,7 @@ def test_separate_fields_are_also_kept_whole_in_the_narrative(html):
         [p for p in review["narrative"] if "role" not in p]
     )
     assert "Strengths" not in review["extensions"]["openreview"]["unmapped_fields"]
-    validate_canonical(review)
+    codec_validate(review)
 
 
 def test_a_point_keeps_the_relative_indentation_of_its_continuation_lines():
@@ -793,7 +805,7 @@ def test_signed_and_borderline_ratings(html, rating, value, recommendation):
 
     assert overall["value"] == value
     assert review["decision"]["recommendation"] == recommendation
-    validate_canonical(review)
+    codec_validate(review)
 
 
 def test_minor_strengths_are_strengths():
@@ -860,7 +872,7 @@ def test_a_report_in_a_single_field_is_the_detailed_review(html, label):
     assert {"ocrs": f"narrative[{index}]", "field": label, "how": "copied"} in (
         review["extensions"]["openreview"]["source_fields"]
     )
-    validate_canonical(review)
+    codec_validate(review)
 
 
 def test_headings_match_whole_category_words():

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
   "review_id": "ai-review-1",
   "version": "1.0.0",
   "created_at": "2026-10-03T01:08:00Z",
@@ -40,11 +40,13 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "Although we filter title overlap, we do not suppress abstract overlap. This is why the lexical baseline remains well above the null floor on the hard slice; nevertheless, the citation-set signal is still useful."
           }
-        ]
+        ],
+        "id": "weaknesse-1"
       },
       {
         "text": "These examples are meant to show what corroborating and complementary citation sets look like, so readers need to identify the papers.\n\n- Both examples link to ref-9, ref-10 and ref-11, and the quantum-annealing example also links to \"Latour 2004\". Elsewhere ref-9 is the Gu et al. LCR dataset and ref-12 is Latour, which plainly are not the cited papers. The bracket markers were likely copied from the original citing sentences and resolved against this paper's bibliography by mistake.\n- The follow-up sentence uses five footnote markers ([^2]–[^6]) to describe four citations, and [^2] appears to serve both as a footnote and as a paper.\n\nA reader cannot tell which paper plays which role, or which papers were embedded for the percentile claims that follow.",
@@ -54,11 +56,13 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "it has been recognized that “nonstochastic” effect improves the performance [ref-9](#ref-ref-9); [ref-10](#ref-ref-10); [ref-11](#ref-ref-11); [Latour 2004](#ref-ref-12).*\n\nHere each citation contributes a different aspect of the claim’s support. [^2] [^3] is the original proposal of the idea, [^4] is a theory paper that defines the key concept the claim depends on, [^5] is a theoretical analysis proving the improvement, and [^6] is a set of computer experiments that demonstrate it in practice.[^2]"
           }
-        ]
+        ],
+        "id": "weaknesse-2"
       },
       {
         "text": "The reranker's anchor term is the mean of PPMI over anchors, and cosine similarity never enters the score. Influence will therefore track PPMI rather than cosine by construction. The finding describes the scorer, not citation sets in general. The text should frame it as a property of the PPMI-based reranker, or test a scorer that could also use topical similarity.",
@@ -68,11 +72,13 @@
         ],
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "",
+            "resource": {
+              "type": "work"
+            },
             "quote": "Figure 4 shows that their usefulness is primarily determined by co-citation evidence rather than topical similarity."
           }
-        ]
+        ],
+        "id": "weaknesse-3"
       }
     ]
   },

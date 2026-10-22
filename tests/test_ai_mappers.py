@@ -62,7 +62,7 @@ class TestOpenAIReview:
     def test_records_where_each_quote_was_found(self):
         result = map_with_record("openaireview", **_payload(OPENAIREVIEW))
         links = [w["evidence_links"][0] for w in _weaknesses(result.review)]
-        assert {link["type"] for link in links} == {"paper_section"}
+        assert {link["resource"]["type"] for link in links} == {"work"}
         anchored = (Rule.ANCHORED_EXACT, Rule.ANCHORED_FUZZY)
         anchors = [step for step in result.record.steps if step.rule in anchored]
         assert [(step.source, step.rule) for step in anchors] == [
@@ -164,7 +164,7 @@ def test_without_a_paper_quotes_are_copied_but_not_checked():
     [key] = [k for k in OPENAIREVIEW["methods"] if k.startswith("progressive__")]
     link = _weaknesses(result.review)[0]["evidence_links"][0]
     quote = OPENAIREVIEW["methods"][key]["comments"][0]["quote"]
-    assert (link["type"], link["quote"]) == ("paper_section", quote)
+    assert (link["resource"]["type"], link["quote"]) == ("work", quote)
     assert "| Unanchored | not checked (no paper given) |" in render_mapping_markdown(result)
 
 

@@ -98,7 +98,16 @@ def main() -> int:
         validate_canonical(review)
         path = out_dir / f"{review['review_id']}.json"
         path.write_text(json.dumps(review, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        rating = next((m["value"] for m in review.get("metrics", []) if m["key"] == "overall"), "-")
+        from ocrs.hierarchy import resolve_definition
+
+        rating = next(
+            (
+                m["value"]
+                for m in review.get("metrics", [])
+                if resolve_definition(review, m).get("catalog_key") == "overall"
+            ),
+            "-",
+        )
         print(f"{path}  {review['referees'][0].get('referee_id', '?')}  rating {rating}")
         print(f"  {review['provenance']['source_url']}")
     zone = reviews[0]["extensions"]["openreview"]["source_page"]["timezone_assumed"]

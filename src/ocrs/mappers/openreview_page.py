@@ -1240,6 +1240,12 @@ def review_from_note(
             ],
         }
     }
+    from ..hierarchy import remap_path, upgrade_content
+
+    moves: dict[str, str] = {}
+    review = upgrade_content(review, moves)
+    for entry in review["extensions"]["openreview"]["source_fields"]:
+        entry["ocrs"] = remap_path(entry["ocrs"], moves)
     return review
 
 

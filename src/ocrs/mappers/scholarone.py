@@ -9,11 +9,11 @@ import uuid
 from typing import Any
 
 from ..catalog import alias_map, load_catalog
+from ..hierarchy import LEGACY_SCHEMA
 from ..identifiers import generate_canonical_work_id
 from ..scales import (
     SCHOLARONE_RECOMMENDATION,
 )
-from ..schema import schema_id
 from ..util import (
     department_affiliation,
     fields_for,
@@ -349,7 +349,7 @@ def from_scholarone(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[
         referee["referee_id"] = reviewer_id
 
     out: dict[str, Any] = {
-        "$schema": schema_id(),
+        "$schema": LEGACY_SCHEMA,
         "review_id": f"s1_{review_id}",
         "version": "1.0.0",
         "created_at": created,

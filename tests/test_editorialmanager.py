@@ -6,9 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import narrative_fields
+from conftest import codec_map_from, codec_map_to, codec_validate, narrative_fields
 
-from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers.editorialmanager import from_editorialmanager, to_editorialmanager
 from ocrs.util import narrative_text
 
@@ -26,8 +25,8 @@ def load_fixture(name: str) -> dict:
 def test_editorialmanager_minimal():
     """Test minimal Editorial Manager review conversion."""
     payload = load_fixture("minimal_review.json")
-    canon = map_from("editorialmanager", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("editorialmanager", payload)
+    codec_validate(canon)
 
     assert canon["provenance"]["source_system"] == "editorialmanager"
     assert canon["target"]["work_id"] == "internal_id:manuscriptId:MS-2024-0042"
@@ -38,8 +37,8 @@ def test_editorialmanager_minimal():
 def test_editorialmanager_realistic():
     """Test realistic Editorial Manager review with all fields."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("editorialmanager", payload, keep_raw=True)
-    validate_canonical(canon)
+    canon = codec_map_from("editorialmanager", payload, keep_raw=True)
+    codec_validate(canon)
 
     # Check basic structure
     assert canon["provenance"]["source_system"] == "editorialmanager"
@@ -69,8 +68,8 @@ def test_editorialmanager_realistic():
 def test_editorialmanager_revision():
     """Test Editorial Manager R2 revision review."""
     payload = load_fixture("realistic_revision.json")
-    canon = map_from("editorialmanager", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("editorialmanager", payload)
+    codec_validate(canon)
 
     # Check revision number mapping
     assert canon["review_context"]["round"] == 3  # revisionNumber 2 -> round 3
@@ -100,7 +99,7 @@ def test_editorialmanager_recommendation_code():
             "commentsToAuthor": "Test comments.",
         }
         canon = from_editorialmanager(payload)
-        validate_canonical(canon)
+        codec_validate(canon)
         assert canon["decision"] == expected
 
 
@@ -121,7 +120,7 @@ def test_editorialmanager_text_recommendation():
             "commentsToAuthor": "Test comments.",
         }
         canon = from_editorialmanager(payload)
-        validate_canonical(canon)
+        codec_validate(canon)
         # The recommendation in the source's own words is kept beside OCRS's reading of it
         assert canon["decision"] == {**expected, "source_label": text}
 
@@ -139,7 +138,7 @@ def test_editorialmanager_ratings_normalization():
         ],
     }
     canon = from_editorialmanager(payload)
-    validate_canonical(canon)
+    codec_validate(canon)
 
     # Check normalization
     quality_metric = next((m for m in canon["metrics"] if m["label"] == "Quality"), None)
@@ -156,10 +155,10 @@ def test_editorialmanager_ratings_normalization():
 def test_editorialmanager_to_and_back():
     """Test roundtrip conversion (lossy)."""
     payload = load_fixture("realistic_review.json")
-    canon = map_from("editorialmanager", payload)
-    validate_canonical(canon)
+    canon = codec_map_from("editorialmanager", payload)
+    codec_validate(canon)
 
-    back = map_to("editorialmanager", canon)
+    back = codec_map_to("editorialmanager", canon)
 
     # Verify basic structure preserved
     assert back["manuscriptId"] == "MS-2024-001234"
@@ -228,14 +227,14 @@ def test_editorialmanager_reviewer_id_fallbacks():
         ({"reviewer_id": 42}, "42"),
         ({"reviewerEmail": "ref@example.org"}, "ref@example.org"),
     ]:
-        canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", **extra})
+        canon = codec_map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", **extra})
         assert canon["referees"][0]["referee_id"] == expected
 
 
 def test_editorialmanager_work_id_fallbacks():
     """Test manuscript ID falls back through the alternative ID keys."""
     for key in ("manuscript_id", "ms_id", "documentId"):
-        canon = map_from("editorialmanager", {**TEXT, key: "MS-77"})
+        canon = codec_map_from("editorialmanager", {**TEXT, key: "MS-77"})
         assert canon["target"]["identifiers"]["internal_id"] == {
             "field_name": "manuscriptId",
             "value": "MS-77",
@@ -246,12 +245,12 @@ def test_editorialmanager_work_id_fallbacks():
 def test_editorialmanager_empty_payload():
     """Test an empty payload is refused: a review must say something."""
     with pytest.raises(ValueError, match="has no review content"):
-        map_from("editorialmanager", {})
+        codec_map_from("editorialmanager", {})
 
 
 def test_editorialmanager_text_only_payload():
     """Test a payload with only comments to the author maps with defaults."""
-    canon = map_from("editorialmanager", TEXT)
+    canon = codec_map_from("editorialmanager", TEXT)
     assert canon["target"]["identifiers"] == {}
     assert canon["target"]["work_id"] == "unknown"
     assert "referee_id" not in canon["referees"][0]
@@ -268,35 +267,39 @@ def test_editorialmanager_text_only_payload():
 def test_editorialmanager_created_at_keys():
     """Test created_at is read from the alternative date keys."""
     for key in ("dateReceived", "date_received", "reviewDate", "created_at"):
-        canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", key: "2024-12-20"})
+        canon = codec_map_from(
+            "editorialmanager", {**TEXT, "manuscriptId": "MS-1", key: "2024-12-20"}
+        )
         assert canon["created_at"] == "2024-12-20T00:00:00Z"
 
 
 def test_editorialmanager_review_id_fallbacks():
     """Test review ID falls back to review_id, then id."""
     for key in ("review_id", "id"):
-        canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", key: 501})
+        canon = codec_map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", key: 501})
         assert canon["review_id"] == "em_501"
         assert canon["provenance"]["source_review_id"] == "501"
 
 
 def test_editorialmanager_doi_identifier():
     """Test a valid DOI becomes the primary identifier; an invalid one is ignored."""
-    canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "doi": "10.1234/abc.5"})
+    canon = codec_map_from(
+        "editorialmanager", {**TEXT, "manuscriptId": "MS-1", "doi": "10.1234/abc.5"}
+    )
     assert canon["target"]["identifiers"]["doi"] == {
         "value": "10.1234/abc.5",
         "hyperlink": "https://doi.org/10.1234/abc.5",
     }
     assert canon["target"]["work_id"] == "doi:10.1234/abc.5"
 
-    canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "doi": "not-a-doi"})
+    canon = codec_map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "doi": "not-a-doi"})
     assert "doi" not in canon["target"]["identifiers"]
     assert canon["target"]["work_id"] == "internal_id:manuscriptId:MS-1"
 
 
 def test_editorialmanager_human_referee_fields():
     """Test ORCID, name and affiliation populate human_referee."""
-    canon = map_from(
+    canon = codec_map_from(
         "editorialmanager",
         {
             **TEXT,
@@ -313,7 +316,7 @@ def test_editorialmanager_human_referee_fields():
     }
 
     # snake_case / short alternative keys
-    canon = map_from(
+    canon = codec_map_from(
         "editorialmanager",
         {
             **TEXT,
@@ -332,13 +335,13 @@ def test_editorialmanager_human_referee_fields():
 
 def test_editorialmanager_invalid_orcid_dropped():
     """Test an ORCID that does not normalize is left out of human_referee."""
-    canon = map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "orcid": "1234"})
+    canon = codec_map_from("editorialmanager", {**TEXT, "manuscriptId": "MS-1", "orcid": "1234"})
     assert canon["referees"][0]["human_referee"] == {}
 
 
 def test_editorialmanager_unknown_code_falls_back_to_text():
     """Test an unmapped recommendationCode falls back to the text recommendation."""
-    canon = map_from(
+    canon = codec_map_from(
         "editorialmanager",
         {"manuscriptId": "MS-1", "recommendationCode": 9, "recommendation": "Reject"},
     )
@@ -347,7 +350,7 @@ def test_editorialmanager_unknown_code_falls_back_to_text():
 
 def test_editorialmanager_narrative_variants():
     """Test narrative uses the first non-blank source and snake_case keys."""
-    canon = map_from(
+    canon = codec_map_from(
         "editorialmanager",
         {
             "manuscriptId": "MS-1",
@@ -368,7 +371,7 @@ def test_editorialmanager_narrative_variants():
 
 def test_editorialmanager_narrative_first_key_wins():
     """Test commentsToAuthor takes precedence over comments_to_author."""
-    canon = map_from(
+    canon = codec_map_from(
         "editorialmanager",
         {"manuscriptId": "MS-1", "commentsToAuthor": "Camel.", "comments_to_author": "Snake."},
     )
@@ -377,7 +380,7 @@ def test_editorialmanager_narrative_first_key_wins():
 
 def test_editorialmanager_opinion_from_comments():
     """Test opinion summary falls back to the generic comments field."""
-    canon = map_from("editorialmanager", {"manuscriptId": "MS-1", "comments": "Generic."})
+    canon = codec_map_from("editorialmanager", {"manuscriptId": "MS-1", "comments": "Generic."})
     assert canon["opinion"]["summary"] == "Generic."
     # "comments" is not a narrative source
     assert "narrative" not in canon
@@ -397,7 +400,7 @@ def test_editorialmanager_ratings_edge_cases():
             {"question": "Bananas", "score": 2},
         ],
     }
-    canon = map_from("editorialmanager", payload)
+    canon = codec_map_from("editorialmanager", payload)
     metrics = canon["metrics"]
     assert [m["label"] for m in metrics] == [
         "Originality",
@@ -451,7 +454,7 @@ def _minimal_canonical(**overrides) -> dict:
 
 def test_editorialmanager_to_minimal():
     """Test to_editorialmanager on a minimal review omits optional fields."""
-    back = map_to("editorialmanager", _minimal_canonical())
+    back = codec_map_to("editorialmanager", _minimal_canonical())
     assert back == {
         "reviewId": "REV-X",
         "manuscriptId": "MS-X",
@@ -462,20 +465,20 @@ def test_editorialmanager_to_minimal():
 
 def test_editorialmanager_to_unprefixed_review_id():
     """Test a review ID without the em_ prefix is passed through unchanged."""
-    back = map_to("editorialmanager", _minimal_canonical(review_id="s1_DOC-1_r2"))
+    back = codec_map_to("editorialmanager", _minimal_canonical(review_id="s1_DOC-1_r2"))
     assert back["reviewId"] == "s1_DOC-1_r2"
 
 
 def test_editorialmanager_to_opinion_text_fallback():
     """Test commentsToAuthor falls back to opinion.text before opinion.summary."""
     canon = _minimal_canonical(opinion={"summary": "Summary text.", "text": "Full opinion."})
-    assert map_to("editorialmanager", canon)["commentsToAuthor"] == "Full opinion."
+    assert codec_map_to("editorialmanager", canon)["commentsToAuthor"] == "Full opinion."
 
 
 def test_editorialmanager_to_revision_requirement():
     """Test a revision requirement is written back as a recommendation label."""
     canon = _minimal_canonical(decision={"revision_requirement": "major"})
-    assert map_to("editorialmanager", canon)["recommendation"] == "Major Revision"
+    assert codec_map_to("editorialmanager", canon)["recommendation"] == "Major Revision"
 
 
 def test_editorialmanager_to_metric_edge_cases():
@@ -502,7 +505,7 @@ def test_editorialmanager_to_no_comments():
 
 def test_editorialmanager_empty_or_short_questions_are_other():
     ratings = [{"question": "", "score": 3}, {"question": "ab", "score": 3}]
-    canon = map_from("editorialmanager", {"manuscriptId": "M", "ratings": ratings})
+    canon = codec_map_from("editorialmanager", {"manuscriptId": "M", "ratings": ratings})
     assert [m["key"] for m in canon["metrics"]] == ["other", "other"]
 
 

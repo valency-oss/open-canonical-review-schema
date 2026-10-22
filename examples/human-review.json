@@ -1,5 +1,5 @@
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json",
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
   "review_id": "journal-review-2041",
   "version": "1.0.0",
   "created_at": "2026-09-14T09:30:00Z",
@@ -21,48 +21,75 @@
   "review_context": {
     "review_type": "initial",
     "stage": "pre_publication",
-    "round": 1
+    "round": 1,
+    "metric_schemas": {
+      "source-form": {
+        "source": {
+          "name": "example-journal",
+          "catalog_ref": "metric-catalog.core.v1.1",
+          "venue": "Example Journal of Earth Sciences"
+        },
+        "definitions": {
+          "correctness": {
+            "label": "Soundness",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 4,
+              "step": 1
+            },
+            "catalog_key": "correctness"
+          },
+          "clarity": {
+            "label": "Clarity",
+            "scale": {
+              "type": "ordinal",
+              "min": 1,
+              "max": 4,
+              "step": 1
+            },
+            "catalog_key": "clarity"
+          }
+        }
+      }
+    }
   },
   "opinion": {
     "summary": "A useful new snow-cover dataset, but the validation does not yet support the accuracy claimed in the abstract.",
-    "stance": "mixed"
+    "stance": "mixed",
+    "decision": {
+      "revision_requirement": "major",
+      "rationale": "The dataset is valuable; the validation needs ground stations outside the training region."
+    },
+    "metric_refs": [
+      "metric-1",
+      "metric-2"
+    ]
   },
-  "decision": {
-    "revision_requirement": "major",
-    "summary_rationale": "The dataset is valuable; the validation needs ground stations outside the training region.",
-    "credence": 0.8
-  },
-  "metric_catalog_ref": "metric-catalog.core.v1",
   "metrics": [
     {
-      "key": "correctness",
-      "label": "Soundness",
-      "scale": {
-        "type": "ordinal",
-        "min": 1,
-        "max": 4,
-        "step": 1
-      },
       "value": 2,
-      "justification": "Validation uses the same stations as calibration."
+      "justification": "Validation uses the same stations as calibration.",
+      "id": "metric-1",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "correctness"
+      }
     },
     {
-      "key": "clarity",
-      "label": "Clarity",
-      "scale": {
-        "type": "ordinal",
-        "min": 1,
-        "max": 4,
-        "step": 1
-      },
-      "value": 3
+      "value": 3,
+      "id": "metric-2",
+      "definition_ref": {
+        "schema_id": "source-form",
+        "key": "clarity"
+      }
     }
   ],
   "findings": {
     "strengths": [
       {
         "text": "Daily coverage at 500 m for twenty years fills a real gap.",
-        "severity": "major"
+        "id": "strength-1"
       }
     ],
     "weaknesses": [
@@ -70,30 +97,45 @@
         "title": "Validation reuses calibration stations",
         "text": "The 94% accuracy is measured on the stations used to calibrate the model, so it overstates accuracy elsewhere.",
         "severity": "major",
-        "probability": 0.9,
-        "credence": 0.7,
         "evidence_links": [
           {
-            "type": "paper_section",
-            "ref": "Section 4.1",
-            "quote": "We evaluate against the same 212 stations."
+            "resource": {
+              "type": "work"
+            },
+            "quote": "We evaluate against the same 212 stations.",
+            "location": {
+              "label": "Section 4.1",
+              "section": "Section 4.1"
+            }
           }
-        ]
+        ],
+        "id": "weaknesse-1",
+        "uncertainty": {
+          "probability": 0.9,
+          "credence": 0.7
+        }
       },
       {
         "text": "Figure 3 has no units on the colour bar.",
         "severity": "minor",
         "evidence_links": [
           {
-            "type": "figure",
-            "ref": "Figure 3"
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Figure 3",
+              "figure": "Figure 3"
+            }
           }
-        ]
+        ],
+        "id": "weaknesse-2"
       }
     ],
     "questions": [
       {
-        "text": "How does accuracy change in forested areas, where snow is hidden under the canopy?"
+        "text": "How does accuracy change in forested areas, where snow is hidden under the canopy?",
+        "id": "question-1"
       }
     ]
   },
@@ -111,5 +153,19 @@
         ]
       }
     }
-  ]
+  ],
+  "extensions": {
+    "ocrs_0_8": {
+      "fields": [
+        {
+          "path": "findings.strengths[0].severity",
+          "value": "major"
+        },
+        {
+          "path": "decision.credence",
+          "value": 0.8
+        }
+      ]
+    }
+  }
 }

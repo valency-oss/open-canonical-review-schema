@@ -10,9 +10,9 @@ import uuid
 from typing import Any
 
 from ..catalog import alias_map, load_catalog
+from ..hierarchy import LEGACY_SCHEMA
 from ..identifiers import generate_canonical_work_id
 from ..scales import normalized_to_recommendation
-from ..schema import schema_id
 from ..util import (
     epoch_ms_to_iso,
     field_name,
@@ -511,7 +511,7 @@ def from_openreview(
     review_id = note.get("id") if isinstance(note.get("id"), str) else str(uuid.uuid4())
 
     out: dict[str, Any] = {
-        "$schema": schema_id(),
+        "$schema": LEGACY_SCHEMA,
         "review_id": review_id,
         "version": "1.0.0",
         "created_at": created,

@@ -1,0 +1,813 @@
+[
+  {
+    "id": "decisive",
+    "title": "A fatal flaw overrides a strong score",
+    "status": "Fits",
+    "source": "Technically this is an 8/10: the evaluation is unusually rigorous. However, the Methods explicitly say patient consent was not obtained. That weakness alone makes me recommend rejection.",
+    "pressure": "Opinion and score have different sets of supporting findings. A high rating and rejection must not be forced into agreement.",
+    "rule": "Opinion.supported_by is optional. Here it points to the decisive ethics weakness; the technical score points to the strength. Neither support list is inferred from the other.",
+    "mapping": {
+      "opinion": {
+        "summary": "Technically strong, but the consent issue is decisive.",
+        "stance": "mixed",
+        "metric_refs": [
+          "m1"
+        ],
+        "supported_by": [
+          "w1"
+        ],
+        "decision": {
+          "recommendation": "reject",
+          "rationale": "The lack of patient consent is decisive."
+        }
+      },
+      "metrics": [
+        {
+          "id": "m1",
+          "definition_ref": {
+            "schema_id": "example-form",
+            "key": "technical_merit"
+          },
+          "value": 8,
+          "supported_by": [
+            "s1"
+          ]
+        }
+      ],
+      "findings": {
+        "strengths": [
+          {
+            "id": "s1",
+            "text": "The evaluation is unusually rigorous."
+          }
+        ],
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The Methods state that patient consent was not obtained.",
+            "severity": "critical",
+            "tags": [
+              "ethics",
+              "consent"
+            ],
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Methods"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "review_context": {
+        "metric_schemas": {
+          "example-form": {
+            "source": {
+              "name": "Invented review form"
+            },
+            "definitions": {
+              "technical_merit": {
+                "label": "Technical merit",
+                "dimension": "technical_merit",
+                "scale": {
+                  "type": "ordinal",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "bare-score",
+    "title": "A score and confidence, with no prose",
+    "status": "Fits",
+    "source": "Overall: 6/10. Confidence: 2/10. [No comments supplied.]",
+    "pressure": "A strict hierarchy could tempt an importer to invent findings that explain a score, or treat confidence as a finding-derived judgment.",
+    "rule": "Keep both original answers and their definitions. supported_by is absent. Confidence is a source-stated answer, not a computed probability or an inferred finding.",
+    "mapping": {
+      "opinion": {
+        "metric_refs": [
+          "m1",
+          "m2"
+        ]
+      },
+      "metrics": [
+        {
+          "id": "m1",
+          "definition_ref": {
+            "schema_id": "example-form",
+            "key": "overall"
+          },
+          "value": 6
+        },
+        {
+          "id": "m2",
+          "definition_ref": {
+            "schema_id": "example-form",
+            "key": "reviewer_confidence"
+          },
+          "value": 2
+        }
+      ],
+      "review_context": {
+        "metric_schemas": {
+          "example-form": {
+            "source": {
+              "name": "Invented review form"
+            },
+            "definitions": {
+              "overall": {
+                "label": "Overall",
+                "dimension": "overall",
+                "scale": {
+                  "type": "ordinal",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1
+                }
+              },
+              "reviewer_confidence": {
+                "label": "Reviewer confidence",
+                "dimension": "reviewer_confidence",
+                "scale": {
+                  "type": "ordinal",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "prose-only",
+    "title": "A purely qualitative review",
+    "status": "Fits",
+    "source": "I recommend acceptance. The proof is elegant and the exposition is clear. Please define the symbol in Equation 2.",
+    "pressure": "There are no numerical scores, no extracted claims and no performed checks. The requested edit is not explicitly tied to a weakness.",
+    "rule": "Metrics and lower-layer objects remain optional. Preserve two strengths and a standalone change; do not invent a weakness or a score.",
+    "mapping": {
+      "opinion": {
+        "summary": "Accept: elegant proof and clear exposition.",
+        "stance": "positive",
+        "supported_by": [
+          "s1",
+          "s2"
+        ],
+        "decision": {
+          "recommendation": "accept"
+        }
+      },
+      "findings": {
+        "strengths": [
+          {
+            "id": "s1",
+            "text": "The proof is elegant."
+          },
+          {
+            "id": "s2",
+            "text": "The exposition is clear."
+          }
+        ],
+        "changes": [
+          {
+            "id": "ch1",
+            "text": "Define the symbol in Equation 2.",
+            "tags": [
+              "clarification"
+            ],
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Equation 2",
+                  "equation": "2"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "mixed-evidence",
+    "title": "One claim, conflicting observations",
+    "status": "Fits",
+    "source": "The paper claims cross-campus generalization. Its original evaluation uses one campus. An additional replication covers two campuses, but both are in the same climate. Generalization is still only partially established.",
+    "pressure": "Evidence has mixed implications. A pointer alone cannot label which observation supports or limits the claim.",
+    "rule": "The finding states the synthesis and its limitations. about can include one claim and multiple check results. Evidence pointers remain plain; no signed evidence edges are needed.",
+    "mapping": {
+      "work_summary": {
+        "claims": [
+          {
+            "id": "c1",
+            "text": "The method generalizes across campuses.",
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Abstract"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "ck1",
+          "kind": "evaluation_coverage",
+          "execution_status": "completed",
+          "results": [
+            {
+              "id": "r1",
+              "text": "Original evaluation: one campus.",
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "work"
+                  },
+                  "version": "v1",
+                  "location": {
+                    "label": "Table 2"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "r2",
+              "text": "Replication: two campuses in one climate.",
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "work"
+                  },
+                  "version": "v1",
+                  "location": {
+                    "label": "Appendix C"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The replication broadens site coverage, but a single climate still limits the generalization claim.",
+            "about": [
+              {
+                "type": "claim",
+                "id": "c1"
+              },
+              {
+                "type": "check_result",
+                "id": "r1"
+              },
+              {
+                "type": "check_result",
+                "id": "r2"
+              }
+            ],
+            "severity": "major"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "check-failed",
+    "title": "The checker fails, not the work",
+    "status": "Fits",
+    "source": "The reproduction runner exhausted its GPU quota before any experiment began. I cannot assess reproducibility from this attempt.",
+    "pressure": "Execution failure can be mistaken for a failed scientific result or a quality score of zero.",
+    "rule": "Record the failed examination and unassessed observation. Do not infer a weakness, rejection or zero reproducibility score.",
+    "mapping": {
+      "checks": [
+        {
+          "id": "ck1",
+          "kind": "artifact_execution",
+          "execution_status": "failed",
+          "outcome": "inconclusive",
+          "procedure": {
+            "description": "Attempt to run the supplied experiments."
+          },
+          "results": [
+            {
+              "id": "r1",
+              "status": "not_assessed",
+              "text": "Runner exhausted its GPU quota before experiment start.",
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "external",
+                    "ref": "Recorded runner log"
+                  },
+                  "location": {
+                    "label": "Quota error"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "raw-measurement",
+    "title": "Raw counts with no evaluative score",
+    "status": "Fits",
+    "source": "Reference checker: 80 references inspected, 3 unresolved. Elapsed time: 12.4 seconds. No reviewer judgment was supplied.",
+    "pressure": "Counts and runtime are measurements, but they are not numerical summaries of evaluative findings. The strict hierarchy cannot treat every number as an overall metric.",
+    "rule": "Keep raw quantities and their units in result.data once. Metrics are summaries or overall assessment scores; do not manufacture findings or an overall rating from checker output.",
+    "mapping": {
+      "checks": [
+        {
+          "id": "ck1",
+          "kind": "reference_verification",
+          "execution_status": "completed",
+          "results": [
+            {
+              "id": "r1",
+              "status": "unresolved_references",
+              "data": {
+                "references_inspected": 80,
+                "references_unresolved": 3,
+                "elapsed": {
+                  "value": 12.4,
+                  "units": "seconds"
+                }
+              },
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "external",
+                    "ref": "Reference-check report"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "alternatives",
+    "title": "Alternative remedies and a conditional decision",
+    "status": "Fits",
+    "source": "Accept only if the authors either remove the causal claim OR run a randomized study. Doing either is sufficient; both are not required.",
+    "pressure": "Two independent change records could accidentally imply that both actions are required. A revision enum alone cannot express the decision condition.",
+    "rule": "The Changes description requires alternative remedies to stay together in one item when either remedy is sufficient. Preserve the decision condition in rationale. No extra schema construct is needed.",
+    "mapping": {
+      "opinion": {
+        "decision": {
+          "recommendation": "accept",
+          "revision_requirement": "major",
+          "rationale": "Acceptance is conditional on either removing the causal claim OR running a randomized study; either is sufficient."
+        },
+        "supported_by": [
+          "w1"
+        ]
+      },
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The causal claim is not established by the current design."
+          }
+        ],
+        "changes": [
+          {
+            "id": "ch1",
+            "text": "Either remove the causal claim OR run a randomized study; either remedy is sufficient.",
+            "addresses": [
+              "w1"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "artifact-scores",
+    "title": "A score for package A versus package B",
+    "status": "Scope example",
+    "source": "Code package A: usability 8/10. Code package B: usability 2/10. Overall paper: 6/10. Both package scores use the same rubric.",
+    "pressure": "This only concerns separately scoring individual artifacts. The same rubric produces 8 for A and 2 for B; without a subject reference, a structured score cannot say which package it evaluates. Normal overall review scores do not have this ambiguity.",
+    "rule": "The current metric layer is for overall summaries. Preserve the per-package ratings in the original source or finding text; do not invent checks or duplicate rubric definitions to force them into that layer. No subject field is added in this version.",
+    "mapping": {
+      "opinion": {
+        "metric_refs": [
+          "m1"
+        ]
+      },
+      "metrics": [
+        {
+          "id": "m1",
+          "definition_ref": {
+            "schema_id": "example-form",
+            "key": "overall"
+          },
+          "value": 6
+        }
+      ],
+      "findings": {
+        "comments": [
+          {
+            "id": "f1",
+            "text": "Code package A: usability 8/10.",
+            "tags": [
+              "artifact",
+              "usability"
+            ]
+          },
+          {
+            "id": "f2",
+            "text": "Code package B: usability 2/10.",
+            "tags": [
+              "artifact",
+              "usability"
+            ]
+          }
+        ]
+      },
+      "review_context": {
+        "metric_schemas": {
+          "example-form": {
+            "source": {
+              "name": "Invented review form"
+            },
+            "definitions": {
+              "overall": {
+                "label": "Overall",
+                "dimension": "overall",
+                "scale": {
+                  "type": "ordinal",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "preserve_unmapped": "Both artifact-local ratings are retained in finding text. They are outside the current structured overall-summary metric layer."
+  },
+  {
+    "id": "versions",
+    "title": "The same check changes across versions",
+    "status": "Fits with versioned pointers",
+    "source": "Package revision abc failed installation. After the authors supplied revision def, installation succeeded. The review concerns paper v2; I am no longer requesting an installation fix.",
+    "pressure": "A flat failed status or stale change can wrongly imply that the current package is still broken.",
+    "rule": "Keep two observations with the exact artifact versions in their pointers. Preserve the final comment; do not emit an active requested change when the reviewer says it is no longer requested.",
+    "mapping": {
+      "target": {
+        "artifacts": [
+          {
+            "id": "a1",
+            "type": "code",
+            "ref": "Example code package"
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "ck1",
+          "kind": "artifact_installation",
+          "execution_status": "completed",
+          "results": [
+            {
+              "id": "r1",
+              "status": "failed",
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "artifact",
+                    "id": "a1"
+                  },
+                  "version": "abc",
+                  "location": {
+                    "label": "Installation log"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "r2",
+              "status": "passed",
+              "evidence_links": [
+                {
+                  "resource": {
+                    "type": "artifact",
+                    "id": "a1"
+                  },
+                  "version": "def",
+                  "location": {
+                    "label": "Installation log"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "findings": {
+        "comments": [
+          {
+            "id": "f1",
+            "text": "Installation succeeds in revision def; the earlier request is no longer active.",
+            "about": [
+              {
+                "type": "check_result",
+                "id": "r1"
+              },
+              {
+                "type": "check_result",
+                "id": "r2"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "finding-chain",
+    "title": "A multi-step argument within one finding",
+    "status": "Fits as one finding",
+    "source": "The train/test split leaks patient identities. Consequently the reported accuracy is inflated; consequently the clinical deployment claim is unsupported.",
+    "pressure": "The source gives a multi-step argument, but that does not require a separate graph node for every step.",
+    "rule": "Preserve the argument in the text of one substantive finding. There are no finding-to-finding support links in this version.",
+    "mapping": {
+      "work_summary": {
+        "claims": [
+          {
+            "id": "c1",
+            "text": "The model is ready for clinical deployment.",
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Discussion"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "Patient-identity leakage inflates the accuracy estimate, so it does not establish the clinical deployment claim.",
+            "about": [
+              {
+                "type": "claim",
+                "id": "c1"
+              }
+            ],
+            "severity": "critical",
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Data split description"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "non-observation",
+    "title": "An absence claim without a performed check",
+    "status": "Fits",
+    "source": "The paper does not explain how missing data were handled. Please add that explanation. I did not inspect the code.",
+    "pressure": "An importer might manufacture a code check or evidence of nonexistent text to justify a missing-information finding.",
+    "rule": "Keep the reviewer’s stated weakness and a change addressing it. A pointer to the relevant Methods section is optional context; no code check or fake quotation is required.",
+    "mapping": {
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The paper does not explain how missing data were handled.",
+            "tags": [
+              "methods",
+              "reporting"
+            ]
+          }
+        ],
+        "changes": [
+          {
+            "id": "ch1",
+            "text": "Explain how missing data were handled.",
+            "addresses": [
+              "w1"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "five-collections",
+    "title": "One paragraph contains all five kinds of point",
+    "status": "Fits",
+    "source": "The dataset is unusually broad, but the subgroup counts are small. How were the thresholds selected? I use robustness here to mean stability across random seeds. To address the small subgroup counts, please report per-group intervals.",
+    "pressure": "A heading or paragraph can mix praise, criticism, a question, a neutral clarification and a requested action. Reusing fields must not flatten those distinctions.",
+    "rule": "Keep five separate collections under findings. Classify each source point once; the change can address the weakness without being duplicated as another weakness.",
+    "mapping": {
+      "findings": {
+        "strengths": [
+          {
+            "id": "s1",
+            "text": "The dataset is unusually broad."
+          }
+        ],
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The subgroup counts are small."
+          }
+        ],
+        "questions": [
+          {
+            "id": "q1",
+            "text": "How were the thresholds selected?"
+          }
+        ],
+        "comments": [
+          {
+            "id": "f1",
+            "text": "I use robustness here to mean stability across random seeds."
+          }
+        ],
+        "changes": [
+          {
+            "id": "ch1",
+            "text": "Report per-group intervals.",
+            "addresses": [
+              "w1"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "shared-uncertainty",
+    "title": "One uncertainty type, two contexts",
+    "status": "Fits",
+    "source": "My probability that the split leaks patient identities is 0.6, and my confidence in assigning that probability is 0.8. Taking this concern into account, my overall score is 7/10, with a plausible range of 6–8 and confidence of 0.7 in that score.",
+    "pressure": "A probability about an assertion and a range of score values are different quantities, even though their surrounding uncertainty fields can be reused.",
+    "rule": "Use one Uncertainty definition: probability on the finding, interval on the metric, and optional credence/rationale on either. Do not put both probability and interval in one object, or substitute model extraction confidence for reviewer uncertainty.",
+    "mapping": {
+      "opinion": {
+        "metric_refs": [
+          "m1"
+        ]
+      },
+      "metrics": [
+        {
+          "id": "m1",
+          "definition_ref": {
+            "schema_id": "example-form",
+            "key": "overall"
+          },
+          "value": 7,
+          "supported_by": [
+            "w1"
+          ],
+          "uncertainty": {
+            "interval": {
+              "low": 6,
+              "high": 8
+            },
+            "credence": 0.7
+          }
+        }
+      ],
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The split may leak patient identities.",
+            "uncertainty": {
+              "probability": 0.6,
+              "credence": 0.8
+            }
+          }
+        ]
+      },
+      "review_context": {
+        "metric_schemas": {
+          "example-form": {
+            "source": {
+              "name": "Invented review form"
+            },
+            "definitions": {
+              "overall": {
+                "label": "Overall",
+                "dimension": "overall",
+                "scale": {
+                  "type": "ordinal",
+                  "min": 1,
+                  "max": 10,
+                  "step": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "positional-span",
+    "title": "An exact span after an emoji and a line break",
+    "status": "Fits",
+    "source": "Paper text: “🧪 Trial\\nThe effect is robust.\\n”. Reviewer: “The robustness claim is too strong for this small sample.”",
+    "pressure": "An emoji occupies one Unicode code point but two UTF-16 code units. PDF extraction, normalization and page-relative counting can otherwise shift the selected passage.",
+    "rule": "Identify the exact extracted text with text_ref. Use zero-based Unicode code-point offsets [start, end), counting stored whitespace. Page and section remain descriptive locators; quote matches the selected slice. No span is inferred without access to the referenced text.",
+    "mapping": {
+      "work_summary": {
+        "claims": [
+          {
+            "id": "c1",
+            "text": "The effect is robust.",
+            "evidence_links": [
+              {
+                "resource": {
+                  "type": "work"
+                },
+                "version": "v1",
+                "location": {
+                  "label": "Abstract",
+                  "page": 1,
+                  "section": "Abstract",
+                  "span": {
+                    "text_ref": "urn:example:paper-v1:extracted-text-v1",
+                    "start": 8,
+                    "end": 29
+                  }
+                },
+                "quote": "The effect is robust."
+              }
+            ]
+          }
+        ]
+      },
+      "findings": {
+        "weaknesses": [
+          {
+            "id": "w1",
+            "text": "The robustness claim is too strong for this small sample.",
+            "about": [
+              {
+                "type": "claim",
+                "id": "c1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "span_texts": {
+      "urn:example:paper-v1:extracted-text-v1": "🧪 Trial\nThe effect is robust.\n"
+    }
+  }
+]

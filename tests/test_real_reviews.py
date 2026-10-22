@@ -18,9 +18,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+from conftest import codec_map_from, codec_map_to, codec_validate
 from test_roundtrip import AI_RUN, differences, frozen_clock, without_import_time  # noqa: F401
 
-from ocrs import map_from, map_to, validate_canonical
 from ocrs.mappers import jats
 from ocrs.util import narrative_text
 
@@ -102,16 +102,16 @@ def comparable(system: str, payload):
 
 def read(system: str, payload, how: dict) -> dict:
     if "output_run" in how:
-        return map_from(system, {"output": payload, **how["output_run"]})
-    return map_from(system, payload, **how)
+        return codec_map_from(system, {"output": payload, **how["output_run"]})
+    return codec_map_from(system, payload, **how)
 
 
 @pytest.mark.parametrize(("system", "file", "how"), REVIEWS)
 @pytest.mark.usefixtures("clock")
 def test_a_real_review_written_in_its_source_format_reads_back_the_same(system, file, how):
     review = read(system, json.loads((REAL / file).read_text()), how)
-    validate_canonical(review)
-    again = read(system, map_to(system, review), how)
+    codec_validate(review)
+    again = read(system, codec_map_to(system, review), how)
     assert differences(without_import_time(review), without_import_time(again)) == set()
 
 
@@ -395,7 +395,7 @@ LOSSES = {
 @pytest.mark.usefixtures("clock")
 def test_a_real_review_read_and_written_back_is_given_back_as_listed(system, file, how):
     payload = json.loads((REAL / file).read_text())
-    written = map_to(system, read(system, payload, how))
+    written = codec_map_to(system, read(system, payload, how))
     assert differences(comparable(system, payload), comparable(system, written)) == LOSSES.get(
         file, set()
     )
@@ -429,7 +429,7 @@ def real(file: str):
 def read_real(file: str) -> dict:
     source = next(source for source in SOURCES if source["file"] == file)
     payload = real(file)
-    return map_from(source["system"], payload, **form(source, payload))
+    return codec_map_from(source["system"], payload, **form(source, payload))
 
 
 def test_a_tmlr_review_is_read():
@@ -499,14 +499,14 @@ def test_a_journal_reviewers_number_is_written_back():
     """The journal narrative writer dropped `reviewer_id`, so a review lost its referee."""
     review = read_real("journal/elife_100443_sa1.json")
     assert review["referees"][0]["referee_id"] == "Reviewer #1"
-    assert map_to("journal_narrative", review)["reviewer_id"] == "Reviewer #1"
+    assert codec_map_to("journal_narrative", review)["reviewer_id"] == "Reviewer #1"
 
 
 def test_a_heading_is_not_the_summary():
     """eLife's reviews start with the heading "Summary:", which was the review's summary."""
     review = read_real("journal/elife_100443_sa1.json")
     assert review["opinion"]["summary"].startswith("This is an important contribution")
-    one_line = map_from("journal_narrative", {"full_text": "Summary:"})
+    one_line = codec_map_from("journal_narrative", {"full_text": "Summary:"})
     assert one_line["opinion"]["summary"] == "Summary:"
 
 
@@ -522,13 +522,13 @@ def test_openaireview_reads_the_comments_of_the_runs_model():
         *((key.removeprefix("progressive__"), m) for key, m in merged.items()),
         *((m["model"], m) for m in merged.values()),
     ]:
-        review = map_from("openaireview", {"output": paper, **AI_RUN, "model_id": model})
+        review = codec_map_from("openaireview", {"output": paper, **AI_RUN, "model_id": model})
         titles = [w["title"] for w in review["findings"]["weaknesses"]]
         assert titles == [c["title"] for c in method["comments"]]
         # Written back, the comments go back to the model they came from
-        assert map_to("openaireview", review) == paper
+        assert codec_map_to("openaireview", review) == paper
     with pytest.raises(ValueError, match="No OpenAIReview method ran with model"):
-        map_from("openaireview", {"output": paper, **AI_RUN, "model_id": "another-model"})
+        codec_map_from("openaireview", {"output": paper, **AI_RUN, "model_id": "another-model"})
 
 
 def test_hotcrp_reads_its_apis_review_object():
@@ -553,7 +553,7 @@ def test_hotcrp_reads_its_apis_review_object():
 def test_hotcrp_writes_an_unlabelled_score_as_it_came():
     """The writer gave HotCRP's unlabelled overall merit the recommendation as a label
     (`2. Reject`), which the reader then took as the reviewer's."""
-    written = map_to("hotcrp", read_real("hotcrp/documented_api_review.json"))
+    written = codec_map_to("hotcrp", read_real("hotcrp/documented_api_review.json"))
     assert written["overall_merit"] == 2
 
 
@@ -633,14 +633,14 @@ def test_editorial_manager_reads_its_web_services_record():
 def test_two_reviewers_of_a_revision_are_two_reviews(system):
     record = real(f"{system}/documented_api_reviewer.json")
     other = {**record, "reviewerPersonId": 1234567}
-    assert map_from(system, record)["review_id"] != map_from(system, other)["review_id"]
+    assert codec_map_from(system, record)["review_id"] != codec_map_from(system, other)["review_id"]
 
 
 def test_a_scholarone_recommendation_given_as_text_is_written_as_text():
     """The web service gives the recommendation's text alone. The writer wrote ScholarOne's
     code for it as well, which the reader then took for an overall score the review did not
     have."""
-    written = map_to("scholarone", read_real("scholarone/documented_api_reviewer.json"))
+    written = codec_map_to("scholarone", read_real("scholarone/documented_api_reviewer.json"))
     assert "overallRecommendation" not in written
     assert written["overallRecommendationLabel"] == "Minor Revision"
     assert written["documentId"] == 51234567
@@ -708,7 +708,7 @@ def test_a_finding_field_written_as_text_comes_back_as_written(file):
     from ocrs.mappers.openreview import FINDING_KEYS
 
     note = real(file)
-    written = map_to("openreview", read_real(file))["content"]
+    written = codec_map_to("openreview", read_real(file))["content"]
     for names in FINDING_KEYS.values():
         for name in names:
             value = (note["content"].get(name) or {}).get("value")
@@ -719,7 +719,7 @@ def test_a_finding_field_written_as_text_comes_back_as_written(file):
 def test_a_finding_changed_in_ocrs_is_written_as_it_now_is():
     review = read_real("openreview/y3oHMcoItR/official_review_F57t6Rab9l.json")
     review["findings"]["weaknesses"] = review["findings"]["weaknesses"][:1]
-    written = map_to("openreview", review)["content"]["weaknesses"]
+    written = codec_map_to("openreview", review)["content"]["weaknesses"]
     assert written == [review["findings"]["weaknesses"][0]["text"]]
 
 
@@ -752,7 +752,7 @@ def test_an_ethics_flag_names_the_kinds_of_concern():
         "notes": "D.",
     }
     # Written back in the form's own words
-    written = map_to("openreview", review)["content"]
+    written = codec_map_to("openreview", review)["content"]
     assert (written["flag_for_ethics_review"], written["details_of_ethics_concerns"]) == (
         flag,
         "D.",
@@ -774,7 +774,7 @@ def test_a_notes_last_change_is_when_it_was_updated():
         "2025-11-04T07:33:14.100000Z",
         "2025-11-12T02:56:08.832000Z",
     )
-    written = map_to("openreview", review)
+    written = codec_map_to("openreview", review)
     assert (written["cdate"], written["mdate"]) == (note["cdate"], note["mdate"])
 
 
@@ -818,7 +818,7 @@ def test_an_f1000_report_is_read_from_its_jats():
     assert narrative_text(review, "review").startswith("1. How did you check the defects")
     # The authors' response nested in the report goes back with it
     assert len(kept["responses"]) == 1
-    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    written = ET.fromstring(codec_map_to("jats", review)["sub_article"])
     assert [s.get("article-type") for s in written.findall("sub-article")] == ["response"]
 
 
@@ -847,7 +847,7 @@ def test_an_elife_assessment_keeps_its_terms():
         {"type": "evidence-strength", "terms": ["Solid"]},
     ]
     assert "**important**" in review["opinion"]["summary"]
-    written = ET.fromstring(map_to("jats", review)["sub_article"])
+    written = ET.fromstring(codec_map_to("jats", review)["sub_article"])
     assert [k.text for k in written.iter("kwd")] == ["Important", "Solid"]
     assert written.find("body/p/bold").text == "important"
 
@@ -875,17 +875,17 @@ def test_a_jats_review_without_what_ocrs_has_no_field_for_is_written_from_ocrs(f
     reading it gives the same review."""
     review = read_real(file)
     review.pop("extensions")
-    again = map_from("jats", map_to("jats", review))
+    again = codec_map_from("jats", codec_map_to("jats", review))
     again.pop("extensions")
     assert differences(without_import_time(review), without_import_time(again)) == set()
 
 
 def test_a_review_from_elsewhere_is_written_as_a_referee_report():
     review = read_real("openreview/y8Rm4VNRPH/official_review_hQNYHP50sF.json")
-    written = map_to("jats", review)
+    written = codec_map_to("jats", review)
     element = ET.fromstring(written["sub_article"])
     assert element.get("article-type") == "referee-report"
-    again = map_from("jats", written)
+    again = codec_map_from("jats", written)
     # Its summary, then its parts under their headings
     text = narrative_text(again, "review")
     assert text.startswith(review["opinion"]["summary"])
@@ -913,7 +913,7 @@ def test_sub_articles_are_an_articles_reports_not_their_responses():
     payloads = sub_articles(article)
     assert [ET.fromstring(p["sub_article"]).get("id") for p in payloads] == ["r1"]
     assert payloads[0]["article"] == {"doi": "10.1234/j.1.2", "title": "A work", "journal": "J"}
-    review = map_from("jats", payloads[0])
+    review = codec_map_from("jats", payloads[0])
     assert review["review_id"] == "r1"
     assert review["opinion"]["summary"] == "Fine."
 
@@ -923,14 +923,14 @@ def test_an_ethics_flag_changed_in_ocrs_is_written_as_it_now_is():
     so a concern added in OCRS came back as "No ethics review needed"."""
     review = read_real("openreview/y3oHMcoItR/official_review_F57t6Rab9l.json")
     review["ethics_and_risk"] = {"ethical_concerns": True, "concern_categories": ["privacy"]}
-    written = map_to("openreview", review)["content"]
+    written = codec_map_to("openreview", review)["content"]
     assert written["flag_for_ethics_review"] == ["Yes, Privacy, security and safety"]
-    again = map_from("openreview", map_to("openreview", review))
+    again = codec_map_from("openreview", codec_map_to("openreview", review))
     assert again["ethics_and_risk"]["ethical_concerns"] is True
     # A review from elsewhere has its concerns written as ICLR's choices
     del review["extensions"]
     review["ethics_and_risk"] = {"ethical_concerns": False}
-    written = map_to("openreview", review)["content"]
+    written = codec_map_to("openreview", review)["content"]
     assert written["flag_for_ethics_review"] == ["No ethics review needed."]
 
 
@@ -944,11 +944,11 @@ def test_a_scholarone_overall_score_question_is_a_criterion():
         "scoreSheetCustomAnswer": {"answerText": "Good", "numericValue": 4.0},
     }
     record = {**record, "scoreSheetCustomQuestions": [question]}
-    review = map_from("scholarone", record)
-    written = map_to("scholarone", review)
+    review = codec_map_from("scholarone", record)
+    written = codec_map_to("scholarone", review)
     assert "overallRecommendation" not in written
     assert written["criteriaResponses"][0]["criterionName"] == "Overall score"
-    again = map_from("scholarone", written)
+    again = codec_map_from("scholarone", written)
     assert differences(without_import_time(review), without_import_time(again)) == set()
 
 
@@ -961,11 +961,11 @@ def test_a_scholarone_overall_score_equal_to_a_code_is_still_a_criterion():
         "questionText": "Overall score",
         "scoreSheetCustomAnswer": {"answerText": "Fair", "numericValue": 2},
     }
-    review = map_from("scholarone", {**record, "scoreSheetCustomQuestions": [question]})
-    written = map_to("scholarone", review)
+    review = codec_map_from("scholarone", {**record, "scoreSheetCustomQuestions": [question]})
+    written = codec_map_to("scholarone", review)
     assert "overallRecommendation" not in written
     assert [c["criterionName"] for c in written["criteriaResponses"]] == ["Overall score"]
-    again = map_from("scholarone", written)
+    again = codec_map_from("scholarone", written)
     assert differences(without_import_time(review), without_import_time(again)) == set()
 
 
@@ -978,7 +978,7 @@ def test_an_ethics_category_added_in_place_is_written():
     note = {"id": "r", "forum": "f", "content": {"summary": "S.", "flag_for_ethics_review": flag}}
     review = from_openreview(note)
     review["ethics_and_risk"]["concern_categories"].append("privacy")
-    written = map_to("openreview", review)["content"]["flag_for_ethics_review"]
+    written = codec_map_to("openreview", review)["content"]["flag_for_ethics_review"]
     assert written == [
         "Yes, Discrimination / bias / fairness concerns",
         "Yes, Privacy, security and safety",
@@ -993,7 +993,7 @@ def test_a_review_of_findings_and_a_summary_taken_from_them_keeps_them_all():
     note = {"id": "r", "forum": "f", "content": {"weaknesses": ["No ablation.", "One dataset."]}}
     review = from_openreview(note)
     assert review["opinion"]["summary"] == "No ablation."
-    again = map_from("jats", map_to("jats", review))
+    again = codec_map_from("jats", codec_map_to("jats", review))
     assert [p for p in again["narrative"] if "role" not in p] == [
         {"title": "Weaknesses", "content": "- No ablation.\n- One dataset."}
     ]
@@ -1014,5 +1014,5 @@ def test_a_score_sheet_of_one_question_may_come_as_an_object(system):
     """The JSON shape is not documented: a lone question may come unwrapped from its list."""
     record = real(f"{system}/documented_api_reviewer.json")
     first = record["scoreSheetCustomQuestions"][0]
-    review = map_from(system, {**record, "scoreSheetCustomQuestions": first})
+    review = codec_map_from(system, {**record, "scoreSheetCustomQuestions": first})
     assert [m["label"] for m in review["metrics"]] == [first["questionText"]]

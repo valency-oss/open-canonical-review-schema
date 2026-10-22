@@ -7,8 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
+from conftest import codec_map_from, codec_map_to, codec_validate
 
-from ocrs import generate_canonical_work_id, map_from, map_to, validate_canonical
+from ocrs import generate_canonical_work_id
 
 
 def test_openreview_to_canonical_and_back():
@@ -31,11 +32,11 @@ def test_openreview_to_canonical_and_back():
             "weaknesses": ["Proof incomplete"],
         },
     }
-    canon = map_from("openreview", openreview_note, keep_raw=True)
-    validate_canonical(canon)
+    canon = codec_map_from("openreview", openreview_note, keep_raw=True)
+    codec_validate(canon)
     assert canon["provenance"]["source_system"] == "openreview"
     assert canon["opinion"]["summary"]
-    note2 = map_to("openreview", canon)
+    note2 = codec_map_to("openreview", canon)
     assert "content" in note2 and isinstance(note2["content"], dict)
 
 
@@ -51,9 +52,9 @@ def test_cmt_to_canonical_and_back():
         "summary": "Strong contribution.",
         "commentsToAuthors": "Well-written and significant. Missing ablation.",
     }
-    canon = map_from("cmt", cmt)
-    validate_canonical(canon)
-    back = map_to("cmt", canon)
+    canon = codec_map_from("cmt", cmt)
+    codec_validate(canon)
+    back = codec_map_to("cmt", canon)
     assert back["reviewId"] == "cmt_r1"
     assert "commentsToAuthors" in back
 
@@ -67,15 +68,15 @@ def test_journal_narrative_minimal():
             "\n\nPlease clarify the assumptions."
         ),
     }
-    canon = map_from("journal_narrative", j)
-    validate_canonical(canon)
+    canon = codec_map_from("journal_narrative", j)
+    codec_validate(canon)
     assert canon["opinion"]["summary"]
-    back = map_to("journal_narrative", canon)
+    back = codec_map_to("journal_narrative", canon)
     assert back["full_text"]
 
 
 def test_openreview_note_without_id_or_signature():
-    canon = map_from("openreview", {"forum": "or_forum_123", "content": {"summary": "Fine."}})
+    canon = codec_map_from("openreview", {"forum": "or_forum_123", "content": {"summary": "Fine."}})
     assert "referee_id" not in canon["referees"][0]
     assert "source_review_id" not in canon["provenance"]
 
@@ -98,16 +99,16 @@ SOURCE_ID_FIELD = {
 )
 def test_work_id_is_canonical_and_maps_back_to_the_source_id(fixture: Path) -> None:
     source = fixture.parent.name
-    canon = map_from(source, json.loads(fixture.read_text()))
+    canon = codec_map_from(source, json.loads(fixture.read_text()))
     target = canon["target"]
     assert target["work_id"] == generate_canonical_work_id(target["identifiers"])
     source_id = target["identifiers"]["internal_id"]["value"]
     # A system that numbers its papers gets the number back
-    assert str(map_to(source, canon)[SOURCE_ID_FIELD[source]]) == source_id
+    assert str(codec_map_to(source, canon)[SOURCE_ID_FIELD[source]]) == source_id
 
 
 def test_journal_narrative_maps_the_doi_back() -> None:
-    canon = map_from(
+    canon = codec_map_from(
         "journal_narrative",
         {
             "review_id": "r1",
@@ -118,7 +119,7 @@ def test_journal_narrative_maps_the_doi_back() -> None:
         },
     )
     assert canon["target"]["work_id"] == "doi:10.1234/abc"
-    assert map_to("journal_narrative", canon)["doi"] == "10.1234/abc"
+    assert codec_map_to("journal_narrative", canon)["doi"] == "10.1234/abc"
 
 
 # Round trips through each source's own format. No mapper can be a bijection: OCRS holds
@@ -299,8 +300,8 @@ def load(path: Path):
 
 def read(source: str, payload, form: dict):
     if source in AI_SOURCES:
-        return map_from(source, {"output": payload, **AI_RUN})
-    return map_from(source, payload, **form)
+        return codec_map_from(source, {"output": payload, **AI_RUN})
+    return codec_map_from(source, payload, **form)
 
 
 def differences(before, after, path: str = "") -> set[str]:
@@ -339,7 +340,7 @@ def fixture_key(path: Path) -> str:
 @pytest.mark.usefixtures("frozen_clock")
 def test_a_review_written_in_its_source_format_reads_back_the_same(source, path, form):
     review = read(source, load(path), form)
-    again = read(source, map_to(source, review), form)
+    again = read(source, codec_map_to(source, review), form)
     assert differences(without_import_time(review), without_import_time(again)) == set()
 
 
@@ -347,7 +348,7 @@ def test_a_review_written_in_its_source_format_reads_back_the_same(source, path,
 @pytest.mark.usefixtures("frozen_clock")
 def test_a_source_review_read_and_written_back_is_given_back_as_listed(source, path, form):
     payload = load(path)
-    written = map_to(source, read(source, payload, form))
+    written = codec_map_to(source, read(source, payload, form))
     assert differences(payload, written) == LOSSES.get(fixture_key(path), set())
 
 
@@ -388,7 +389,7 @@ def test_a_score_label_that_does_not_say_the_decision_does_not_replace_it(
         decision=decision,
         metrics=[{**overall, "justification": "Excellent"}],
     )
-    again = map_from(writer, map_to(writer, review))
+    again = codec_map_from(writer, codec_map_to(writer, review))
     assert {k: again["decision"].get(k) for k in decision} == decision
 
 
@@ -403,8 +404,8 @@ def test_a_list_valued_score_with_a_label_is_written(writer):
         "justification": "Two topics",
     }
     review = written_review(writer, decision={"recommendation": "accept"}, metrics=[tags])
-    again = map_from(writer, map_to(writer, review))
-    validate_canonical(again)
+    again = codec_map_from(writer, codec_map_to(writer, review))
+    codec_validate(again)
     assert again["decision"]["recommendation"] == "accept"
 
 
@@ -422,10 +423,10 @@ def test_scholarone_keeps_a_recommendation_label_unless_it_says_another(label, k
         decision={"revision_requirement": "minor"},
         metrics=[{**overall, "justification": label}],
     )
-    written = map_to("scholarone", review)
+    written = codec_map_to("scholarone", review)
     assert written["overallRecommendation"] == 2
     assert ("overallRecommendationLabel" in written) is kept
-    assert map_from("scholarone", written)["decision"] == {"revision_requirement": "minor"}
+    assert codec_map_from("scholarone", written)["decision"] == {"revision_requirement": "minor"}
 
 
 @pytest.mark.parametrize("writer", ["cmt", "hotcrp"])
@@ -434,7 +435,7 @@ def test_a_score_labelled_by_its_form_keeps_the_label_in_another_system(writer):
     note gives the number alone; another system needs the label written to read the same
     recommendation from the score."""
     review = read("openreview", load(OPENREVIEW_V2 / "review.json"), OPENREVIEW_V2_FORM)
-    again = map_from(writer, map_to(writer, review))
+    again = codec_map_from(writer, codec_map_to(writer, review))
     assert again["decision"]["recommendation"] == review["decision"]["recommendation"]
 
 
@@ -448,7 +449,7 @@ def test_a_decision_note_keeps_its_revision_beside_a_score():
         decision={"revision_requirement": "major"},
         metrics=[{"key": "overall", "label": "rating", "scale": scale, "value": 4}],
     )
-    again = map_from("openreview", map_to("openreview", review))
+    again = codec_map_from("openreview", codec_map_to("openreview", review))
     assert again["decision"] == {"revision_requirement": "major"}
     assert again["review_context"] == {"review_type": "recommendation"}
 
@@ -457,10 +458,10 @@ def test_an_openreview_score_goes_back_to_its_own_field():
     """A score keeps its field, so the form's bounds for it apply when it is read again."""
     bounds = {"overall_rating": {"min": 1, "max": 10}}
     note = {"id": "n1", "forum": "f1", "content": {"summary": "S.", "overall_rating": 4}}
-    review = map_from("openreview", note, scale_bounds=bounds)
-    written = map_to("openreview", review)
+    review = codec_map_from("openreview", note, scale_bounds=bounds)
+    written = codec_map_to("openreview", review)
     assert written["content"]["overall_rating"] == 4
-    again = map_from("openreview", written, scale_bounds=bounds)
+    again = codec_map_from("openreview", written, scale_bounds=bounds)
     assert again["decision"] == review["decision"] == {"recommendation": "weak_reject"}
 
 
@@ -473,7 +474,10 @@ def test_an_overall_score_that_is_a_list_leaves_the_recommendation_to_its_field(
         decision={"recommendation": "accept"},
         metrics=[{**overall, "justification": "Accept"}],
     )
-    assert map_from(writer, map_to(writer, review))["decision"]["recommendation"] == "accept"
+    assert (
+        codec_map_from(writer, codec_map_to(writer, review))["decision"]["recommendation"]
+        == "accept"
+    )
 
 
 @pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
@@ -481,7 +485,7 @@ def test_an_overall_score_that_is_not_a_number_makes_up_no_recommendation(writer
     """The readers take a recommendation from the overall score's field and read only a number
     there, so a score of another kind is left out rather than read back as a verdict."""
     overall = {"key": "overall", "label": "rating", "scale": {"type": "textual"}, "value": "Strong"}
-    again = map_from(writer, map_to(writer, written_review(writer, metrics=[overall])))
+    again = codec_map_from(writer, codec_map_to(writer, written_review(writer, metrics=[overall])))
     assert "recommendation" not in again.get("decision", {})
 
 
@@ -495,10 +499,10 @@ def test_an_overall_score_that_is_not_a_number_makes_up_no_recommendation(writer
 @pytest.mark.usefixtures("frozen_clock")
 def test_a_summary_beside_the_comments_is_given_back(writer, payload):
     payload = {**payload, "summary": "Short summary.", "commentsToAuthor": "Long review."}
-    review = map_from(writer, payload)
-    written = map_to(writer, review)
+    review = codec_map_from(writer, payload)
+    written = codec_map_to(writer, review)
     assert written["summary"] == "Short summary."
-    assert without_import_time(map_from(writer, written)) == without_import_time(review)
+    assert without_import_time(codec_map_from(writer, written)) == without_import_time(review)
 
 
 @pytest.mark.parametrize("writer", ["cmt", "hotcrp", "openreview"])
@@ -507,7 +511,7 @@ def test_a_score_that_is_not_a_number_is_written_as_it_is(writer, value):
     """The readers take a label only after a number, so another value is written alone."""
     metric = {"key": "other", "label": "topics", "scale": {"type": "categorical"}}
     review = written_review(writer, metrics=[{**metric, "value": value, "justification": "Why"}])
-    written = map_to(writer, review)
+    written = codec_map_to(writer, review)
     assert (written.get("content") or written)["topics"] == value
 
 
@@ -533,7 +537,10 @@ def test_another_score_does_not_take_the_recommendations_field(writer, name):
             },
         ],
     )
-    assert map_from(writer, map_to(writer, review))["decision"]["recommendation"] == "reject"
+    assert (
+        codec_map_from(writer, codec_map_to(writer, review))["decision"]["recommendation"]
+        == "reject"
+    )
 
 
 @pytest.mark.parametrize("content", [{"recommendation": "Weak Reject"}, {}])
@@ -542,11 +549,11 @@ def test_an_overall_score_on_a_field_without_a_recommendation_stays_there(conten
     bounds, and a review without a recommendation gets none."""
     bounds = {"overall_score": {"min": 1, "max": 10}}
     note = {"id": "n1", "forum": "f1", "content": {"summary": "S.", "overall_score": 6, **content}}
-    review = map_from("openreview", note, scale_bounds=bounds)
-    written = map_to("openreview", review)
+    review = codec_map_from("openreview", note, scale_bounds=bounds)
+    written = codec_map_to("openreview", review)
     assert written["content"]["overall_score"] == 6
     assert "rating" not in written["content"]
-    again = map_from("openreview", written, scale_bounds=bounds)
+    again = codec_map_from("openreview", written, scale_bounds=bounds)
     assert again.get("decision") == review.get("decision")
     assert again["metrics"] == review["metrics"]
 
@@ -559,7 +566,7 @@ def test_a_labelled_score_reads_back_the_same(writer, value, label):
     """A score is written without an exponent, and a label may run over several lines."""
     metric = {"key": "other", "label": "novelty", "scale": {"type": "interval"}, "value": value}
     review = written_review(writer, metrics=[{**metric, "justification": label}])
-    [again] = map_from(writer, map_to(writer, review))["metrics"]
+    [again] = codec_map_from(writer, codec_map_to(writer, review))["metrics"]
     assert (again["value"], again["justification"]) == (value, label)
 
 
@@ -585,9 +592,9 @@ def test_a_labelled_score_reads_back_the_same(writer, value, label):
 def test_a_recommendation_in_words_that_name_none_keeps_them(source, payload):
     """The readers take words that name no recommendation as borderline, and the writers give
     the words back rather than "Borderline"."""
-    review = map_from(source, payload)
+    review = codec_map_from(source, payload)
     assert review["decision"] == {"recommendation": "borderline", "source_label": "Not sure"}
-    assert map_from(source, map_to(source, review))["decision"] == review["decision"]
+    assert codec_map_from(source, codec_map_to(source, review))["decision"] == review["decision"]
 
 
 def test_words_beside_a_score_that_would_read_as_another_recommendation_keep_their_field():
@@ -595,10 +602,10 @@ def test_words_beside_a_score_that_would_read_as_another_recommendation_keep_the
     which the reader takes the recommendation from first."""
     note = {"id": "r1", "forum": "f1", "content": {"summary": "S.", "recommendation": "Not sure"}}
     note["content"]["rating"] = 8
-    review = map_from("openreview", note)
-    written = map_to("openreview", review)
+    review = codec_map_from("openreview", note)
+    written = codec_map_to("openreview", review)
     assert written["content"] == note["content"]
-    assert map_from("openreview", written)["decision"] == review["decision"]
+    assert codec_map_from("openreview", written)["decision"] == review["decision"]
 
 
 @pytest.mark.parametrize("source", ["cmt", "hotcrp"])
@@ -621,7 +628,7 @@ def test_a_score_carries_a_recommendation_its_number_would_not_read_as(source):
             }
         ],
     }
-    again = map_from(source, map_to(source, review))
+    again = codec_map_from(source, codec_map_to(source, review))
     assert again["decision"]["recommendation"] == "borderline"
 
 
@@ -631,7 +638,7 @@ def test_a_score_carries_a_recommendation_its_number_would_not_read_as(source):
 def test_a_recommendation_ocrs_cannot_name_keeps_its_words_in_every_form(target):
     """A JATS term OCRS cannot name is written in its words. Readers that take such words as
     borderline add that, and keep the words."""
-    review = map_from(
+    review = codec_map_from(
         "jats",
         {
             "sub_article": (
@@ -642,20 +649,20 @@ def test_a_recommendation_ocrs_cannot_name_keeps_its_words_in_every_form(target)
         },
     )
     assert review["decision"] == {"source_label": "approve-in-part"}
-    again = map_from(target, map_to(target, review))
+    again = codec_map_from(target, codec_map_to(target, review))
     assert again["decision"]["source_label"] == "approve-in-part"
     assert again["decision"].get("recommendation") in (None, "borderline")
 
 
 def test_scholarone_writes_the_words_beside_the_code_it_makes():
     note = {"id": "r1", "forum": "f1", "content": {"summary": "S.", "decision": "Accept (Oral)"}}
-    review = map_from("openreview", note)
-    written = map_to("scholarone", review)
+    review = codec_map_from("openreview", note)
+    written = codec_map_to("scholarone", review)
     assert (written["overallRecommendation"], written["overallRecommendationLabel"]) == (
         1,
         "Accept (Oral)",
     )
-    again = map_from("scholarone", written)
+    again = codec_map_from("scholarone", written)
     assert again["decision"] == {"recommendation": "accept"}
     assert [m.get("justification") for m in again["metrics"] if m["key"] == "overall"] == [
         "Accept (Oral)"

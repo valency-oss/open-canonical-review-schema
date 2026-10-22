@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from .hierarchy import upgrade_content
 from .schema import schema_id
 
 # The named text fields of 0.7's `narrative`, as the parts of 0.8's: (field, role, audience)
@@ -23,24 +24,16 @@ CATALOG_V1, CATALOG_V1_1 = "metric-catalog.core.v1", "metric-catalog.core.v1.1"
 
 
 def migrate(review: dict[str, Any]) -> dict[str, Any]:
-    """An OCRS 0.7 review as an OCRS 0.8 review, which means the same thing. A review already
-    in 0.8 comes back unchanged. The review given is not changed.
+    """Convert a 0.7 or 0.8 review to the current hierarchy without changing the input.
 
-    - `referee` becomes the first of `referees`, and `expertise` moves onto the referees,
-      from `human_referee` or else `review_context`.
-    - `decision.confidence` becomes `decision.credence`.
-    - Action items become points: `priority` becomes `severity`, and `applies_to` becomes
-      `evidence_links` (its section, figure and table), `claim_ids` and `addresses` (its
-      finding). `ethics_and_risk.required_mitigations` join `findings.changes`, with scope
-      `ethics`, or tagged `ethics` when they have another scope. A contribution's
-      `claim_id` becomes `claim_ids`.
-    - `narrative`'s named fields become its parts, each with its role, and the text for the
-      editors has audience `editors`; its `sections` follow them, an empty title left out.
-    - A reviewer's expertise that 0.7 scored as a confidence (HotCRP's "Reviewer Expertise")
-      is an `expertise` metric, and the core metric catalog v1 is v1.1, which adds that key.
-    - A review read from JATS, whose license 0.7 kept only in `extensions.jats`, has it in
-      `provenance.license`, as the 0.8 reader gives it.
+    Normalize referees, expertise and narrative parts, then move decisions, metric
+    definitions, extracted material, checks and evidence into the 0.9 records. Source
+    fields without a faithful canonical home remain in extensions.ocrs_0_8. A review
+    already naming 0.9 is returned unchanged; migration is idempotent. It does not
+    infer supporting findings or rewrite ambiguous overview text.
     """
+    if "/v0.9.0/" in review.get("$schema", ""):
+        return copy.deepcopy(review)
     out = copy.deepcopy(review)
     _referees(out)
     decision = out.get("decision")
@@ -68,8 +61,8 @@ def migrate(review: dict[str, Any]) -> dict[str, Any]:
             out["narrative"] = parts
         else:
             out.pop("narrative")
-    if "$schema" in out:
-        out["$schema"] = schema_id()
+    out = upgrade_content(out)
+    out["$schema"] = schema_id()
     return out
 
 

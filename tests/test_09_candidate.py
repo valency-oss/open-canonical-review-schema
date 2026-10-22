@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Valency Systems Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""The staged release can be reviewed without changing the published schema."""
+"""The released metric and artifact component contracts."""
 
 import copy
 import json
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
 
-CANDIDATE = Path(__file__).parents[1] / "proposals/0.9.0/canonical-review.schema.json"
+CANDIDATE = Path(__file__).parents[1] / "src/ocrs/schemas/canonical-review.schema.json"
 
 
 def candidate():

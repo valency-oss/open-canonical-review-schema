@@ -28,13 +28,13 @@ import uuid
 import xml.etree.ElementTree as ET
 from typing import Any
 
+from ..hierarchy import LEGACY_SCHEMA
 from ..identifiers import (
     DOI_PATTERN,
     generate_canonical_work_id,
     normalize_orcid,
     parse_canonical_work_id,
 )
-from ..schema import schema_id
 from ..util import (
     first_paragraph,
     for_authors,
@@ -416,7 +416,7 @@ def from_jats(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, A
         kept["responses"] = responses
 
     review: dict[str, Any] = {
-        "$schema": schema_id(),
+        "$schema": LEGACY_SCHEMA,
         "review_id": doi or source_id or publisher_id or str(uuid.uuid4()),
         "version": "1.0.0",
         "created_at": created or now_iso(),
