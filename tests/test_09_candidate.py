@@ -3,6 +3,7 @@
 """The released metric and artifact component contracts."""
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -25,6 +26,9 @@ def test_candidate_is_a_valid_schema_and_keeps_the_published_version_unchanged()
     Draft202012Validator.check_schema(candidate())
     published = Path(__file__).parents[1] / "versions/v0.8.0/canonical-review.schema.json"
     assert json.loads(published.read_text())["$id"].endswith("/v0.8.0/canonical-review.schema.json")
+    assert hashlib.sha256(published.read_bytes()).hexdigest() == (
+        "32ed637fa4077a72386a31d6b8fa00e83795c534383daf60ae34752e9aecdbdb"
+    )
 
 
 def test_one_form_holds_the_full_nonuniform_scale_for_multiple_observations():

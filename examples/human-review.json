@@ -60,11 +60,7 @@
     "decision": {
       "revision_requirement": "major",
       "rationale": "The dataset is valuable; the validation needs ground stations outside the training region."
-    },
-    "metric_refs": [
-      "metric-1",
-      "metric-2"
-    ]
+    }
   },
   "metrics": [
     {
@@ -109,7 +105,7 @@
             }
           }
         ],
-        "id": "weaknesse-1",
+        "id": "weakness-1",
         "uncertainty": {
           "probability": 0.9,
           "credence": 0.7
@@ -129,7 +125,7 @@
             }
           }
         ],
-        "id": "weaknesse-2"
+        "id": "weakness-2"
       }
     ],
     "questions": [

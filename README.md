@@ -454,6 +454,9 @@ or substitute converter confidence for reviewer uncertainty.
 Metrics keep their original values and reference a definition in
 `review_context.metric_schemas` through `{schema_id, key}`. Definitions retain the original
 field label, dimension, question, scale, anchors, values, bounds, step and units when given.
+`dimension` keeps the closed 0.8 aspect vocabulary and adds `review_confidence`;
+`confidence` remains valid for existing mappings. Use `other` for an unlisted criterion
+and preserve its original label and prompt. Custom source field keys remain unrestricted.
 Normalization is optional, with a method; it neither equates different rubrics nor turns
 a confidence rating into a probability. Local metrics need definitions too.
 

@@ -15,9 +15,14 @@ stored in one direction. Published earlier schemas remain unchanged.
   Move the old `key`, `label`, `aspect` and `scale` into a definition; `aspect` becomes
   `dimension`. The old catalog reference belongs to the source form. Do not invent
   missing rubric metadata or normalize without recording the method.
+  `dimension` keeps the closed 0.8 aspect enum and adds `review_confidence`; retain an
+  unlisted source criterion's label and prompt with `dimension: "other"`.
 - `target.artifacts[]` identifies associated materials with IDs, types and optional
   locations, versions, hashes and reported availability. Examinations belong in checks;
   evaluations belong in findings. An unavailable artifact needs no invented URL.
+  `reported_availability` keeps 0.8's vocabulary (`public`, `restricted`,
+  `available_on_request`, `not_available`, `unknown`). The 0.8 artifact types `models`
+  and `appendix` are now `model` and `supplement`.
 - `opinion` holds `summary`, `stance`, optional `decision`, `metric_refs` and optional
   `supported_by`. Move top-level `decision` here and rename `summary_rationale` to
   `rationale`. Direct opinion support is independent of each metric's support.
@@ -54,18 +59,36 @@ assigns the current `$schema` and is idempotent. Fields without a faithful new h
 in `extensions.ocrs_0_8`, with compact source-conversion metadata. In particular,
 claim-local ratings do not silently become work-wide metrics, and numeric scores do
 not cause invented supporting findings. Ambiguous old overview text is retained
-verbatim; migration does not semantically rewrite a review.
+verbatim; migration does not semantically rewrite a review. Retained fields are keyed by
+the ID of the record they belong to, so they stay with it when a migrated review is
+edited. A 0.8 `summarizes` list, a finding-to-finding link, is among them. A 0.8
+normalized score without a method gets `method: "unspecified"`. Only overall scores
+join `opinion.metric_refs`.
 
 ### Python package
 
 - Public imports and exports use 0.9 records. Existing source-specific codecs use a
   private compatibility projection; mapping records point into the current hierarchy.
+  `map_from` returns 0.9; the per-format functions such as `from_cmt` still return
+  the intermediate 0.8 shape, with a 0.8 `$schema`. Any valid 0.9 record, including
+  an edited migrated one, can be written by `map_to`.
+- OpenReview `scale_bounds` supplied by the caller are kept in
+  `extensions.openreview.caller_scale_bounds`, not as the source form's snapshot.
+- `validate_canonical(..., schema_path=...)` applies that schema to one call only.
+  Records naming 0.9 or any later schema version get the hierarchy's reference checks.
+  Evidence ranges are checked using the selected schema, including legacy locations.
 - Validation checks global IDs, reference types, definition resolution, original scale
   values and bounds, intervals, source ranges and optional text-span resolution.
   Allowed link directions make the semantic graph acyclic without reciprocal edges.
 - Tests cover the discussed adversarial cases, current-record round trips through the
   real-review corpus, migration, Unicode spans, original source fields and examples.
   Historical 0.8 field-contract tests remain against its immutable published schema.
+  Fixed OpenReview and DeepReview golden records also check the public 0.9 output directly.
+- Export tolerates deleted summaries and status-free raw observations, preserves IDs
+  that new changes reference, and does not restore deleted claim, artifact or ethics
+  evaluations from migration metadata. Later normalization and interval edits take
+  precedence over retained legacy fields. Repeated reasons share one support link;
+  empty legacy check notes round-trip without inventing text or a check verdict.
 - The package, versioned schema, examples, README and citation are updated together.
 
 ## 0.8.0

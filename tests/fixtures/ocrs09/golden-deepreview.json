@@ -1,0 +1,1647 @@
+{
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
+  "review_id": "review-1",
+  "version": "1.0.0",
+  "created_at": "2026-10-15T17:30:00Z",
+  "provenance": {
+    "source_system": "example-platform",
+    "source_review_id": "review-1",
+    "imported_at": "2026-01-01T00:00:00Z",
+    "mapping": {
+      "mapping_spec_id": "canonical-review.mapping.v1",
+      "mapping_spec_version": "1.2.0",
+      "mapper_version": "1.1.0"
+    }
+  },
+  "referees": [
+    {
+      "referee_type": "ai",
+      "identity_mode": "open",
+      "ai_referee": {
+        "system": {
+          "critic_framework": {
+            "name": "deepreview",
+            "version": "unspecified"
+          },
+          "models": [
+            {
+              "role": "reviewer",
+              "model_id": "unspecified"
+            }
+          ]
+        },
+        "execution": {
+          "started_at": "2026-10-15T17:00:00Z",
+          "ended_at": "2026-10-15T17:30:00Z",
+          "wall_time_seconds": 1800.0
+        }
+      }
+    }
+  ],
+  "target": {
+    "work_id": "doi:10.1234/abc",
+    "work_type": "preprint",
+    "identifiers": {
+      "doi": {
+        "value": "10.1234/abc",
+        "hyperlink": "https://doi.org/10.1234/abc"
+      }
+    }
+  },
+  "opinion": {
+    "summary": "This paper introduces a multi-source deep-learning framework for forecasting bay-level air temperatures in Freezer Hall 3 of the Brannock Cold-Storage Depot (BCSD) at four dispatch horizons (5 min, 15 min, 30 min, and 60 min). To warn the depot's dock scheduler of warm-air surges before trucks reach the doors, the authors combine one-minute bay temperature maps from the in-hall Ceiling Thermal Array (CTA) with coarser 15-minute snapshots of the truck yard from the depot's yard-management system (the Yard and Dock Feed, YDF), including trailer positions, reefer return-air temperatures, and Gate Transit Vectors (GTV) derived from gate RFID reads. The architecture pairs graph-attention layers on a rack-aisle graph, a dilated 2D convolutional yard encoder, an infiltration-path join that links yard cells to the bays behind each dock door, a single-shot multi-horizon decoder built on a Newton-cooling residual, and a two-phase curriculum with an asymmetric missed-warm loss, and it reports a 14% lower temperature error and 22% fewer missed warm bays at the 30-minute lead than the depot's deployed door-event regression."
+  },
+  "findings": {
+    "strengths": [
+      {
+        "id": "strength-1",
+        "text": "The paper tackles a practical gap in automated cold-chain operations by pushing bay temperature forecasts out to the 30–60 minute window a dock scheduler needs to resequence arrivals, with a possible saving of roughly 0.4% to 2.1% of the depot's refrigeration energy and no new hardware."
+      },
+      {
+        "id": "strength-2",
+        "text": "Pairing an in-hall thermal map with a view of the truck yard is an unusual and well-motivated combination for warehouse control, joining a precise local measurement of the hall to an early signal of heat that is still on its way in."
+      },
+      {
+        "id": "strength-3",
+        "text": "The infiltration-path join, combined with graph-attention layers (`GraphAttn`) on the rack-aisle graph and an upwind shift by the gate transit vectors, gives a clean answer to the mismatch between a planar yard raster and a hall whose bays are reached through a handful of doors at uncertain depths."
+      },
+      {
+        "id": "strength-4",
+        "text": "The single-shot decoder, which predicts a gated residual on top of a Newton-cooling relaxation and is trained first on an occupancy-weighted load loss and then with an asymmetric missed-warm penalty, builds the hall's thermal response into the output and avoids an early habit of forecasting a uniformly warm hall."
+      }
+    ],
+    "weaknesses": [
+      {
+        "id": "weakness-1",
+        "text": "The alternating even/odd calendar-day data split places 71 of the 93 scored test days directly between adjacent development days (and interleaves validation days with test days), which risks leakage across multi-day heat waves and weekly delivery cycles; the authors might evaluate a contiguous multi-week block split with buffer days removed at its edges, or stratify test results by how many neighboring days sit in the development pool."
+      },
+      {
+        "id": "weakness-2",
+        "text": "There are internal inconsistencies and missing definitions in the preprocessing and evaluation descriptions—most notably two incompatible accounts of the CTA Gaussian smoothing ($\\sigma = 2.5$ bay pitches on only the final sweep and the target versus $\\sigma = 6$ grid cells on every sweep), disagreements between the prose and Table 1 on yard-feed normalizations, and a missing $L_1$ formula for the mean absolute recovery-energy error (MARE), whose place in Equation 11 is taken by a repeat of the $L_2$ training loss."
+      },
+      {
+        "id": "weakness-3",
+        "text": "In the 30–60 minute ablations (Table 4), removing the ceiling array entirely (`No CTA`) gives a slightly lower missed-warm rate and load MSE than the full model, which suggests that tying the shared decoder to the last observed bay temperature $\\theta_0$ carries stale local state once the warm air has moved on; the model also loses to plain persistence in quiet periods, and a lead-dependent decay on $\\theta_0$ or a better-conditioned gate could help."
+      },
+      {
+        "id": "weakness-4",
+        "text": "Several architectural and training details needed for reproducibility and a fair comparison with baselines are underspecified, including missing citations for the graph and thermal models the method builds on (Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018; Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020), withholding the coordinate and difference channels from the `GraphGRU` and `StackTCN` baselines, reading decoder query metadata from a matched future 20-minute target sweep, and leaving out the promised \"shift-balanced sampler\" and \"setpoint-prior initialization.\"",
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "external",
+              "ref": "Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018",
+              "work": {
+                "title": "Message Passing on Floor-Plan Graphs for Indoor Climate Prediction",
+                "authors": [
+                  "Halvorsen et al."
+                ],
+                "year": 2018
+              }
+            },
+            "location": {
+              "label": "Reference Paper: Message Passing on Floor-Plan Graphs for Indoor Climate Prediction, Halvorsen et al., 2018"
+            }
+          },
+          {
+            "resource": {
+              "type": "external",
+              "ref": "Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020",
+              "work": {
+                "title": "Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration",
+                "authors": [
+                  "Vasquez-Thorne et al."
+                ],
+                "year": 2020
+              }
+            },
+            "location": {
+              "label": "Reference Paper: Lumped-Capacitance Models of Refrigerated Warehouses Under Door Infiltration, Vasquez-Thorne et al., 2020"
+            }
+          }
+        ]
+      },
+      {
+        "id": "issue-1.1.1",
+        "title": "Potential Inconsistency in Plume-Reach and Arrival-Time Estimates",
+        "text": "- **Observation:** In Section 1.2 (page 3), the text states: *\"For doors $2\\text{–}9\\text{ m}$ wide, the warm plume reaches about $6\\text{–}20\\text{ m}$ past the scored-zone boundary. At front speeds of $3.0\\text{–}4.2\\text{ m min}^{-1}$ it crosses that zone in about $2\\text{–}6\\text{ min}$.\"* On page 4 it adds: *\"Measured from the door line instead, the same plumes reach about $4\\text{–}27\\text{ m}$ into the hall.\"* Section 1.5 (page 6) repeats the comparison, and Appendix B (page 35) gives the derivation: *\"Past the scored-zone boundary the reach is about $2.2$ times the door width. Over the logged weeks the median door width in use is $2.8\\text{ m}$, with the 10th–90th percentile at $1.4\\text{–}9.0\\text{ m}$. The reach past the boundary is then about $6\\text{–}20\\text{ m}$. From the door line, where the factor is $3.0$, the same doors give about $4\\text{–}27\\text{ m}$.\"*\n- **Potential Concern:** Under a free-jet spreading model, the reach of a plume through a door of width $w$ is $R = k\\,w$, with the factor $k$ set by where the reach is measured from.\n  - For the reach from the door line, $k = 3.0$, so the 10th–90th percentile widths $w \\in [1.4, 9.0]\\text{ m}$ give $R \\approx 4.2\\text{–}27\\text{ m}$ ($\\sim 4\\text{–}27\\text{ m}$ as reported).\n  - For the reach past the scored-zone boundary, $k = 2.2$, and the same widths give $R \\approx 3.1\\text{–}19.8\\text{ m}$, not $6\\text{–}20\\text{ m}$. The lower figure of $6\\text{ m}$ is instead the reach at the *median* width ($2.2 \\times 2.8\\text{ m} \\approx 6.2\\text{ m}$).\n  - The scored-zone range therefore pairs the *median* width with the *90th-percentile* width, while the door-line range uses the *10th-to-90th percentile* widths, so at the lower bound the reach from the door line ($4\\text{ m}$) looks shorter than the reach past the boundary ($6\\text{ m}$), which cannot be. Stating in Section 1.2 that the $6\\text{–}20\\text{ m}$ reach and the $2\\text{–}6\\text{ min}$ crossing time at $3.0\\text{–}4.2\\text{ m min}^{-1}$ refer to median-to-90th-percentile widths ($w \\approx 2.8\\text{–}9.0\\text{ m}$), while a $1.4\\text{ m}$ door reaches only $\\sim 3\\text{ m}$ past the boundary, would make the comparison consistent.",
+        "group": [
+          "[Introduction, BCSD Operations Context & Forecasting Background] (Pages: 1-7)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 3,
+              "page_end": 4,
+              "section": "1.2",
+              "label": "Section 1.2, Pages 3–4"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 6,
+              "section": "1.5",
+              "label": "Section 1.5, Page 6"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "For doors $2\\text{–}9\\text{ m}$ wide, the warm plume reaches about $6\\text{–}20\\text{ m}$ past the scored-zone boundary. At front speeds of $3.0\\text{–}4.2\\text{ m min}^{-1}$ it crosses that zone in about $2\\text{–}6\\text{ min}$.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Measured from the door line instead, the same plumes reach about $4\\text{–}27\\text{ m}$ into the hall.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Past the scored-zone boundary the reach is about $2.2$ times the door width. Over the logged weeks the median door width in use is $2.8\\text{ m}$, with the 10th–90th percentile at $1.4\\text{–}9.0\\text{ m}$. The reach past the boundary is then about $6\\text{–}20\\text{ m}$. From the door line, where the factor is $3.0$, the same doors give about $4\\text{–}27\\text{ m}$.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-1.2.1",
+        "text": "The Abstract states *\"We estimate the optimistic order-of-magnitude saving in BCSD refrigeration energy to be between $0.4\\%$ and $2.1\\%$,\"* whereas Section 4.1 (page 30) and Section 5 (page 33) give a single figure ($\\sim 1.8\\%$) from the product $0.60 \\times 0.35 \\times 0.085 \\approx 1.79\\%$. Using the same phrasing in the Abstract and Section 4.1 would make them consistent.",
+        "group": [
+          "[Introduction, BCSD Operations Context & Forecasting Background] (Pages: 1-7)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 1,
+              "section": "Abstract",
+              "label": "Abstract (Page 1)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "We estimate the optimistic order-of-magnitude saving in BCSD refrigeration energy to be between $0.4\\%$ and $2.1\\%$,",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-1.2.2",
+        "text": "In *\"The rule-based door controller now used by DockPlan, described in,$^{21}$ applies a similar event-triggered load model,\"* the superscript citation stands in for the object of *\"in\"*, followed by a stray comma. Consider revising to *\"described in Ref. 21,\"* or *\"described by Marchetti,$^{21}$\"*.",
+        "group": [
+          "[Introduction, BCSD Operations Context & Forecasting Background] (Pages: 1-7)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 5,
+              "section": "1.3",
+              "label": "Section 1.3 (Page 5)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "The rule-based door controller now used by DockPlan, described in,$^{21}$ applies a similar event-triggered load model,",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.1.1",
+        "title": "Inconsistent Descriptions and Selective Application of CTA Spatial Gaussian Smoothing",
+        "text": "The paper gives conflicting accounts of how the CTA bay maps are smoothed, which leaves the preprocessing hard to reproduce and raises a concern about whether the features are consistent across the 30-sweep history:\n- *Two kernel widths and two grids:* Section 2.1 (page 8) states: *\"We Gaussian-smooth $\\theta$ over neighboring bays with $\\sigma = 2.5$ bay pitches ($\\sim 3.0\\text{ m}$ at a $1.2\\text{ m}$ pitch) before labeling, and we smooth the last-sweep $\\theta$ the same way...\"* (as does the caption of Figure 1(a) on page 11). A later paragraph on page 9 instead says: *\"In addition, we applied a Gaussian smoothing kernel to the CTA temperature maps... Each sweep is smoothed with $\\sigma = 6$ grid cells, a standard kernel similar to that in.$^{21}$\"* It is not clear whether smoothing happens on the rack-aisle graph with $\\sigma = 2.5$ bay pitches or on a rectangular floor-plan raster with $\\sigma = 6$ cells, or whether the page 9 paragraph is left over from an earlier draft that described the $48 \\times 40$ raster used by the door-event regression of Reference 21. The text also does not say how smoothing treats bays on opposite faces of a rack, which are neighbors on the floor plan but not along an aisle.\n- *Smoothing only the final sweep, or every sweep:* Page 8 and page 10 (Section 2.3) state that *\"Only the final sweep and the target are smoothed, as described in Sect. 2.1.\"* Page 9 and Figure 1(a) (page 11), however, describe and show every displayed sweep of the hour (`-60 min` to `+0 min`) as smoothed with $\\sigma = 2.5$.\n- *A step at the last sweep:* If the first 29 sweeps keep their raw sensor noise while only the 30th is smoothed over $\\sim 3\\text{ m}$, the inputs change character at exactly the issue time. This matters for three parts of the study:\n  1. *Bay encoder differences (Section 2.6, page 16):* The first and second differences $\\Delta\\theta$ and $\\Delta^2\\theta$ across the last sweeps would mix a smoothed sweep 30 with a raw sweep 29 ($\\Delta\\theta = \\theta_{30}^{\\text{smooth}} - \\theta_{29}^{\\text{raw}}$), so part of the final trend feature is the smoothing itself.\n  2. *Heat-front flow baseline (Section 2.4, page 13):* The Lucas–Kanade field is fitted between *\"the last two bay temperature maps,\"* and pairing a raw map with a smoothed one breaks the constancy assumption the fit relies on.\n  3. *Stacked-sweep baselines (StackTCN and GraphGRU):* Both receive 29 noisy sweeps and one smoothed sweep, and must learn around the change at $t_{\\text{end}}$.\nStating whether all 30 sweeps or only the last were smoothed, and smoothing every sweep that enters a difference or a flow fit in the same way, would settle this.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.1 and 2.3, Figure 1a",
+              "figure": "Sections 2.1 and 2.3, Figure 1a"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 8–9, 10–11"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "We Gaussian-smooth $\\theta$ over neighboring bays with $\\sigma = 2.5$ bay pitches ($\\sim 3.0\\text{ m}$ at a $1.2\\text{ m}$ pitch) before labeling, and we smooth the last-sweep $\\theta$ the same way...",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "In addition, we applied a Gaussian smoothing kernel to the CTA temperature maps... Each sweep is smoothed with $\\sigma = 6$ grid cells, a standard kernel similar to that in.$^{21}$",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Only the final sweep and the target are smoothed, as described in Sect. 2.1.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the last two bay temperature maps,",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-2.1.2",
+        "title": "Multi-Day Weather and Delivery-Cycle Leakage and Validation–Test Adjacency in the Alternating Day Split",
+        "text": "In Section 2.1 (pages 8–9) and Section 2.3 (pages 10–12), the 238 operating days are sorted by date and split by alternating index: even-indexed days form the development pool (80% training, 20% evenly spaced validation) and odd-indexed days the test holdout, with no buffer days between them. As page 9 notes (and Section 4.2, page 32, concedes), 229 of the 237 consecutive pairs in the archive are one calendar day apart, so 112 of the 119 odd-indexed days (and 71 of the 93 scored holdout days after filtering, with another 15 that have one development neighbor) have development days on both sides ($d-1$ and $d+1$). Two concerns follow:\n- *Shared regimes across training and test:* The day-of-week input is fixed at zero in the metadata MLP, but the yard encoder still sees outdoor temperature, humidity and the trailer mix, and heat waves, weekly supplier rotations and slow drifts in reefer return-air temperature (`rat`) and dew point (`dew`) at BCSD usually last several days. With neighboring days on opposite sides of the split, the late shift of day $N$ (training) and the early shift of day $N+1$ (test) are only $\\sim 8\\text{--}10$ hours apart, so a model with $\\sim 7.4 \\times 10^4$ parameters can recognize near-identical conditions from $t \\pm 24\\text{ h}$ at test time. Baselines with no parameters and no memory (persistence, heat-front flow, door-event regression, and GTV advection) cannot do this, and neither can a deployed model facing a new season.\n- *Validation days next to test days:* The 24 validation days are an evenly spaced 20% of the even-indexed pool, so each sits one calendar day from a test day on either side. Because validation-loss plateaus drive the learning-rate schedule, early stopping, and the switch to the Phase 2 missed-warm finetuning (Section 2.7), model selection is tuned on conditions interleaved with the test set. The authors could bound the effect without new data, either by training once more on contiguous multi-week or monthly blocks (dropping 1–2 buffer days at each boundary) or, with no retraining at all, by splitting the existing holdout results in Section 4.2 into the 71 test days with two development neighbors and the 22 with one or none (or by how much the weather and delivery mix changed from the neighboring training days).",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.1, 2.3, 3.1, 4.2, and 5"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 8–12, 25–26, 32–33"
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-2.1.3",
+        "title": "Inconsistencies and Missing Specifications in Yard Feed Normalization, Imputation, Camera Offset Correction, Depth Reference, and GTV Pooling",
+        "text": "Several preprocessing and geometric details of the 12-channel yard raster and the transit vectors in Sections 2.3–2.6 and Table 1 disagree or are too thin to reproduce:\n- *Normalizations in the prose and Table 1:* Page 12 (Section 2.3) normalizes outdoor dry bulb (`tdb`) as $(^\\circ\\text{C} - 18)/9$, while Table 1 (page 13) gives $(T_{\\text{db}} - 15)/9$. Page 12 also clips the 15-minute change in reefer return-air temperature (`drat`) to $(\\Delta K/10, 2)$, an interval that mixes the scale factor with a missing lower bound, while Table 1 gives $\\Delta T_{\\text{rat}}/10$, clipped to $[-2, 2]$. And page 12 calls the door channel *\"a $0, 1$ mask\"* (matching Table 1's `1 if DS >= 2`), whereas Section 2.6 (page 18) samples the same channel as a *\"door-open fraction.\"*\n- *Filling gaps after differencing for `spread`, `dew_dep`, and `drat`:* Page 12 and Table 1 form the differences $\\text{rat}-\\text{tdb}$ (`spread`) and $\\text{tdb}-\\text{dew}$ (`dew_dep`) *before* filling missing reefer readings with $-18^\\circ\\text{C}$, so that the fill cannot fake a temperature spread. Neither says what then fills the gaps in `spread` and `dew_dep` themselves, or whether `drat` is also computed before the fill and masked when either snapshot is missing; computed after the fill, it would spike every time a trailer's telemetry dropped out or came back.\n- *Camera offset correction and the infiltration-path join:* Page 12 states: *\"The yard mast camera views the apron at $38.5^\\circ$ from vertical, so a trailer of height $h$ is drawn several metres toward the mast. We use trailer heights from the YMS to undo that shift before sampling the yard raster along each infiltration path.\"* First, an oblique view displaces the top of a tall object *away* from the point below the camera, not toward the mast. Second, the YMS records trailer roof height above the apron, while the raster is registered to the dock plate $1.2\\text{ m}$ above it, and Table 1 fills missing heights with $0\\text{ m}$; measured from the dock plate, a missing height becomes $-1.2\\text{ m}$ and shifts the cell the wrong way unless it is clamped. Third, moving cells of a rectangular raster by per-cell heights opens holes and overlaps, and seems at odds with the infiltration-path join of Section 2.6 (page 18), which samples the yard encoder output and four raw channels at three fixed depths into the hall ($4, 12,$ and $20\\text{ m}$) *\"because how far the warm air actually reaches is not known in advance.\"* It should be stated whether the offset on the $96 \\times 112$ raster is removed before the 2-D CNN using per-cell heights, or applied at each of the three depths during the join.\n- *Depth reference and GTV pooling:* GTV advection (page 13) pools vectors *\"above $1.5\\text{ m s}^{-1}$ ground speed\"*, and the infiltration-path join (page 18) samples at *\"$4, 12,$ and $20\\text{ m}$\"*. Because the dock seal and leveller add $3.0\\text{ m}$ between the door line and the inner wall, the text should say whether the $4, 12,$ and $20\\text{ m}$ depths and the reach $R$ used in GTV advection (page 14) are measured from the door line or from the inner face of the seal. On page 13, *\"For each day we pool gate-validated transit vectors ... take the mean $(u, v)$ and median dwell per $15\\text{ min}$ snapshot\"* should also say whether pooling is per snapshot or across the whole day, and page 18 should say whether the upwind shift $(u, v)H$ is applied in yard east/north meters at all three depths.\n- *Camera designation:* Section 2.3 (page 12) names only \"mast camera YC-2\", although the data run from 2 September 2025 to 27 April 2026 (page 9) and the depot replaced YC-2 with YC-3 on 9 January 2026 (Reference 44). Even if both cameras share a mount and field of view, the text should say which camera recorded the later part of the archive.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.2, 2.3, 2.4 & 2.6, Table 1",
+              "table": "Sections 2.2, 2.3, 2.4 & 2.6, Table 1"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 9–14, 18"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "a $0, 1$ mask",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "The yard mast camera views the apron at $38.5^\\circ$ from vertical, so a trailer of height $h$ is drawn several metres toward the mast. We use trailer heights from the YMS to undo that shift before sampling the yard raster along each infiltration path.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "because how far the warm air actually reaches is not known in advance.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "above $1.5\\text{ m s}^{-1}$ ground speed",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "$4, 12,$ and $20\\text{ m}$",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "For each day we pool gate-validated transit vectors ... take the mean $(u, v)$ and median dwell per $15\\text{ min}$ snapshot",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-2.1.4",
+        "title": "Order of Operations in CTA Masking, Zero-Filling, Smoothing, and Robust Scaling",
+        "text": "Section 2.3 (page 10) gives the pipeline as: *\"In each bay map, bays with $n_{\\text{valid}} < 3$ or non-finite $\\theta$ are masked and set to 0. Temperature is clipped to $[-35, 5]$ and scaled on the training split to $z = (\\theta - m)/q$, with $m$ the median and $q$ the interquartile range. Only the final sweep and the target are smoothed, as described in Sect. 2.1. Because CTA sweeps are stored in sensor order... We reorder each sweep onto the rack-aisle graph.\"* Three details are missing:\n- *Zeros bleeding through the smoothing:* If masked bays are set to $\\theta = 0$ before the $\\sigma = 2.5$ bay-pitch smoothing, without normalizing by the smoothed validity mask, the zeros, far warmer than a $-22^\\circ\\text{C}$ hall, leak into neighboring valid bays, warm them artificially, and create false warm labels ($\\theta \\ge -15^\\circ\\text{C}$).\n- *Scaling, filling, and physical temperature:* The text should say whether $m$ and $q$ come only from valid bays ($n_{\\text{valid}} \\ge 3$) before filling, whether masked bays are reset after scaling (so they do not carry the value $-m/q$ into the graph layers), and that only the network input is scaled while the targets, the persistence anchor $\\theta_0$, and every metric use smoothed temperature in $^\\circ\\text{C}$.\n- *Reordering onto the graph:* Sensors do not map one-to-one onto bays, since a sensor between two bays sees both. The text should say whether the reordering takes the nearest sensor or interpolates, and whether smoothing comes before or after it.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.1 and 2.3"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 8 and 10"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "In each bay map, bays with $n_{\\text{valid}} < 3$ or non-finite $\\theta$ are masked and set to 0. Temperature is clipped to $[-35, 5]$ and scaled on the training split to $z = (\\theta - m)/q$, with $m$ the median and $q$ the interquartile range. Only the final sweep and the target are smoothed, as described in Sect. 2.1. Because CTA sweeps are stored in sensor order... We reorder each sweep onto the rack-aisle graph.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-2.2.1",
+        "text": "In *\"Only bays with $n_{\\text{valid}} \\ge 3$ are retained\"*, define $n_{\\text{valid}}$ (the number of working thermopiles that see the bay).",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 8,
+              "section": "2.1",
+              "label": "Page 8, Section 2.1"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Only bays with $n_{\\text{valid}} \\ge 3$ are retained",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.2",
+        "text": "*\"Fig. 1(a) shows six sequences of CTA bay maps...\"* $\\rightarrow$ Figure 1(a) shows six sweeps (from `-60 min` to `+0 min`) of a single one-hour sequence, not six separate sequences.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 9,
+              "section": "2.1",
+              "label": "Page 9, Section 2.1"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Fig. 1(a) shows six sequences of CTA bay maps...",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.3",
+        "text": "Missing noun before superscript citations in *\"...similar to that in.$^{21}$\"*, *\"This width was first chosen in$^{21}$ after trial runs\"* (page 9), and *\"...which follows.$^{21}$\"* (page 10). Replace with explicit nouns or author names (e.g., *\"in Ref. 21\"* or *\"in Marchetti$^{21}$\"*).",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 9 and 10, Sections 2.1 and 2.3"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "...similar to that in.$^{21}$",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "This width was first chosen in$^{21}$ after trial runs",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.4",
+        "text": "Mixed British and American spellings within the same sections: *\"dew-point vapour\"* (page 10, line 4; Table 1) versus *\"water-vapor\"* (page 10, line 12), and *\"metres\"* / *\"Normalisation\"* (pages 12–13) versus *\"normalized\"* / *\"gray\"* / *\"center\"* elsewhere in the text.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Page 10 (Section 2.2) and Pages 12–13 (Section 2.3, Table 1)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.5",
+        "text": "The caption says *\"Deep blue is $\\theta \\le -22^\\circ\\text{C}$; white is warm\"*, but the maps and colorbar in Figure 1(a) use a sequential orange colormap (pale yellow for cold bays to dark orange for warm ones) with no blue at all.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 11,
+              "label": "Page 11, Figure 1(a) caption",
+              "figure": "Page 11, Figure 1(a) caption"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Deep blue is $\\theta \\le -22^\\circ\\text{C}$; white is warm",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.6",
+        "text": "*\"...humidity is scaled by $[0, 100]/100$...\"* $\\rightarrow$ Consider writing *\"clipped to $[0, 100]$ and divided by $100$\"* for clarity.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 12,
+              "section": "2.3",
+              "label": "Page 12, Section 2.3"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "...humidity is scaled by $[0, 100]/100$...",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-2.2.7",
+        "text": "The normalisation column reads `DS/4 (0 closed ... 4 held open)`. In the YMS door-state codes listed in Appendix A, code `4` is a sensor fault and code `5` is held open (consistent with the `held` flag in the next row being `DS >= 4.5` while `open` is `1.5 <= DS < 3.5`). Please check whether `DS` was remapped or clipped to $[0, 4]$ before dividing by $4$.",
+        "group": [
+          "[CTA & Yard Feed Datasets, Preprocessing, and Splitting Strategy] (Pages: 7-13)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 13,
+              "label": "Page 13, Table 1 (`door` channel)",
+              "table": "Page 13, Table 1 (`door` channel)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.1.1",
+        "title": "Potential Future-Timestamp Leakage and Lead Mismatch in Decoder Query Metadata",
+        "text": "The \"Transit vectors and metadata\" paragraph (pages 17–18) says the shared decoder query metadata are \"projected forward from values known at $t_{\\text{end}}$,\" and then: *\"Shift clock is the clock time at the sweep first matched as the $20\\text{ min}$ target (within $25\\%$ of $20\\text{ min}$), and feed age is the age of the newest yard snapshot at the last history sweep plus that same lag. ... The lead placeholder in this shared copy is $\\tanh(H/4\\text{ h})$ at $H = 30\\text{ min}$.\"* Two concerns follow, about causal validity and internal consistency:\n- **Possible leakage from future timestamps:** CTA sweeps arrive with jitter and occasional gaps (hence the different window counts $n$ per lead in Table 2), so taking the shift clock and the feed-age lag from the timestamp of an actual *recorded* future sweep matched within $\\pm 25\\%$ of $t_{\\text{end}} + 20\\text{ min}$ uses archive information that does not exist at $t_{\\text{end}}$ in live operation. Whether such a sweep exists at all may also track sensor outages or the end of a shift. At inference, these features should advance by a fixed nominal offset from $t_{\\text{end}}$, not by the lag of a matched future sweep.\n- **Mismatch with the trained leads:** No other part of the paper uses a $20\\text{ min}$ lead; the four trained and evaluated leads are $5\\text{ min}$, $15\\text{ min}$, $30\\text{ min}$, and $60\\text{ min}$, and $H_{\\text{ref}} = 30\\text{ min}$ is the reference both in the next sentence ($\\tanh(H/4\\text{ h})$ at $H = 30\\text{ min}$) and in the horizon embedder (Equation 5, page 19). A $20\\text{ min}$ target sweep therefore disagrees with both the placeholder ($30\\text{ min}$) and the decoded lead $H$. The authors should explain the $20\\text{ min}$ choice and confirm that the lag is a fixed offset from $t_{\\text{end}}$ at evaluation.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 17,
+              "page_end": 18,
+              "section": "2.6",
+              "label": "Section 2.6, Pages 17–18"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Shift clock is the clock time at the sweep first matched as the $20\\text{ min}$ target (within $25\\%$ of $20\\text{ min}$), and feed age is the age of the newest yard snapshot at the last history sweep plus that same lag. ... The lead placeholder in this shared copy is $\\tanh(H/4\\text{ h})$ at $H = 30\\text{ min}$.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.1.2",
+        "title": "Input Channel Disparity and Multi-Lead Readout for the `GraphGRU` and `StackTCN` Baselines",
+        "text": "Two fairness and reproducibility concerns arise in how the graph baselines are configured relative to the proposed bay encoder:\n- **Fewer input features:** Section 2.5 (page 15) gives `StackTCN` *\"the 30 sweeps, stacked on the channel axis ($30 \\times 2 = 60$ channels)\"* (presumably $\\theta$ and the validity flag, though the two channels are not named), and `GraphGRU` is given no channel count at all. The bay encoder (Section 2.6, page 16) receives 7 channels per sweep: $\\theta$, the differences $\\Delta\\theta$ and $\\Delta^2\\theta$, the bay coordinates $(x, y, \\ell)$, and a validity flag. Graph-attention layers (`GraphAttn`, Equation 2) weigh neighbors by their features alone, so without the coordinates they cannot tell a bay beside a dock door from one against the back wall, or a floor-level bay from a top-rack one. Withholding the 3 coordinate channels and the 2 difference channels limits what the baselines can learn about where warm air enters and how it rises, even from the array alone.\n- **Multi-lead readout:** Section 2.5 (pages 15–16) ends both baselines in a single `GraphAttn` head that reads the last hidden state or emits $\\Delta\\theta_0$ per bay, while Section 2.7 (page 20) trains every model with losses averaged over the four leads ($5\\text{ min}$, $15\\text{ min}$, $30\\text{ min}$, $60\\text{ min}$). It is not said whether that head emits four outputs at once, takes the lead embedding $e(H)$, or whether each baseline is trained four times, once per lead.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.5–2.7, Pages 14–16, 20"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the 30 sweeps, stacked on the channel axis ($30 \\times 2 = 60$ channels)",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.1.3",
+        "title": "Missing Definitions of the Mean Absolute Recovery-Energy Error (MARE) and the Equivalent-Load Error, and Mask Consistency",
+        "text": "- **No MARE formula, and a repeated MSE:** Section 2.8 (pages 22–23) opens with a paragraph headed **Mean absolute recovery-energy error (MARE)**, the paper's headline metric, but never gives its formula. Equation 11 instead repeats the occupancy-weighted mean *squared* error $\\mathcal{L} = \\frac{\\sum_i w_i (\\hat{\\theta}_i - \\theta_i)^2}{\\sum_i w_i}$ (already $\\mathcal{L}_{\\text{load}}$ in Equation 8, page 20) and calls it *\"the square of the MARE residual in Sect. 2.8.\"* A mean of squares is not the square of a mean absolute error, so it is unclear whether MARE is the occupancy-weighted mean absolute error over valid bays at least $6\\text{ m}$ from the dock wall,\n  $$\\text{MARE}(\\hat{\\theta}, \\theta) = \\frac{\\sum_i w_i |\\hat{\\theta}_i - \\theta_i|}{\\sum_i w_i},$$\n  or an unweighted mean over the same bays. Equation 11 should give the MARE formula in place of the repeated MSE.\n- **Depth cut and validity mask across Equations 8, 9, 11, and 12:** Equation 8 (page 20) sums over occupancy weights $w_i$ without the condition (bay valid, $d_i \\ge 6\\text{ m}$ from the dock wall) that appears later in Equation 11 (page 23) and in $\\mathcal{L}_{\\text{MW}}$ (Equation 9, page 21). Equation 12 (page 23) scores $\\eta_{\\text{MW}}$ on bays valid at *both* $t_{\\text{end}}$ and $t_{\\text{end}} + H$, while Equations 8, 9, and 11 do not say which they require. Since the inputs keep bays right up to the door line, the text should say whether training (Equation 8) uses the same $d_i \\ge 6\\text{ m}$ cut and two-sweep mask as Equations 11 and 12.\n- **Equivalent-load metric:** On pages 23–24, Equation 15 defines $P_{\\text{eq}} = 85\\text{ kW} \\times (\\theta - \\theta_{\\text{sup}})/\\Delta\\theta_{\\text{design}}$, and the prose says both that *\"The forecast map implies $P_{\\text{eq}}(\\hat{\\theta})$ and the observed map $P_{\\text{eq}}(\\theta)$, so the residual is in kilowatts\"* and that *\"Comparing the load on bays the model called cold with the load on the truly cold bays turns a mask error into the same units.\"* These describe two different calculations: a per-bay absolute error $|P_{\\text{eq}}(\\hat{\\theta}_i) - P_{\\text{eq}}(\\theta_i)|$, or a comparison of mean load between the predicted-cold and truly-cold masks. The formula behind `kW MAE` and $|\\Delta E_{\\text{shift}}|$, and whether the weights $w_i$ apply, should be stated.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 20,
+              "page_end": 24,
+              "label": "Sections 2.7–2.8, Pages 20–24"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the square of the MARE residual in Sect. 2.8.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "The forecast map implies $P_{\\text{eq}}(\\hat{\\theta})$ and the observed map $P_{\\text{eq}}(\\theta)$, so the residual is in kilowatts",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Comparing the load on bays the model called cold with the load on the truly cold bays turns a mask error into the same units.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.1.4",
+        "title": "Missing Training Procedures, Hyperparameters, and Components Promised in Section 2",
+        "text": "Several details needed to reproduce the work, including parts promised in the Section 2 overview on page 7 (*\"We then define the loss, including the occupancy-weighted load objective, the shift-balanced sampler, the plateau schedule that trains each run to convergence, and the setpoint-prior initialization, in Sect. 2.7\"*), are missing from Sections 2.5–2.7:\n- **Training mechanisms and hyperparameters (Section 2.7, pages 20–21):** Neither the **\"shift-balanced sampler\"** nor the **\"setpoint-prior initialization\"** appears in Section 2.7. The section also omits the optimizer, batch size, weight decay, initial learning rate, the learning rate of the 20-epoch $\\mathcal{L}_{\\text{MW}}$ phase, and the patience and decay factor behind *\"the learning rate drops each time validation loss plateaus, three times in all\"*.\n- **Unstated architecture sizes (Sections 2.5–2.6, pages 14–20):**\n  - *Graph construction and baselines (Section 2.5, pages 14–15):* The length scale of the exponential kernel that turns aisle distances into edge weights is not given, nor the number of attention heads in `GraphGRU` and in the blocks of `StackTCN`, nor how `StackTCN` pools from 288 bays to 72 and 18 and back.\n  - *Temporal mixer, decoder, and gate (Section 2.6, pages 17, 19–20):* The channel count of the dilated 1-D temporal convolution, the number of heads in the temporal attention block, and the hidden size of the horizon embedder (Equation 5) are not stated. Figure 2(e) (page 17) draws a decoder block (`Linear -> GELU -> GraphAttn -> GraphAttn -> Linear`) fed with `\"Raw Yard / Persist Features\"`, and Section 2.9 (page 24) says that *\"In the decoder skip, last-sweep temperature is the setpoint and the last difference is 0. Yard features in the same skip vector are unchanged\"*, but Section 2.6 never lists the features in that skip connection, the layer widths, or the number of heads in the decoder's `GraphAttn` blocks. In Equation 7 (page 20), the size of the raw yard vectors $p_i^{\\text{now}}$ and $p_i^{\\text{up}}$ (the 4 raw channels at 3 depths, $4 \\times 3 = 12$ features each, or all 12 raster channels) is not given either.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 14,
+              "page_end": 21,
+              "label": "Sections 2.5–2.7, Pages 14–21"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "We then define the loss, including the occupancy-weighted load objective, the shift-balanced sampler, the plateau schedule that trains each run to convergence, and the setpoint-prior initialization, in Sect. 2.7",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the learning rate drops each time validation loss plateaus, three times in all",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "In the decoder skip, last-sweep temperature is the setpoint and the last difference is 0. Yard features in the same skip vector are unchanged",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.1.5",
+        "title": "Ambiguity in Newton-Cooling Anchor Clipping and Gate Behavior Under Ablations",
+        "text": "- **Bounds on the anchor and the output (Equation 6, page 20):** Equation 6 predicts $\\hat{\\theta} = \\theta_{\\text{sup}} + (\\theta_0 - \\theta_{\\text{sup}})\\,\\mathrm{e}^{-H/\\kappa} + \\alpha\\,g\\,\\Delta\\theta$, where *\"$\\theta_0$ is the bay temperature in the last CTA sweep\"*. Because masked bays are set to $0$ (page 10) and temperatures are clipped to $[-35, 5]$, a masked bay enters as $\\theta_0 = 0^\\circ\\text{C}$, far above any real bay. Page 23 later notes that *\"the decoder already keeps $\\hat{\\theta}$ within $[-32, 2]$\"*. The clamping applied to $\\theta_0$ for masked bays, and to $\\hat{\\theta}$, should be stated alongside Equation 6.\n- **Anchor $\\theta_0$ and gate $g$ in the ablations (Section 2.9, page 24):** For the **No CTA input** ablation (page 24), the text says that *\"In the decoder skip, last-sweep temperature is the setpoint and the last difference is 0,\"* but does not say whether the anchor $\\theta_0$ in Equation 6 is also set to the setpoint ($-22^\\circ\\text{C}$). Conversely, the gate $g = \\sigma(w^\\top [p_i^{\\text{now}} \\parallel p_i^{\\text{up}}] + b)$ of Equation 7 (page 20) depends only on raw yard features, so when the yard inputs are zeroed in the **No yard feed** ablation (page 24), $[p_i^{\\text{now}} \\parallel p_i^{\\text{up}}] = \\mathbf{0}$ and $g$ becomes one learned constant $\\sigma(b)$ for every bay, whereas for the array-only baselines (`GraphGRU` and `StackTCN`, page 16) $g$ and $\\alpha$ are fixed at $1$. Stating how $\\theta_0$, $g$, and $\\alpha$ are set in each ablation would make them reproducible.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Sections 2.6, 2.8 & 2.9, Pages 19–20, 22–24"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "$\\theta_0$ is the bay temperature in the last CTA sweep",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the decoder already keeps $\\hat{\\theta}$ within $[-32, 2]$",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "In the decoder skip, last-sweep temperature is the setpoint and the last difference is 0,",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.1.6",
+        "title": "Undefined Threshold Symbol $\\kappa$ and Collision with the Time Constant in the Missed-Warm Loss $\\mathcal{L}_{\\text{MW}}$",
+        "text": "In Equation 6 (page 20), $\\kappa$ is the hall's thermal time constant. On the next page, Equation 9 (page 21) defines the missed-warm loss as:\n$$\\mathcal{L}_{\\text{MW}} = \\frac{1}{|W|} \\sum_{i \\in W} \\operatorname{ReLU}(\\kappa - \\hat{\\theta}_i), \\qquad W = \\{ i : \\theta_i \\ge \\kappa, \\text{ valid}, d_i \\ge 6\\text{ m} \\}.$$\nHere $\\kappa$ stands, undefined, for the warm-bay threshold ($-15^\\circ\\text{C}$, from Sections 2.1 and 2.8), the same symbol as the time constant in Equation 6. A separate symbol (such as $\\theta_{\\text{warm}} = -15^\\circ\\text{C}$), its value written into Equation 9, and a statement that $\\mathcal{L}_{\\text{MW}} = 0$ when $|W| = 0$ (a hall with no warm bays) would remove the confusion.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 20,
+              "page_end": 21,
+              "label": "Sections 2.6–2.7, Pages 20–21"
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-3.2.1",
+        "text": "Two different symbols denote the identity matrix on consecutive pages: $\\mathbb{1}$ in $L = \\mathbb{1} - D^{-1/2} A D^{-1/2}$ (page 14) and $\\mathbb{I}$ in $\\tilde{A} = A + \\mathbb{I}$ (Equation 2, page 15). $A$ also denotes the adjacency matrix here after naming the door area in Equation 1, and $H$ is used on page 15 for the `GraphGRU` hidden width ($H = 40$), clashing with the forecast lead $H$.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 14,
+              "page_end": 15,
+              "section": "2.5",
+              "label": "Pages 14–15 (Section 2.5, Equation 2)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.2",
+        "text": "*\"Each sweep produces 6 features per node (bay) in the graph layers... A sensor-valid flag is concatenated as a seventh channel.\"* Since $\\theta$ (1), $\\Delta\\theta$ and $\\Delta^2\\theta$ (2), and $(x, y, \\ell)$ (3) already make 6 before the flag, saying directly that each sweep gives 7 features per node (6 physical and positional, plus the flag) would avoid the ambiguity.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 16,
+              "section": "2.6",
+              "label": "Page 16 (Section 2.6, Bay encoder)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Each sweep produces 6 features per node (bay) in the graph layers... A sensor-valid flag is concatenated as a seventh channel.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.3",
+        "text": "Several labels inside Figure 2 contain typos or terms that differ from the text:\n- In block **a** (*Bay Encoder*): `\"Residaul Block\"` should be `\"Residual Block\"`.\n- In block **c** (*Transit + Metadata Encoder*, inside the attention box): `\"Query: Bay Embeddigns\"` and `\"Key: Bay Embeddigns\"` should be `\"Bay Embeddings\"`.\n- In block **e** (*Decoder*): `\"Out: forcast\"` should be `\"Out: forecast\"`.\n- In blocks **a**, **b**, and **c**: The normalization layers are labeled `\"LayerNorm\"`, whereas the text on page 18 specifies `\"batch normalization\"` for the yard encoder and mentions no normalization in the bay or transit encoders.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 17,
+              "label": "Page 17 (Figure 2 diagram)",
+              "figure": "Page 17 (Figure 2 diagram)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.4",
+        "text": "The symbol $g$ denotes both the gating MLP on the temporal mixer's skip connection (Equation 4, page 19) and the per-bay sigmoid gate in the decoder (Equations 6–7, page 20).",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Pages 19 & 20 (Equations 4, 6, and 7)",
+              "equation": "Pages 19 & 20 (Equations 4, 6, and 7)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.5",
+        "text": "- The inline headings `\"Loss function\"` (page 20) and `\"Training Curriculum\"` (page 21) lack the trailing period that every other inline heading in Sections 2.4–2.9 has.\n- In Equation 10 (page 21), $\\mathcal{L}_{\\text{total}} = \\mathcal{L} + \\lambda \\mathcal{L}_{\\text{MW}}$ uses $\\mathcal{L}$ rather than $\\mathcal{L}_{\\text{load}}$ (defined in Equation 8). The prose on pages 20–21 also italicizes the subscripts ($\\mathcal{L}_{load}$, $\\mathcal{L}_{MW}$) that Equations 8–10 set upright ($\\mathcal{L}_{\\text{load}}$, $\\mathcal{L}_{\\text{MW}}$).",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 20,
+              "page_end": 21,
+              "section": "2.7",
+              "label": "Pages 20–21 (Section 2.7, Equations 8–10 and headings)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.6",
+        "text": "For the missed-warm rate $\\eta_{\\text{MW}} = \\frac{\\text{FN}}{\\text{TP} + \\text{FN}}$, stating that a forecast bay counts as warm (the positive class) when $\\hat{\\theta}_i \\ge -15^\\circ\\text{C}$ and as cold otherwise would make the definition self-contained.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 22,
+              "section": "2.8",
+              "label": "Page 22 (Section 2.8, Equation 12)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-3.2.7",
+        "text": "The text writes *\"The full BCSD $E_{\\text{shift}}$ also depends on door traffic...\"* whereas the rest of the section uses $E_{\\text{shift},d}$. Using $E_{\\text{shift},d}$ throughout is recommended.",
+        "group": [
+          "[Forecasting Baselines, Multi-Source Architecture, Training & Metrics] (Pages: 12-24)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 23,
+              "section": "2.8",
+              "label": "Page 23 (Section 2.8, below Equation 14)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "The full BCSD $E_{\\text{shift}}$ also depends on door traffic...",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.1.1",
+        "title": "Mechanistic Interpretation of the `No CTA` Ablation Outperforming `Proposed` on `load MSE` and $\\eta_{\\text{MW}}$ at 30–60 min, and Quiet-Period Underperformance",
+        "text": "In Table 4 (p. 30) and Section 4.2 (*\"the ceiling array can raise the long-lead error\"*, pp. 31–32), dropping the in-hall array (`No CTA`) gives a lower (better) `load MSE` ($0.0412 \\pm 0.0026$ vs. $0.0423 \\pm 0.0014$ at $30\\text{ min}$; $0.0538 \\pm 0.0017$ vs. $0.0561 \\pm 0.0029$ at $60\\text{ min}$) and a lower (better) missed-warm rate $\\eta_{\\text{MW}}$ ($0.121 \\pm 0.019$ vs. $0.134 \\pm 0.024$ at $30\\text{ min}$; $0.152 \\pm 0.021$ vs. $0.158 \\pm 0.030$ at $60\\text{ min}$) than the full `Proposed` model, although `Proposed` stays ahead on `MARE` ($3.4\\%$ at $30\\text{ min}$ and $1.1\\%$ at $60\\text{ min}$), $|\\Delta E_{\\text{shift}}|$, and `kW MAE`. Since `load MSE` ($\\mathcal{L}_{\\text{load}}$) and $\\mathcal{L}_{\\text{MW}}$ are exactly the training objectives (Equations 8–10), it is notable that the full model does worse than the array-free ablation on its own loss at long leads, while Section 4.2 puts this down only to *\"forcing the decoder through a one-hour sensor history.\"* Three points deserve discussion:\n- *The fixed Newton-cooling anchor $\\theta_0$ at long leads:* In Equation 6 (p. 20), the decoder adds a residual to a relaxation that starts from the last observed sweep: $\\hat{\\theta} = \\theta_{\\text{sup}} + (\\theta_0 - \\theta_{\\text{sup}})\\,\\mathrm{e}^{-H/\\kappa} + \\alpha\\,g\\,\\Delta\\theta$. At $30\\text{–}60\\text{ min}$, a warm plume present at $t_{\\text{end}}$ has usually been drawn back to the coils or has spread $90\\text{–}250\\text{ m}$ at $3.0\\text{–}4.2\\text{ m min}^{-1}$, far beyond the $64\\text{ m}$ hall. Anchoring on $\\theta_0$ therefore asks the term $\\alpha\\,g\\,\\Delta\\theta$ both to build the incoming heat suggested by the yard *and* to cancel stale local structure in $\\theta_0$; wherever the yard-driven gate $g \\in (0, 1)$ is small or slightly mistimed, remnants of $\\theta_0$ survive into the forecast and cost heavily under the squared `load MSE`. In `No CTA`, the last sweep is the setpoint, so the anchor carries no stale structure and the head forecasts directly from the smoother upwind yard features, which lowers squared outliers (`load MSE`) and missed warm bays ($\\eta_{\\text{MW}}$) at the cost of a larger mean bias ($\\Delta P_{\\text{eq}} = +1.84$ vs. $+1.29\\text{ kW}$ at $30\\text{ min}$) and $L_1$ error (`MARE`). Discussing this in Section 4.2, and whether a lead-dependent weight on the anchor (e.g., replacing $\\theta_0$ by $\\theta_{\\text{set}} + \\beta(H)(\\theta_0 - \\theta_{\\text{set}})$ with $\\beta(H) \\to 0$ at long leads) would let the model move smoothly from an array-anchored residual at $5\\text{–}15\\text{ min}$ to a yard-driven forecast at $30\\text{–}60\\text{ min}$, would strengthen the analysis.\n- *The gate $g$ and Phase-2 $\\mathcal{L}_{\\text{MW}}$ hedging in quiet periods:* On nearly static windows ($|\\Delta f_{\\text{warm}}| < 0.03$) and in the quietest quartile of door traffic, `Proposed` loses to last-value persistence, winning on only $46\\% / 41\\%$ and $38\\% / 33\\%$ of windows at $30 / 60\\text{ min}$ (Section 3.1, p. 27; Section 4.2, p. 31), even though the gate of Equation 7 is designed so that *\"a quiet bay can stay on its measured temperature.\"* Table 3 (p. 26) also shows all three learned models with a positive signed bias $\\Delta P_{\\text{eq}}$ ($+1.29$ and $+1.22\\text{ kW}$ for `Proposed` at $30$ and $60\\text{ min}$ vs. $-0.31$ and $-0.04\\text{ kW}$ for persistence), so that $\\hat{\\theta} > \\theta$ on average. Section 4.2 could explain why $g$ does not close ($g \\to 0$) in quiet periods, for instance because Equation 7 sees only point-sampled yard values $[p_i^{\\text{now}} \\parallel p_i^{\\text{up}}]$ rather than transit speed, the lead $H$, or the array's own differences ($\\Delta\\theta$), and because regression to the mean and the Phase-2 $\\mathcal{L}_{\\text{MW}}$ finetuning push residuals away from zero.\n- *Seed spread and fair comparison:* In Table 4, the gaps between `Proposed` and `No CTA` in $\\eta_{\\text{MW}}$ at $30\\text{ min}$ ($0.134 \\pm 0.024$ vs. $0.121 \\pm 0.019$) and $60\\text{ min}$ ($0.158 \\pm 0.030$ vs. $0.152 \\pm 0.021$), and in `load MSE` at $30\\text{ min}$ ($0.0423 \\pm 0.0014$ vs. $0.0412 \\pm 0.0026$), lie within $1\\sigma$ over the four training seeds. And because `No CTA` (yard only) already beats `GraphGRU` and `StackTCN` at $30\\text{–}60\\text{ min}$, noting in Section 3.1 (p. 25) that `GraphGRU` and `StackTCN` see *the array history only* would keep readers from crediting the long-lead gains to the backbone rather than to the yard feed.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 25,
+              "page_end": 27,
+              "section": "3.1",
+              "label": "Section 3.1, pp. 25–27"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 28,
+              "page_end": 30,
+              "section": "3.2",
+              "label": "Section 3.2, pp. 28–30, Table 4"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 31,
+              "page_end": 32,
+              "section": "4.2",
+              "label": "Section 4.2, pp. 31–32"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "the ceiling array can raise the long-lead error",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "forcing the decoder through a one-hour sensor history.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "a quiet bay can stay on its measured temperature.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-4.1.2",
+        "title": "Conditioning of the $\\bar{\\theta} \\in [-21, -14]^\\circ\\text{C}$ Benchmark Filter and Unreported Performance in Initially Quiet ($\\bar{\\theta} < -21^\\circ\\text{C}$) Periods",
+        "text": "Every score in Tables 2–4 and Figures 3–8 is restricted to the 8,912 working-hour test windows whose window-mean observed CTA temperature lies in $\\bar{\\theta} \\in [-21, -14]^\\circ\\text{C}$ (out of 41,377 working-hour test windows), on the grounds that *\"Windows colder than $-21^\\circ\\text{C}$ are quiet and every method trivially agrees\"* (p. 24). Two concerns follow from this filter:\n- *Which window the filter uses, and the transitions it may drop:* It is not stated whether the window mean behind the filter is taken over the one-hour history ($t \\le t_{\\text{end}}$), at the issue time $t_{\\text{end}}$, or at the target $t_{\\text{end}} + H$ (the different counts $n$ per lead in Table 2 suggest the history, with windows dropped only when the target sweep is missing). If it is the history, then a hall that is quiet at $t_{\\text{end}}$ and is hit by a burst of arrivals $30\\text{–}60\\text{ min}$ later, the case where the yard feed should matter most, never enters the evaluation.\n- *False alarms in quiet periods:* Windows that start below $-21^\\circ\\text{C}$ and stay there (roughly $64\\%$ of operating hours at BCSD) are exactly where a model fed with yard activity and finetuned with an asymmetric penalty ($\\mathcal{L}_{\\text{MW}}$) might raise false warm calls; whether it \"trivially agrees\" with persistence there is an empirical question, all the more since `Proposed` already loses to persistence on $54\\% / 59\\%$ of static windows ($|\\Delta f_{\\text{warm}}| < 0.03$) inside the band. Reporting `MARE` and the false-warm rate on the excluded quiet windows, and stating which time window defines the filter, would show that running the model around the clock does no harm in quiet periods.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 24,
+              "page_end": 27,
+              "section": "3.1",
+              "label": "Section 3.1, pp. 24–27"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 30,
+              "section": "4.1",
+              "label": "Section 4.1, p. 30"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 31,
+              "section": "4.2",
+              "label": "Section 4.2, p. 31"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Windows colder than $-21^\\circ\\text{C}$ are quiet and every method trivially agrees",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-4.1.3",
+        "title": "Formulation of the BCSD Energy Saving Estimate and Its Link to Conditional Cold-Call Risk",
+        "text": "In Section 4.1 (p. 30) and Section 5 (p. 33), the $\\sim 1.8\\%$ energy saving is the product of the share of hall time in loading shifts ($60\\%$), the fraction of historical shifts in the $\\bar{\\theta} \\in [-21, -14]^\\circ\\text{C}$ band ($35\\%$), and the $8.5\\%$ absolute drop in $\\eta_{\\text{MW}}$ at $30\\text{ min}$ ($0.60 \\times 0.35 \\times 0.085 \\approx 1.79\\% \\sim 1.8\\%$). As a rough estimate this is reasonable, but two aspects of how it relates to operations and to the $0.4\\%\\text{–}2.1\\%$ range in the Abstract need clarification:\n- *Conditioning on true warmth vs. predicted cold:* By Equation 12, $\\eta_{\\text{MW}} = \\mathrm{FN}/(\\mathrm{TP} + \\mathrm{FN}) = P(\\text{pred cold} \\mid \\text{true warm})$ is the share of *truly warm* bays called cold. A scheduler, though, does not choose among truly warm bays; it routes pallets to bays the forecast calls *cold* ($\\hat{\\theta} < -15^\\circ\\text{C}$). The chance that a bay chosen this way turns out warm is the conditional cold-call risk (false omission rate) $P(\\text{true warm} \\mid \\text{pred cold}) = \\mathrm{FN}/(\\mathrm{TN} + \\mathrm{FN})$, which the authors study in Appendix A (Figure 7, pp. 34–35), or, over the whole hall, $f_{\\text{warm}} \\cdot \\Delta \\eta_{\\text{MW}}$. In Figure 7 ($30\\text{ min}$ and $60\\text{ min}$ columns), `Proposed` lowers $P(\\text{true warm} \\mid \\text{pred cold})$ relative to `Persist` and `Door-event` by about $0.02\\text{–}0.04$ in mixed conditions (up to $\\sim 0.05$ near $f_{\\text{warm}} \\approx 0.4\\text{–}0.5$).\n- *Other factors and bounds:* A warm bay caught in time saves both the pallet's product and the extra compressor cycle needed to pull the bay back down (up to a $2\\times$ factor on saved compressor time, as noted on p. 22), whereas false warm calls, forklift travel limits, and the off-peak tariff window (22:00–06:00, when cooling is cheapest) reduce the net saving. Connecting the product in Section 4.1 to the warm fraction $f_{\\text{warm}}$, the conditional risk in Appendix A, and the $2\\times$ factor would show how the authors arrive at both the $0.4\\%$ lower bound and the $2.1\\%$ upper bound in the Abstract.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 30,
+              "section": "4.1",
+              "label": "Section 4.1, p. 30"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 33,
+              "section": "5",
+              "label": "Section 5, p. 33"
+            }
+          },
+          {
+            "resource": {
+              "type": "work",
+              "ref": "appendix:Appendix A, pp. 34–35"
+            },
+            "location": {
+              "page": 34,
+              "page_end": 35,
+              "label": "Appendix A, pp. 34–35"
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-4.1.4",
+        "title": "Inconsistent Regime Definitions ($\\Delta\\bar{\\theta}$ vs. $\\Delta f_{\\text{warm}}$), Figure 5(b) Bar Aggregation, and Unspecified Shift Operator in Appendix B",
+        "text": "Several definitions in the figures and appendices need brief clarification for reproducibility:\n- *Regime thresholds (pp. 26–28):* Section 3.1 (p. 27, lines 2–3) defines the `Arriving` and `Recovering` bars of Figure 3 by the change in window-mean temperature: *\"Arriving is a rise of at least $0.6^\\circ\\text{C}$ in that mean, $\\bar{\\theta}(t_0 + H) - \\bar{\\theta}(t_0) \\ge 0.6$, and Recovering is a drop of at least $0.6^\\circ\\text{C}$.\"* Section 3.2 and the Figure 5 caption (p. 28) instead use the change in the warm-bay fraction, $\\Delta f_{\\text{warm}} \\ge 0.06$ and $\\Delta f_{\\text{warm}} \\le -0.06$ (and the horizontal axis of the left panels of both Figure 3 and Figure 5 is $\\Delta f_{\\text{warm}}$). Since $\\bar{\\theta}$ and $f_{\\text{warm}} = \\text{fraction}(\\theta \\ge -15^\\circ\\text{C})$ are on different scales, the text should say which one defines the regimes in each figure.\n- *$\\eta_{\\text{MW}}$ in Figure 5(b) vs. Table 4 (p. 28 vs. p. 30):* Figure 5(b) plots the $30\\text{ min}$ $\\eta_{\\text{MW}}$ on `All` windows at $\\approx 0.146$ for `Proposed` and $\\approx 0.338$ for `No yard feed`, while Tables 2–4 report four-seed means of $0.134 \\pm 0.024$ (`Proposed`) and $0.307 \\pm 0.031$ (`No yard feed`) on the same holdout. The Figure 5 caption should say whether panel (b) shows one seed or a per-window average (rather than the bay-pooled $\\mathrm{FN}/(\\mathrm{TP}+\\mathrm{FN})$ of Table 4).\n- *\"One door-path step\" and the overlap measure in Appendix B (p. 35):* Appendix B (p. 35 and Figure 8) calls a window *spreading* *\"when the warm mask moved one door-path step overlaps the future warm mask more than the last sweep left where it was\"* and *settling* otherwise. Please state which vector sets that step (the mean GTV backtrace of Section 2.4, the door-event regression's drift, or a best-fit shift between $t_{\\text{end}}$ and $t_{\\text{end}} + H$) and how mask overlap is measured (count of shared warm bays, intersection-over-union, or F1 on $\\theta \\ge -15^\\circ\\text{C}$ beyond $6\\text{ m}$).",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Potential Mistakes and Improvements"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 26,
+              "page_end": 27,
+              "section": "3.1",
+              "label": "Section 3.1, pp. 26–27"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 28,
+              "section": "3.2",
+              "label": "Section 3.2, p. 28"
+            }
+          },
+          {
+            "resource": {
+              "type": "work",
+              "ref": "appendix:Appendix B, pp. 35–36"
+            },
+            "location": {
+              "page": 35,
+              "page_end": 36,
+              "label": "Appendix B, pp. 35–36"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Arriving is a rise of at least $0.6^\\circ\\text{C}$ in that mean, $\\bar{\\theta}(t_0 + H) - \\bar{\\theta}(t_0) \\ge 0.6$, and Recovering is a drop of at least $0.6^\\circ\\text{C}$.",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "when the warm mask moved one door-path step overlaps the future warm mask more than the last sweep left where it was",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-4.2.1",
+        "text": "*\"The proposed model is better on the missed-warm rate ($24\\%$ below persistence), although that seed spread reaches the winning door-event value.\"* In Table 2 at $5\\text{ min}$, `Proposed` has $\\eta_{\\text{MW}} = 0.041 \\pm 0.008$ (in bold as best) and `Door-event regression` has $\\eta_{\\text{MW}} = 0.046$. Since lower is better, `Proposed` ($0.041$) holds the winning mean at $5\\text{ min}$, and it is its own $1\\sigma$ seed spread that reaches the door-event value, not the door-event value that wins.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 25,
+              "section": "3.1",
+              "label": "Page 25 (Section 3.1, paragraph 2)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "The proposed model is better on the missed-warm rate ($24\\%$ below persistence), although that seed spread reaches the winning door-event value.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.2.2",
+        "text": "The opening quotation marks on the regime labels `\"All\"`, `\"Quiet\"`, `\"Busy\"` (p. 25, last line) and `\"Cold\"`, `\"Mixed\"`, `\"Warm\"` (p. 27, lines 1–2) are typeset as closing double quotes (`”`) instead of opening ones (`“`).",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "section": "3.1",
+              "label": "Pages 25 and 27 (Section 3.1 quotation marks)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.2.3",
+        "text": "The three rows of Figure 3 are labeled `(a) Persistence`, `(c) Door-event reg.`, and `(e) StackTCN`, skipping `(b)`, `(d)`, and `(f)`. Labeling the right-hand win-fraction panels `(b)`, `(d)`, and `(f)`, or numbering the three rows `(a)`, `(b)`, and `(c)`, would keep the labels consistent.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 26,
+              "label": "Page 26 (Figure 3 subpanel labels)",
+              "figure": "Page 26 (Figure 3 subpanel labels)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.2.4",
+        "text": "The issue time at the end of the one-hour history is written $t_0$ (`θ(t_0)`, `t_0 + H`), whereas Sections 1–2 and Figure 1 call the same time $t_{\\text{end}}$. Using $t_{\\text{end}}$ throughout would improve consistency.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 27,
+              "page_end": 28,
+              "section": "3.1",
+              "label": "Pages 27–28 (Section 3.1 and Figure 4 caption)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.2.5",
+        "text": "In the bottom legend of Figure 4, the inequality sign is missing from the warm label, which reads `θ −15 warm` instead of `θ ≥ −15 warm`.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 28,
+              "label": "Page 28 (Figure 4 legend)",
+              "figure": "Page 28 (Figure 4 legend)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-4.2.6",
+        "text": "On p. 28, *\"within 3–6% of persist / door-event (Tab. 3)\"* corresponds to `No yard feed` MARE $0.1871$ (Table 4) against `Last-value persistence` $0.1762$ ($+6.2\\%$) and `Door-event regression` $0.1779$ ($+5.2\\%$), so *\"5–6% above persist / door-event\"* (matching *\"8–10% above persist / door-event\"* in the next sentence) would be more precise. Note also that the percentages for `No yard feed` on p. 28 ($31\\%$ and $26\\%$) are relative to `Proposed`, while the reductions for `No CTA` on p. 29 and in Figure 6 ($47\\%$, $22\\%$, $3.4\\%$, $1.1\\%$) are relative to `No CTA`; naming the reference model in both paragraphs would avoid ambiguity.",
+        "group": [
+          "[Empirical Benchmark Results, Ablations, Discussion & Technical Appendices] (Pages: 24-37)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "label": "Page 28 (Section 3.2, line 5) and Page 29 (Section 3.2, paragraph 1 & Figure 6)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "within 3–6% of persist / door-event (Tab. 3)",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "8–10% above persist / door-event",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-5.1.1",
+        "title": "Missing Bibliography Entries for Core Methodological Components (Graph Attention and Lumped-Capacitance Models)",
+        "text": "A concern about scholarly completeness in the Bibliography (pages 37–44) is that it leaves out the works behind two components the method depends on. Section 2.5 (pages 14–15) introduces \"graph-attention layers\" and \"GraphAttn\" (Equations 2–3) on the rack-aisle graph without citing work on message passing over building floor plans (Halvorsen et al., 2018), and Section 2.6 (page 19) builds the decoder on a \"lumped-capacitance Newton-cooling relaxation\" without citing the warehouse infiltration models it follows (Vasquez-Thorne et al., 2020). Adding these to the bibliography and citing them in Sections 2.5 and 2.6 would give proper credit and help readers reproduce the graph construction and the decoder's time constant.",
+        "group": [
+          "[Disclosures, Acknowledgments & Bibliography] (Pages: 33-34, 37-44)",
+          "Potential Mistakes and Improvements"
+        ],
+        "severity": "major"
+      },
+      {
+        "id": "issue-5.2.1",
+        "text": "The funding sentence still holds template placeholders (`[FUNDER NAME]`, grant `XX-0000-000`). Please fill in the funder and the grant number before publication.",
+        "group": [
+          "[Disclosures, Acknowledgments & Bibliography] (Pages: 33-34, 37-44)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 34,
+              "label": "Page 34 (Acknowledgments, line 4)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-5.2.2",
+        "text": "The entry gives two different degrees in the same citation: *\"PhD thesis, Kestrel Ford Polytechnic, School of Mechanical Engineering (2026). MEng thesis; supervisor D. A. Pellegrini.\"* (Likely a BibTeX `phdthesis` entry whose `note = {MEng thesis...}` field contradicts it.)",
+        "group": [
+          "[Disclosures, Acknowledgments & Bibliography] (Pages: 33-34, 37-44)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work",
+              "ref": "bibliography:Reference 21 (Page 40)"
+            },
+            "location": {
+              "page": 40,
+              "label": "Reference 21 (Page 40)"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "PhD thesis, Kestrel Ford Polytechnic, School of Mechanical Engineering (2026). MEng thesis; supervisor D. A. Pellegrini.",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-5.2.3",
+        "text": "The DOIs of these three *Journal of Cold-Chain Engineering* entries repeat the resolver inside the identifier, so the printed links resolve nowhere:\n* Ref. 30 (page 41): `[doi:https://doi.org/10.5555/jcce.2019.0412]`\n* Ref. 31 (page 41): `[doi:https://doi.org/10.5555/jcce.2021.0087]`\n* Ref. 38 (page 42): `[doi:https://doi.org/10.5555/jcce.2017.1130]`",
+        "group": [
+          "[Disclosures, Acknowledgments & Bibliography] (Pages: 33-34, 37-44)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work",
+              "ref": "bibliography:References 30, 31, and 38 (Pages 41–42)"
+            },
+            "location": {
+              "page": 41,
+              "page_end": 42,
+              "label": "References 30, 31, and 38 (Pages 41–42)"
+            }
+          }
+        ],
+        "severity": "minor"
+      },
+      {
+        "id": "issue-5.2.4",
+        "title": "Author Name Formatting in References",
+        "text": "Several bibliography entries (Refs. 2, 3, 5, 6, 8, 11, 14, 17, 19, 23, 26, 28, 33, 41, 47) spell out first names while the rest use initials (e.g., Ref. 2: *\"Ruth Vantongeren, Kwame Osei and Lars Brask\"* against Ref. 9: *\"R. Vantongeren, K. Osei and L. Brask\"*), and in Ref. 14 the initials are lowercase: *\"j. m. Dufresne, a. Kowalczyk\"*.",
+        "group": [
+          "[Disclosures, Acknowledgments & Bibliography] (Pages: 33-34, 37-44)",
+          "Minor Corrections and Typos"
+        ],
+        "evidence_links": [
+          {
+            "resource": {
+              "type": "work"
+            },
+            "location": {
+              "page": 37,
+              "page_end": 42,
+              "label": "Pages 37–42"
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "Ruth Vantongeren, Kwame Osei and Lars Brask",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "R. Vantongeren, K. Osei and L. Brask",
+            "location": {
+              "label": ""
+            }
+          },
+          {
+            "resource": {
+              "type": "work"
+            },
+            "quote": "j. m. Dufresne, a. Kowalczyk",
+            "location": {
+              "label": ""
+            }
+          }
+        ],
+        "severity": "minor"
+      }
+    ]
+  },
+  "extensions": {
+    "ocrs_0_8": {
+      "fields": [
+        {
+          "path": "record:weakness-1",
+          "value": {
+            "summarizes": []
+          }
+        },
+        {
+          "path": "record:weakness-2",
+          "value": {
+            "summarizes": []
+          }
+        },
+        {
+          "path": "record:weakness-3",
+          "value": {
+            "summarizes": []
+          }
+        },
+        {
+          "path": "record:weakness-4",
+          "value": {
+            "summarizes": []
+          }
+        },
+        {
+          "path": "record:issue-1.2.2",
+          "value": {
+            "suggested_edits": [
+              {
+                "replacement": "described in Ref. 21,"
+              },
+              {
+                "replacement": "described by Marchetti,$^{21}$"
+              }
+            ]
+          }
+        },
+        {
+          "path": "record:issue-2.2.6",
+          "value": {
+            "suggested_edits": [
+              {
+                "replacement": "clipped to $[0, 100]$ and divided by $100$"
+              }
+            ]
+          }
+        },
+        {
+          "path": "record:issue-3.2.3",
+          "value": {
+            "suggested_edits": [
+              {
+                "original": "Residaul Block",
+                "replacement": "Residual Block"
+              },
+              {
+                "original": "Query: Bay Embeddigns",
+                "replacement": "Bay Embeddings"
+              },
+              {
+                "original": "Key: Bay Embeddigns",
+                "replacement": "Bay Embeddings"
+              },
+              {
+                "original": "Out: forcast",
+                "replacement": "Out: forecast"
+              }
+            ]
+          }
+        },
+        {
+          "path": "record:issue-4.2.6",
+          "value": {
+            "suggested_edits": [
+              {
+                "replacement": "5–6% above persist / door-event"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
