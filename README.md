@@ -74,6 +74,25 @@ A review names the version it follows in `$schema`, which the mappers set to the
 
 For complete reviews, see [examples/](examples/). The Python package below also maps reviews from other systems to OCRS.
 
+## Install the Python package
+
+Python 3.12 or newer is required. Install the version matching the schema you use:
+
+```bash
+python -m pip install "ocrs @ git+https://github.com/valency-oss/open-canonical-review-schema.git@v0.9.0"
+```
+
+The [GitHub release](https://github.com/valency-oss/open-canonical-review-schema/releases/tag/v0.9.0)
+also provides a wheel, a source archive, and SHA-256 checksums. Download the wheel to install
+without Git:
+
+```bash
+python -m pip install ./ocrs-0.9.0-py3-none-any.whl
+```
+
+OCRS currently distributes packages through GitHub Releases. The repository's
+[`uv sync` instructions](#development) are for contributors working from a clone.
+
 ## API
 ```python
 from ocrs import map_from, map_to, validate_canonical
@@ -761,7 +780,12 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## License
 
-Apache License 2.0 - see [LICENSE](LICENSE) for details.
+OCRS code, schemas, and original documentation use Apache License 2.0; see [LICENSE](LICENSE)
+and [NOTICE](NOTICE). Published review fixtures and source-system logos retain their own
+licenses and trademark rights, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Maintainers can
+find the release and hosting procedure in [RELEASING.md](RELEASING.md).
 
 ## Acknowledgments
 

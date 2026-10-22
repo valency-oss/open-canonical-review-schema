@@ -1,5 +1,9 @@
 # Real reviews
 
+The repository's Apache license does not replace these reviews' original licenses. See
+[THIRD_PARTY_NOTICES.md](../../../THIRD_PARTY_NOTICES.md) for attribution and the complete
+[OpenAIReview MIT notice](../../../licenses/OpenAIReview-MIT.txt).
+
 Published reviews, used by `tests/test_real_reviews.py` to check the round trips on what systems
 actually produce. `sources.json` lists every file with its source, URL, license and the date it
 was fetched; `scripts/fetch_real_reviews.py` fetches them all again, byte for byte.

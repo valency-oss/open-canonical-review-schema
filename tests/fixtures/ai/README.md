@@ -1,5 +1,8 @@
 # AI reviewer fixtures
 
+See [THIRD_PARTY_NOTICES.md](../../../THIRD_PARTY_NOTICES.md) for the distinction between
+original OCRS fixtures and the CC BY 4.0 paper excerpts included here.
+
 Outputs of AI reviewers, used by `tests/test_ai_mappers.py`, `tests/test_deepreview.py` and `tests/test_reviewer3.py`. The OpenAIReview output is real; the DeepReview and Reviewer3 reports are written in each reviewer's format about an invented paper.
 
 | File | What it is |

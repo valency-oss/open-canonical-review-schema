@@ -1,1 +1,8 @@
 recursive-include src/ocrs/schemas *.json
+include *.md CITATION.cff uv.lock
+graft examples
+graft scripts
+graft site
+graft tests
+graft versions
+global-exclude __pycache__ *.py[cod]

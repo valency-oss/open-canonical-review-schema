@@ -13,7 +13,7 @@ jobs:
   links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Check links in the docs
         uses: lycheeverse/lychee-action@v2
@@ -24,5 +24,7 @@ jobs:
             --exclude '\{value\}'
             --exclude '^https://example\.com/'
             --exclude '^https://github\.com/valency-oss/open-canonical-review-schema'
-            README.md CONTRIBUTING.md CLA.md ADOPTERS.md CHANGELOG.md CODE_OF_CONDUCT.md examples/README.md tests/fixtures/ai/README.md
+            README.md CONTRIBUTING.md CLA.md ADOPTERS.md CHANGELOG.md CODE_OF_CONDUCT.md
+            SECURITY.md RELEASING.md THIRD_PARTY_NOTICES.md site/logos/README.md
+            examples/README.md tests/fixtures/ai/README.md
           fail: true

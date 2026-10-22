@@ -149,9 +149,14 @@ example and every JSON and Python block in the README and this guide still works
 
 ### Releases
 
-A release is the merge of a version's pull request to `main`. On that merge, GitHub Pages
-publishes every version in `versions/` at its permanent URL, along with the HTML documentation
-for the current schema.
+A version's pull request updates `main` and the versioned schema files. Once public hosting
+is enabled, GitHub Pages publishes every version in `versions/` at its permanent URL, along
+with the current HTML documentation. CI builds the site on every pull request.
+
+Maintainers then run **Prepare release**, which tests the built distributions and creates a
+draft GitHub release with the matching version tag, wheel, source archive, checksums, and
+changelog entry. Publishing that draft makes the version available for pinned installation.
+See [RELEASING.md](RELEASING.md) for initial hosting configuration and the release procedure.
 
 ## The Python package
 
@@ -201,6 +206,19 @@ Run the pre-commit hooks on all files with:
 ```bash
 uv run prek run --all-files
 ```
+
+### Checking distributions
+
+Package checks install the built wheel into a temporary environment and run the full tests
+from the extracted source archive, so missing fixtures or editable-install assumptions fail:
+
+```bash
+uv build
+uv run python scripts/check_distribution.py dist
+```
+
+Use a clean `dist/` directory containing only the current version's wheel and source archive.
+CI runs this check independently of the tests in the working checkout.
 
 ### Code style
 
@@ -254,6 +272,10 @@ Valency Systems Inc. maintains OCRS. A maintainer reviews each pull request, and
 is merged once its issue has settled what the field means and who will fill it.
 
 ## Reporting issues
+
+For vulnerabilities, follow [SECURITY.md](SECURITY.md) and contact `security@valency.io`
+privately. Do not include confidential reviews, private manuscript text, or credentials in
+public bug reports.
 
 When reporting bugs:
 

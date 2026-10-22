@@ -1,14 +1,33 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ocrs"
 version = "0.9.0"
-description = "Open Canonical Review Schema (OCRS) - schema + mappers for OpenReview, CMT, and narrative journal reviews."
+description = "A canonical peer review schema and Python mappers for human, AI, and hybrid reviews."
+readme = "README.md"
 license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
+authors = [{name = "Valency Systems Inc."}]
 requires-python = ">=3.12"
 dependencies = ["jsonschema>=4.19.0", "pydantic>=2.5"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://valency-oss.github.io/open-canonical-review-schema/"
+Documentation = "https://valency-oss.github.io/open-canonical-review-schema/canonical-review.html"
+Repository = "https://github.com/valency-oss/open-canonical-review-schema"
+Issues = "https://github.com/valency-oss/open-canonical-review-schema/issues"
+Changelog = "https://github.com/valency-oss/open-canonical-review-schema/blob/main/CHANGELOG.md"
 
 [tool.setuptools.package-data]
 ocrs = ["schemas/*.json"]
