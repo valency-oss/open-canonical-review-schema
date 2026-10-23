@@ -21,10 +21,6 @@ def stroke_icon(paths: str) -> str:
     )
 
 
-def logo(src: str) -> str:
-    return f'<img src="{src}" alt="">'
-
-
 def badge(text: str, background: str, color: str = "#fff", underline: str = "") -> str:
     """A square of a site's own colors, for a system with no logo that works at icon size."""
     style = f"background: {background}; color: {color}"
@@ -33,27 +29,19 @@ def badge(text: str, background: str, color: str = "#fff", underline: str = "") 
     return f'<span class="site-badge" style="{style}">{text}</span>'
 
 
-# Google publishes no Deep Review logo, so DeepReview shows Google's, from Google's own CDN.
-GOOGLE_LOGO = "https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png"
-
 # The review sources drawn mapping into OCRS, in order: registry key, name, type, icon. A source
-# with an exporter in the registry also gets an arrow back. Logos are in site/logos/. OpenReview,
-# CMT and HotCRP have no logo legible at icon size, so their icons are in their sites' own colors;
-# ScholarOne's is the book cropped from its wordmark.
+# with an exporter in the registry also gets an arrow back. The diagram shows a system's logo
+# only when its owner has said it may be used; none has, so each system's icon is its initials
+# in a color from its site's stylesheet (DeepReview's from the Google Research page announcing it).
 SOURCES = [
     ("openreview", "OpenReview", "conference", badge("OR", "#8c1b13")),
     ("cmt", "CMT", "conference", badge("CMT", "#007ea3")),
     ("hotcrp", "HotCRP", "conference", badge("H", "#ffbbbb", "#f33360", "#f33360")),
-    ("openaireview", "OpenAI<wbr>Review", "ai", logo("logos/openaireview.png")),
-    ("reviewer3", "Reviewer3", "ai", logo("logos/reviewer3.png")),
-    ("deepreview", "DeepReview", "ai", logo(GOOGLE_LOGO)),
-    ("editorialmanager", "Editorial Manager", "journal", logo("logos/editorialmanager.png")),
-    (
-        "scholarone",
-        "ScholarOne",
-        "journal",
-        f'<span class="crop">{logo("logos/scholarone.png")}</span>',
-    ),
+    ("openaireview", "OpenAI<wbr>Review", "ai", badge("OAR", "#800000")),
+    ("reviewer3", "Reviewer3", "ai", badge("R3", "#171717")),
+    ("deepreview", "DeepReview", "ai", badge("DR", "#1a73e8")),
+    ("editorialmanager", "Editorial Manager", "journal", badge("EM", "#003462")),
+    ("scholarone", "ScholarOne", "journal", badge("S1", "#007262")),
     (
         "jats",
         "JATS",
@@ -348,21 +336,6 @@ def create_landing_page(docs_dir: Path, versions: list[str]):
             place-items: center;
             margin-bottom: 0.55rem;
             color: #525252;
-        }
-        .node-icon img {
-            display: block;
-            max-width: 28px;
-            max-height: 28px;
-            mix-blend-mode: multiply;
-        }
-        .node-icon .crop {
-            width: 15px;
-            height: 28px;
-            overflow: hidden;
-        }
-        .node-icon .crop img {
-            height: 28px;
-            max-width: none;
         }
         .site-badge {
             width: 28px;

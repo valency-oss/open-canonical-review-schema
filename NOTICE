@@ -2,9 +2,8 @@ Open Canonical Review Schema (OCRS)
 Copyright 2026 Valency Systems Inc.
 
 OCRS code, schemas, and original documentation are licensed under Apache-2.0.
-The source distribution also includes third-party review fixtures and brand
-assets. Their original licenses and trademark rights remain applicable;
-they are not relicensed under Apache-2.0.
+The source distribution also includes third-party review fixtures. Their
+original licenses remain applicable; they are not relicensed under Apache-2.0.
 
 See THIRD_PARTY_NOTICES.md for attribution, modifications, and license scope,
 and licenses/OpenAIReview-MIT.txt for the OpenAIReview copyright and license.

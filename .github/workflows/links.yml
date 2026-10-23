@@ -25,6 +25,6 @@ jobs:
             --exclude '^https://example\.com/'
             --exclude '^https://github\.com/valency-oss/open-canonical-review-schema'
             README.md CONTRIBUTING.md CLA.md ADOPTERS.md CHANGELOG.md CODE_OF_CONDUCT.md
-            SECURITY.md RELEASING.md THIRD_PARTY_NOTICES.md site/logos/README.md
+            SECURITY.md RELEASING.md THIRD_PARTY_NOTICES.md
             examples/README.md tests/fixtures/ai/README.md
           fail: true

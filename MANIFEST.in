@@ -3,9 +3,6 @@ include *.md CITATION.cff uv.lock
 graft examples
 graft scripts
 graft site
-# Other owners' marks are shown on the docs site to identify formats; don't redistribute them
-recursive-exclude site/logos *.png
-exclude site/review-flow.png
 graft tests
 graft versions
 global-exclude __pycache__ *.py[cod]

@@ -90,6 +90,9 @@ join `opinion.metric_refs`.
   precedence over retained legacy fields. Repeated reasons share one support link;
   empty legacy check notes round-trip without inventing text or a check verdict.
 - The package, versioned schema, examples, README and citation are updated together.
+- The review-flow diagram shows OCRS 0.9.0 and is back in the README. It names the supported
+  systems, with their initials in their sites' colors, instead of showing their logos, since
+  no owner has said its logo may be used; the logo files are removed.
 
 ## 0.8.0
 

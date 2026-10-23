@@ -42,12 +42,10 @@ does not imply that the vendor supplied or endorsed its contents.
 
 ## Brand assets
 
-The source-system images in `site/logos/` and the `site/review-flow.png` diagram identify
-supported formats on the documentation site. They remain the marks of their owners, are
-excluded from OCRS's Apache-2.0 grant, and are left out of the Python distributions. See the
-[asset inventory](site/logos/README.md) for the represented products and sources. The Google
-icon used by the generated site is loaded from Google's CDN; the static flow diagram also
-contains a rendering of that mark.
+OCRS shows another organization's logo only when that organization has said it may be used.
+None has yet, so the documentation site and the `site/review-flow.png` diagram show each
+supported system by its name and its initials in a color from its site. The names identify
+the formats OCRS reads and writes and remain their owners' trademarks.
 
 Valency's marks follow the organization's
 [trademark policy](https://github.com/valency-oss/.github/blob/main/TRADEMARK.md). No permission

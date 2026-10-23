@@ -33,6 +33,10 @@ Science is entering an agentic era. AI agents now draft papers, run analyses and
 
 OCRS provides bidirectional mappers for converting between the canonical schema and various peer review platforms:
 
+<p align="center">
+  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.9.0, shown as two-way arrows">
+</p>
+
 | System | Source (`from`) | Target (`to`) | Notes |
 |--------|:---------------:|:-------------:|-------|
 | **OpenReview** | Full | Full | Conference reviews with structured findings and metrics; also [a saved forum page](#reviews-from-a-saved-openreview-page) |
@@ -783,8 +787,8 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ## License
 
 OCRS code, schemas, and original documentation use Apache License 2.0; see [LICENSE](LICENSE)
-and [NOTICE](NOTICE). Published review fixtures and source-system logos retain their own
-licenses and trademark rights, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+and [NOTICE](NOTICE). Published review fixtures retain their own licenses, and the names of
+supported systems remain their owners' trademarks, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Maintainers can
 find the release and hosting procedure in [RELEASING.md](RELEASING.md).
