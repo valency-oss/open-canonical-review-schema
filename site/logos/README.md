@@ -13,6 +13,10 @@ copyright and trademark rights; displaying them does not imply endorsement.
 
 These files were introduced in commit `379b912`. The original download URLs and separate
 redistribution permissions were not recorded; the links above identify the products, not
-independent license grants. Reusers should check each owner's brand terms before using the
-images in another product. The documentation also references Google's mark at
-`https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png`.
+independent license grants. OCRS therefore uses them only to identify, on its documentation
+site, the formats it reads and writes, and leaves them (and `site/review-flow.png`, which
+renders the same marks) out of its source archive and wheel. Reusers should check each
+owner's brand terms before using the images in another product. The documentation also
+references Google's mark at `https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png`,
+loaded from Google's servers rather than copied into this repository, to identify Google
+DeepReview's format.

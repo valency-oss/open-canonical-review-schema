@@ -43,8 +43,8 @@ does not imply that the vendor supplied or endorsed its contents.
 ## Brand assets
 
 The source-system images in `site/logos/` and the `site/review-flow.png` diagram identify
-supported formats. They remain the marks
-of their owners and are excluded from OCRS's Apache-2.0 grant. See the
+supported formats on the documentation site. They remain the marks of their owners, are
+excluded from OCRS's Apache-2.0 grant, and are left out of the Python distributions. See the
 [asset inventory](site/logos/README.md) for the represented products and sources. The Google
 icon used by the generated site is loaded from Google's CDN; the static flow diagram also
 contains a rendering of that mark.
