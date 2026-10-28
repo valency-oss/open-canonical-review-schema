@@ -40,7 +40,7 @@ from .ai import (
     reviewer_model,
 )
 
-MAPPER_VERSION = "1.1.0"
+MAPPER_VERSION = "1.2.0"
 MERGED_METHOD_PREFIX = "progressive__"
 UNMERGED_METHOD_PREFIX = "progressive_original__"
 IGNORED = {"paragraphs", f"methods.{UNMERGED_METHOD_PREFIX}*"}
@@ -128,6 +128,10 @@ def map_comment(
     if comment.quote:
         link_target = f"{target}.evidence_links[0]"
         link = recorder.evidence_link(f"{source}.quote", link_target, comment.quote, "", blocks)
+        exact = recorder.copy(
+            f"{source}.quote", f"{link_target}.location.text_anchor.exact", comment.quote
+        )
+        link["location"] = {"text_anchor": {"exact": exact}}
         finding["evidence_links"] = [link]
     return finding
 
