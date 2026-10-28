@@ -71,6 +71,14 @@ class TestOpenAIReview:
         ]
         assert anchors[0].result == {"part": "body", "block_id": "ecrossimz2"}
 
+    def test_quote_is_the_text_anchor(self):
+        result = map_with_record("openaireview", **_payload(OPENAIREVIEW))
+        [method] = [m for k, m in OPENAIREVIEW["methods"].items() if k.startswith("progressive__")]
+        links = [w["evidence_links"][0] for w in _weaknesses(result.review)]
+        assert [link["location"]["text_anchor"] for link in links] == [
+            {"exact": comment["quote"]} for comment in method["comments"]
+        ]
+
     def test_gaps(self):
         gaps = map_with_record("openaireview", **_payload(OPENAIREVIEW)).record.gaps
         assert [quote.source for quote in gaps.unanchored] == [f"{COMMENTS}[1].quote"]
@@ -98,7 +106,7 @@ class TestOpenAIReview:
         assert review["provenance"]["mapping"] == {
             "mapping_spec_id": "canonical-review.mapping.v1",
             "mapping_spec_version": "1.2.0",
-            "mapper_version": "1.1.0",
+            "mapper_version": "1.2.0",
         }
         assert review["target"]["version"] == RUN["work_version"]
         assert review["review_context"] == {"requested_by": "example-platform"}

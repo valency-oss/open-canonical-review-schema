@@ -87,6 +87,7 @@ findings.weaknesses[].evidence_links[].location.page,deepreview,from,issues[].ti
 findings.weaknesses[].evidence_links[].location.page_end,deepreview,from,issues[].tiers[].items[].location,parsed,1,
 findings.weaknesses[].evidence_links[].location.section,deepreview,from,issues[].tiers[].items[].location,parsed,1,
 findings.weaknesses[].evidence_links[].location.table,deepreview,from,,observed,1,
+findings.weaknesses[].evidence_links[].location.text_anchor.exact,openaireview,from,methods.progressive__*.comments[].quote,copied,5,
 findings.weaknesses[].evidence_links[].quote,deepreview,from,issues[].tiers[].items[].text,parsed,1,
 findings.weaknesses[].evidence_links[].quote,openaireview,from,methods.progressive__*.comments[].quote,copied,5,
 findings.weaknesses[].evidence_links[].resource.ref,deepreview,from,,observed,1,

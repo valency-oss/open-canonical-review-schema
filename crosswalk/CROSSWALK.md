@@ -46,7 +46,7 @@ Out of 835 OCRS leaf fields.
 | `hotcrp` | 42 | 5.0 | 8 of 8 |  | 3 | fields observed, sources not recorded |
 | `jats` | 31 | 3.7 | 8 of 8 |  | 7 | fields observed, sources not recorded |
 | `journal_narrative` | 21 | 2.5 | 8 of 8 |  | 8 | fields observed, sources not recorded |
-| `openaireview` | 32 | 3.8 | 8 of 8 | 14 | 5 | fields and sources recorded |
+| `openaireview` | 33 | 4.0 | 8 of 8 | 14 | 5 | fields and sources recorded |
 | `openreview` | 56 | 6.7 | 8 of 8 |  | 37 | fields observed, sources not recorded |
 | `openreview_page` | 52 | 6.2 | 8 of 8 | 1 | 2 | fields and sources recorded |
 | `reviewer3` | 50 | 6.0 | 8 of 8 | 0 | 1 | fields and sources recorded |
@@ -112,6 +112,7 @@ No fixture fills 2 of the 8 fields in this section.
 | `findings.weaknesses[].evidence_links[].location.page_end` |  |  | parsed:issues[].tiers[].items[].location |  |  |  |  |  |  |  |  |  |
 | `findings.weaknesses[].evidence_links[].location.section` |  |  | parsed:issues[].tiers[].items[].location |  |  |  |  |  |  |  |  |  |
 | `findings.weaknesses[].evidence_links[].location.table` |  |  | observed |  |  |  |  |  |  |  |  |  |
+| `findings.weaknesses[].evidence_links[].location.text_anchor.exact` |  |  |  |  |  |  |  | copied:methods.progressive__*.comments[].quote |  |  |  |  |
 | `findings.weaknesses[].evidence_links[].quote` |  |  | parsed:issues[].tiers[].items[].text |  |  |  |  | copied:methods.progressive__*.comments[].quote |  |  |  |  |
 | `findings.weaknesses[].evidence_links[].resource.ref` |  |  | observed |  |  |  |  |  |  |  |  |  |
 | `findings.weaknesses[].evidence_links[].resource.type` |  |  | observed \| parsed:issues[].tiers[].items[].location |  |  |  |  | observed |  |  |  |  |
@@ -126,7 +127,7 @@ No fixture fills 2 of the 8 fields in this section.
 | `findings.weaknesses[].text` |  |  | copied:issues[].tiers[].items[].text \| copied:weaknesses[].text |  | observed |  |  | copied:methods.progressive__*.comments[].explanation | observed | observed |  |  |
 | `findings.weaknesses[].title` |  |  | copied:issues[].tiers[].items[].title |  |  |  |  | copied:methods.progressive__*.comments[].title |  |  |  |  |
 
-No fixture fills 331 of the 373 fields in this section.
+No fixture fills 330 of the 373 fields in this section.
 
 ### `metrics`
 
