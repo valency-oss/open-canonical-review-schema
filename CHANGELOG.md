@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.1
+
+A compatible release: every review valid under 0.9.0 is still valid and means the same
+thing. It adds one way to point at a place in the reviewed material.
+
+### Schema
+
+- `location.node: {doc_ref, id}` names one element of a structured representation of the
+  material, such as a paragraph, heading, figure, table, equation or reference entry in a
+  document tree (a block of a MyST or mdast document, a JATS element with an `@id`, an
+  HTML element), by its identifier there. `doc_ref` pins the representation by version or
+  content hash, as `span.text_ref` pins text. Both are required within a node; the node
+  itself is optional. A node does not depend on any text rendering. Combine it with a
+  `span` or a `text_anchor` to select characters inside the element. It follows the W3C
+  Web Annotation model, where a fragment selector and text position and quote selectors
+  can be given together and a reader uses the ones it can resolve.
+
+### Python package
+
+- `validate_canonical(..., node_sources={doc_ref: element_ids})` also checks that each
+  node names an element of that representation, as `text_sources` checks spans.
+
 ## 0.9.0
 
 A breaking release that organizes review content as a hierarchy. Opinion and metrics

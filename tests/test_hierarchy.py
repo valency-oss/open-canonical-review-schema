@@ -28,6 +28,10 @@ from ocrs.hierarchy import legacy_view
 from ocrs.migrate import migrate
 from ocrs.report import value_at
 
+V08_SCHEMA = (
+    "https://valency-oss.github.io/open-canonical-review-schema/v0.8.0/canonical-review.schema.json"
+)
+
 FIXTURES = Path(__file__).parent / "fixtures"
 CASES = json.loads((FIXTURES / "ocrs09/adversarial.json").read_text())
 
@@ -191,6 +195,48 @@ def test_positional_spans_count_unicode_code_points_and_check_the_exact_text():
         validate_canonical(r)
 
 
+IR = "urn:example:paper-v1:ir"
+IR_TEXT = "urn:example:paper-v1:ir-text"
+
+
+def node_record(location):
+    link = {"resource": {"type": "work"}, "version": "v1", "location": location}
+    weakness = {"id": "w1", "text": "Table 2 contradicts the text.", "evidence_links": [link]}
+    return record(findings={"weaknesses": [weakness]})
+
+
+def test_a_node_names_an_element_of_a_pinned_structured_representation():
+    validate_canonical(node_record({"node": {"doc_ref": IR, "id": "tbl-2"}, "table": "Table 2"}))
+    both = {
+        "node": {"doc_ref": IR, "id": "p-14"},
+        "span": {"text_ref": IR_TEXT, "start": 0, "end": 3},
+        "text_anchor": {"exact": "ABC"},
+    }
+    validate_canonical(node_record(both), text_sources={IR_TEXT: "ABC"})
+    p14, p99 = (
+        node_record({"node": {"doc_ref": IR, "id": "p-14"}}),
+        node_record({"node": {"doc_ref": IR, "id": "p-99"}}),
+    )
+    validate_canonical(p14, node_sources={IR: {"p-14", "tbl-2"}})
+    with pytest.raises(ValidationError, match="is not in"):
+        validate_canonical(p99, node_sources={IR: ["p-14"]})
+    validate_canonical(p99, node_sources={"another-representation": ["p-14"]})
+
+
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"id": "p-14"},
+        {"doc_ref": IR},
+        {"doc_ref": IR, "id": ""},
+        {"doc_ref": IR, "id": "p-14", "offset": 3},
+    ],
+)
+def test_a_node_needs_its_representation_and_identifier(node):
+    with pytest.raises(ValidationError):
+        validate_canonical(node_record({"node": node}))
+
+
 @pytest.mark.parametrize(
     "source,folder",
     [
@@ -206,7 +252,7 @@ def test_public_source_imports_use_09_and_round_trip_original_values(source, fol
     payload = json.loads((FIXTURES / folder / "minimal_review.json").read_text())
     review = map_from(source, payload)
     validate_canonical(review)
-    assert "/v0.9.0/" in review["$schema"]
+    assert review["$schema"] == schema_id()
     assert not (
         {
             "decision",
@@ -239,7 +285,7 @@ def test_migration_preserves_probabilities_without_changing_their_proposition():
             }
         ]
     )
-    old["$schema"] = old["$schema"].replace("v0.9.0", "v0.8.0")
+    old["$schema"] = old["$schema"].replace(schema_id(), V08_SCHEMA)
     before = copy.deepcopy(old)
     new = migrate(old)
     validate_canonical(new)
@@ -291,7 +337,7 @@ def test_legacy_claim_and_finding_id_collisions_keep_typed_links_unambiguous():
         findings={"weaknesses": [{"id": "same", "text": "A limitation.", "claim_ids": ["same"]}]},
         claim_assessments=[{"claim_id": "same", "claim_text": "A claim.", "status": "unclear"}],
     )
-    old["$schema"] = old["$schema"].replace("v0.9.0", "v0.8.0")
+    old["$schema"] = old["$schema"].replace(schema_id(), V08_SCHEMA)
     new = migrate(old)
     validate_canonical(new)
     claim = new["work_summary"]["claims"][0]
@@ -350,7 +396,7 @@ def legacy(**content):
     from v08_schema import validate_canonical as validate_08
 
     old = record(**content)
-    old["$schema"] = old["$schema"].replace("v0.9.0", "v0.8.0")
+    old["$schema"] = old["$schema"].replace(schema_id(), V08_SCHEMA)
     validate_08(old)
     return old
 

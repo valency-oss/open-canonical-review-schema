@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from jsonschema import ValidationError
 from test_09_candidate import candidate, validate_part
-from test_hierarchy import legacy, linked_record
+from test_hierarchy import V08_SCHEMA, legacy, linked_record
 from test_roundtrip import AI_RUN, frozen_clock, load  # noqa: F401
 from v08_schema import validate_canonical as validate_08
 
-from ocrs import map_from, map_to, validate_canonical
+from ocrs import map_from, map_to, schema_id, validate_canonical
 from ocrs.hierarchy import legacy_view
 from ocrs.migrate import migrate
 
@@ -105,7 +105,7 @@ def test_explicit_legacy_schema_checks_ranges_in_all_its_evidence_locations(loca
     from test_hierarchy import record
 
     review = record(**content)
-    review["$schema"] = review["$schema"].replace("v0.9.0", "v0.8.0")
+    review["$schema"] = review["$schema"].replace(schema_id(), V08_SCHEMA)
     with pytest.raises(ValidationError, match="page_end"):
         validate_canonical(
             review, schema_path=ROOT / "versions/v0.8.0/canonical-review.schema.json"

@@ -3,13 +3,13 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/ci.yml?branch=main&label=CI)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/ci.yml)
 [![Links](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/links.yml?branch=main&label=links)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/links.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/docs.yml?branch=main&label=docs)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/docs.yml)
-[![Schema version](https://img.shields.io/badge/schema-v0.9.0-blue)](CHANGELOG.md#090)
+[![Schema version](https://img.shields.io/badge/schema-v0.9.1-blue)](CHANGELOG.md#091)
 [![Status: draft](https://img.shields.io/badge/status-draft-orange)](CONTRIBUTING.md#versioning)
 [![JSON Schema draft 2020-12](https://img.shields.io/badge/JSON%20Schema-draft%202020--12-blue)](https://json-schema.org/draft/2020-12)
 [![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-**Status: v0.9.0, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
+**Status: v0.9.1, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
 
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
@@ -34,7 +34,7 @@ Science is entering an agentic era. AI agents now draft papers, run analyses and
 OCRS provides bidirectional mappers for converting between the canonical schema and various peer review platforms:
 
 <p align="center">
-  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.9.0, shown as two-way arrows">
+  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.9.1, shown as two-way arrows">
 </p>
 
 | System | Source (`from`) | Target (`to`) | Notes |
@@ -58,27 +58,27 @@ Round trips are tested both ways for every system, with each system's fixtures: 
 
 ### Crosswalk
 
-[crosswalk/CROSSWALK.md](crosswalk/CROSSWALK.md) shows, for every OCRS field, which systems fill it. For the three AI mappers and saved OpenReview pages, it also shows the source field and how: copied, looked up in a table, parsed by a pattern, or anchored to a quote. The other systems record no source fields yet, so their columns show only the fields their fixtures fill. It also shows each system's coverage of OCRS, the source fields OCRS has no place for (where the mapper records them), and what the other mappers keep in `extensions` to write back. `scripts/build_crosswalk.py` generates it by running every mapper over the test fixtures, and CI fails when it is out of date. So a blank cell means no fixture filled that field, which is not always the same as impossible. The current crosswalk is published beside the schema, as `https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/crosswalk.csv` (also `crosswalk.long.csv`, `gaps.csv`, `coverage.csv` and `CROSSWALK.md`).
+[crosswalk/CROSSWALK.md](crosswalk/CROSSWALK.md) shows, for every OCRS field, which systems fill it. For the three AI mappers and saved OpenReview pages, it also shows the source field and how: copied, looked up in a table, parsed by a pattern, or anchored to a quote. The other systems record no source fields yet, so their columns show only the fields their fixtures fill. It also shows each system's coverage of OCRS, the source fields OCRS has no place for (where the mapper records them), and what the other mappers keep in `extensions` to write back. `scripts/build_crosswalk.py` generates it by running every mapper over the test fixtures, and CI fails when it is out of date. So a blank cell means no fixture filled that field, which is not always the same as impossible. The current crosswalk is published beside the schema, as `https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/crosswalk.csv` (also `crosswalk.long.csv`, `gaps.csv`, `coverage.csv` and `CROSSWALK.md`).
 
 ## Use the schema
 
 The schema is at a permanent URL, one per version:
 
 ```
-https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json
+https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json
 ```
 
 Validate a review with any JSON Schema (draft 2020-12) validator, for example [check-jsonschema](https://github.com/python-jsonschema/check-jsonschema):
 
 ```bash
-uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json review.json
+uvx check-jsonschema --schemafile https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json review.json
 ```
 
 A review names the version it follows in `$schema`, which the mappers set to the package's version. Editors such as VS Code use it to check the file as you write:
 
 ```json
 {
-  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json"
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json"
 }
 ```
 
@@ -89,15 +89,15 @@ For complete reviews, see [examples/](examples/). The Python package below also 
 Python 3.12 or newer is required. Install the version matching the schema you use:
 
 ```bash
-python -m pip install "ocrs @ git+https://github.com/valency-oss/open-canonical-review-schema.git@v0.9.0"
+python -m pip install "ocrs @ git+https://github.com/valency-oss/open-canonical-review-schema.git@v0.9.1"
 ```
 
-The [GitHub release](https://github.com/valency-oss/open-canonical-review-schema/releases/tag/v0.9.0)
+The [GitHub release](https://github.com/valency-oss/open-canonical-review-schema/releases/tag/v0.9.1)
 also provides a wheel, a source archive, and SHA-256 checksums. Download the wheel to install
 without Git:
 
 ```bash
-python -m pip install ./ocrs-0.9.0-py3-none-any.whl
+python -m pip install ./ocrs-0.9.1-py3-none-any.whl
 ```
 
 OCRS currently distributes packages through GitHub Releases. The repository's
@@ -503,6 +503,17 @@ never use bytes, tokens or UTF-16 code units. Page and section do not change the
 Provide `text_sources={text_ref: exact_text}` to `validate_canonical` to also check the
 span's bounds and its quote. Offline structural validation does not fetch source materials.
 
+A `node` names one element of a structured representation of the work: a paragraph,
+heading, figure, table, equation or reference entry in a document tree, such as a block of
+a MyST or mdast document, a JATS element with an `@id`, or an HTML element. `doc_ref` pins
+that representation as `text_ref` pins a span's text, and `id` is the element's identifier
+there. A node does not depend on how the document is rendered as text, so it still names a
+figure, a table or a paragraph when no text rendering is shared; a span or a `text_anchor`
+in the same location selects characters inside it. Provide
+`node_sources={doc_ref: element_ids}` to `validate_canonical` to also check that the node
+exists. Review systems that hold the work's structured text, such as a publishing platform
+reviewing its own documents, can give all three, and readers use whichever they can resolve.
+
 ```json
 {
   "findings": {
@@ -512,10 +523,13 @@ span's bounds and its quote. Offline structural validation does not fetch source
       "evidence_links": [{
         "resource": {"type": "work"},
         "version": "v2",
+        "quote": "the median of five runs",
         "location": {
           "page": 5,
           "section": "3.2 Methods",
-          "span": {"text_ref": "paper-v2-extracted-text", "start": 120, "end": 185}
+          "node": {"doc_ref": "paper-v2-document-tree", "id": "p-3-2-4"},
+          "span": {"text_ref": "paper-v2-extracted-text", "start": 120, "end": 143},
+          "text_anchor": {"exact": "the median of five runs", "prefix": "we report ", "suffix": " for each"}
         }
       }]
     }]
