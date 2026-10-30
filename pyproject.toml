@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ocrs"
-version = "0.9.0"
+version = "0.9.1"
 description = "A canonical peer review schema and Python mappers for human, AI, and hybrid reviews."
 readme = "README.md"
 license = "Apache-2.0"

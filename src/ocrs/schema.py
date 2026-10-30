@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Collection
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,7 @@ def validate_canonical(
     *,
     schema_path: str | Path | None = None,
     text_sources: dict[str, str] | None = None,
+    node_sources: dict[str, Collection[str]] | None = None,
 ) -> None:
     """Validate a canonical review object; raises ValidationError on failure. A
     `schema_path` applies to this call only; later calls use the packaged schema."""
@@ -46,7 +48,7 @@ def validate_canonical(
         validator = _validator
     validator.validate(obj)
     if is_hierarchical(validator.schema.get("$id", "")) or is_hierarchical(obj.get("$schema", "")):
-        check_references(obj, text_sources=text_sources)
+        check_references(obj, text_sources=text_sources, node_sources=node_sources)
     else:
         check_legacy_references(obj, evidence_schema=validator.schema)
 
@@ -180,10 +182,17 @@ def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None
             raise ValidationError(f"page_end {page_end} is before page {page}")
 
 
-def check_references(obj: dict[str, Any], *, text_sources: dict[str, str] | None = None) -> None:
+def check_references(
+    obj: dict[str, Any],
+    *,
+    text_sources: dict[str, str] | None = None,
+    node_sources: dict[str, Collection[str]] | None = None,
+) -> None:
     """Review-local IDs, downward references, score scales and source ranges.
 
-    Supply exact stored text through text_sources to also check span bounds and quotes.
+    Supply exact stored text through text_sources to also check span bounds and quotes,
+    and the element identifiers of structured representations through node_sources
+    (keyed by doc_ref) to also check that each node names an element that exists.
     Validation never downloads or normalizes source text. The permitted link directions
     make the semantic graph acyclic without requiring reciprocal edges.
     """
@@ -253,6 +262,10 @@ def check_references(obj: dict[str, Any], *, text_sources: dict[str, str] | None
                     raise ValidationError("span.end exceeds the referenced text length")
                 if "quote" in link and link["quote"] != text[span["start"] : span["end"]]:
                     raise ValidationError("quote does not equal the selected span")
+        node = location.get("node")
+        if node and node_sources is not None and node["doc_ref"] in node_sources:
+            if node["id"] not in node_sources[node["doc_ref"]]:
+                raise ValidationError(f"node {node['id']!r} is not in {node['doc_ref']!r}")
 
 
 def _check_metric(metric: dict, scale: dict) -> None:

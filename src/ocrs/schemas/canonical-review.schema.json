@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.0/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -2207,7 +2207,7 @@
       "required": ["resource"]
     },
     "evidenceLocation": {
-      "description": "Optional named locations and ranges, combinable with a positional span; page and section never change a span’s origin.",
+      "description": "Optional named locations and ranges, combinable with a structural node and a positional span; page and section never change a span’s origin.",
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
@@ -2269,6 +2269,24 @@
         "span": {
           "$ref": "#/$defs/textSpan",
           "description": "Exact positional span in a fixed text representation."
+        },
+        "node": {
+          "description": "One element of a structured representation of the referenced material, such as a paragraph, heading, figure, table, equation or reference entry in a document tree (a block of a MyST or mdast document, a JATS element with an @id, an HTML element), by its identifier there. It names the element without depending on any text rendering; combine it with a span or text_anchor to select characters inside it.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["doc_ref", "id"],
+          "properties": {
+            "doc_ref": {
+              "description": "Resolvable URI or source ID pinning the exact structured representation the identifier belongs to, by version or content hash, as text_ref pins a span's text.",
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "description": "Identifier of the element in that representation, exactly as the representation gives it",
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
         "text_anchor": {
           "description": "Exact text with optional immediately surrounding text to distinguish repeated passages",
