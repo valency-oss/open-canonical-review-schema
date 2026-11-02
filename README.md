@@ -409,7 +409,7 @@ they describe. Fields marked **required** must be present; everything else is op
 
 | Field | Description |
 |-------|-------------|
-| `referees` **required** | Who wrote the review: one referee, or several for a panel or collaborative review. Each is human, AI, or hybrid, with identity mode (open to triple blind), expertise, competing interests, and reproducibility settings |
+| `referees` **required** | Who wrote the review: one referee, or several for a panel or collaborative review; for an author's response, its authors. Each is human, AI, or hybrid, with identity mode (open to triple blind), expertise, competing interests, and reproducibility settings |
 | `target` **required** | Artifact identities in `artifacts[]`, plus the version of the work being reviewed: `work_id` as `<type>:<value>` (e.g. `doi:10.1234/abc`), its identifiers, and `relations` to its other versions and forms |
 | `review_context` | Review circumstances and reusable source forms in `metric_schemas` |
 | `related_reviews` | Other reviews this one responds to, replaces, or summarizes (a meta-review) |
@@ -533,6 +533,35 @@ reviewing its own documents, can give all three, and readers use whichever they 
         }
       }]
     }]
+  }
+}
+```
+
+### Author responses
+
+An author's response to a review is a review of its own: `review_context.review_type` is
+`author_comment`, a `related_reviews` entry of type `responds_to` names the review it
+answers, and `referees` are the authors who wrote it. A point of the response can name the
+finding or change it answers with `responds_to`, its id in the answered review, and say
+what the authors did about it with `status`: `addressed` (they changed the work),
+`will_address` (they will change it in a later version), `clarified` (they answer with an
+explanation, not a change) or `disputed` (they disagree). Both are optional, and `status`
+requires `responds_to`. A response whose points use `responds_to` has exactly one
+`related_reviews` entry of type `responds_to`. Whether each id exists in the answered review
+cannot be checked from the response alone: provide `answered_review=review` to
+`validate_canonical` to also check it. [examples/author-response.json](examples/author-response.json)
+answers [examples/human-review.json](examples/human-review.json).
+
+```json
+{
+  "review_context": {"review_type": "author_comment", "stage": "post_publication"},
+  "related_reviews": [{"type": "responds_to", "review_id": "8da454e1-8562-4f65-8641-88c291c40ade"}],
+  "referees": [{"referee_type": "human", "identity_mode": "open", "human_referee": {"name": "Author A"}}],
+  "findings": {
+    "comments": [
+      {"id": "response-1", "text": "We added three datasets; see Table 2.",
+       "responds_to": "weakness-3", "status": "addressed"}
+    ]
   }
 }
 ```
