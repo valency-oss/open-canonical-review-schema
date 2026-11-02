@@ -191,15 +191,12 @@ def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None
 def names_review(relation: dict[str, Any], review: dict[str, Any]) -> bool:
     """Whether a related_reviews entry names this review, by any identifier both carry."""
     provenance = review.get("provenance", {})
-    ids = {review.get("review_id"), provenance.get("source_review_id")} - {None}
-    doi = provenance.get("review_doi")
+    ids = {review.get("review_id"), provenance.get("source_review_id")} - {None, ""}
+    doi, url = relation.get("doi"), relation.get("url")
     return (
         relation.get("review_id") in ids
-        or (doi is not None and relation.get("doi", "").lower() == doi.lower())
-        or (
-            provenance.get("source_url") is not None
-            and relation.get("url") == provenance["source_url"]
-        )
+        or (bool(doi) and doi.lower() == provenance.get("review_doi", "").lower())
+        or (bool(url) and url == provenance.get("source_url"))
     )
 
 

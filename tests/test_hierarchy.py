@@ -355,6 +355,20 @@ def test_the_answered_review_is_the_one_the_response_names():
         validate_canonical(response_record(point, related_reviews=by_url), answered_review=with_doi)
 
 
+def test_empty_identifiers_name_no_review():
+    point = {"id": "c1", "text": "Done.", "responds_to": "weakness-3"}
+    by_review_id = [{"type": "responds_to", "review_id": "journal-review-1"}]
+    blank = {
+        **ANSWERED,
+        "review_id": "another-review",
+        "provenance": {"source_system": "journal", "review_doi": "", "source_url": ""},
+    }
+    with pytest.raises(ValidationError, match="answered_review is not a review"):
+        validate_canonical(
+            response_record(point, related_reviews=by_review_id), answered_review=blank
+        )
+
+
 def test_a_response_to_several_whole_reviews_accepts_any_of_them():
     plain = {"id": "c1", "text": "Thank you both."}
     two = [
