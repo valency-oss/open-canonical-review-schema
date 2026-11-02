@@ -195,7 +195,7 @@ def names_review(relation: dict[str, Any], review: dict[str, Any]) -> bool:
     doi, url = relation.get("doi"), relation.get("url")
     return (
         relation.get("review_id") in ids
-        or (bool(doi) and doi.lower() == provenance.get("review_doi", "").lower())
+        or (bool(doi) and doi.lower() == (provenance.get("review_doi") or "").lower())
         or (bool(url) and url == provenance.get("source_url"))
     )
 
