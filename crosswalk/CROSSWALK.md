@@ -28,28 +28,28 @@ Each cell is `method:source_field`. Several are separated by `|`.
 Paths use `[]` for any list position. The files beside this one hold the same data:
 
 - `crosswalk.long.csv`: one row per OCRS field, system and source field, with the number of fixtures that showed it.
-- `crosswalk.csv`: one row per OCRS field, including all 851 leaf fields, one column per system.
+- `crosswalk.csv`: one row per OCRS field, including all 861 leaf fields, one column per system.
 - `gaps.csv`: source fields with no OCRS field, fields lost on a round trip, and values coerced to an allowed one.
 - `coverage.csv`: the table below.
 
-Schema: `https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json`.
+Schema: `https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json`.
 
 ## Coverage
 
-Out of 851 OCRS leaf fields.
+Out of 861 OCRS leaf fields.
 
 | System | Leaf fields filled | % | Required filled | Unmapped source fields | Fixtures | Column |
 |---|---|---|---|---|---|---|
 | `cmt` | 35 | 4.1 | 8 of 8 |  | 2 | fields observed, sources not recorded |
-| `deepreview` | 44 | 5.2 | 8 of 8 | 0 | 1 | fields and sources recorded |
-| `editorialmanager` | 40 | 4.7 | 8 of 8 |  | 4 | fields observed, sources not recorded |
+| `deepreview` | 44 | 5.1 | 8 of 8 | 0 | 1 | fields and sources recorded |
+| `editorialmanager` | 40 | 4.6 | 8 of 8 |  | 4 | fields observed, sources not recorded |
 | `hotcrp` | 42 | 4.9 | 8 of 8 |  | 3 | fields observed, sources not recorded |
 | `jats` | 31 | 3.6 | 8 of 8 |  | 7 | fields observed, sources not recorded |
-| `journal_narrative` | 21 | 2.5 | 8 of 8 |  | 8 | fields observed, sources not recorded |
-| `openaireview` | 33 | 3.9 | 8 of 8 | 14 | 5 | fields and sources recorded |
-| `openreview` | 56 | 6.6 | 8 of 8 |  | 37 | fields observed, sources not recorded |
-| `openreview_page` | 52 | 6.1 | 8 of 8 | 1 | 2 | fields and sources recorded |
-| `reviewer3` | 50 | 5.9 | 8 of 8 | 0 | 1 | fields and sources recorded |
+| `journal_narrative` | 21 | 2.4 | 8 of 8 |  | 8 | fields observed, sources not recorded |
+| `openaireview` | 33 | 3.8 | 8 of 8 | 14 | 5 | fields and sources recorded |
+| `openreview` | 56 | 6.5 | 8 of 8 |  | 37 | fields observed, sources not recorded |
+| `openreview_page` | 52 | 6.0 | 8 of 8 | 1 | 2 | fields and sources recorded |
+| `reviewer3` | 50 | 5.8 | 8 of 8 | 0 | 1 | fields and sources recorded |
 | `scholarone` | 41 | 4.8 | 8 of 8 |  | 3 | fields observed, sources not recorded |
 
 ## Fields by section
@@ -127,7 +127,7 @@ No fixture fills 2 of the 8 fields in this section.
 | `findings.weaknesses[].text` |  |  | copied:issues[].tiers[].items[].text \| copied:weaknesses[].text |  | observed |  |  | copied:methods.progressive__*.comments[].explanation | observed | observed |  |  |
 | `findings.weaknesses[].title` |  |  | copied:issues[].tiers[].items[].title |  |  |  |  | copied:methods.progressive__*.comments[].title |  |  |  |  |
 
-No fixture fills 340 of the 383 fields in this section.
+No fixture fills 350 of the 393 fields in this section.
 
 ### `metrics`
 

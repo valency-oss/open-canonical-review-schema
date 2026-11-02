@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -108,7 +108,7 @@
       }
     },
     "referees": {
-      "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews)",
+      "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews). For an author_comment, the authors who wrote it",
       "type": "array",
       "minItems": 1,
       "items": {"$ref": "#/$defs/referee"}
@@ -566,6 +566,34 @@
         {"properties": {"written_report": {}}, "required": ["written_report"]},
         {"properties": {"opinion": {"properties": {"stance": {}}, "required": ["stance"]}}, "required": ["opinion"]}
       ]
+    },
+    {
+      "$anchor": "respondsToOneReview",
+      "description": "A review whose points name the findings they answer (responds_to) has exactly one related_reviews entry of type responds_to: the review those findings are in.",
+      "if": {
+        "properties": {
+          "findings": {
+            "anyOf": [
+              {"properties": {"strengths": {"contains": {"required": ["responds_to"]}}}, "required": ["strengths"]},
+              {"properties": {"weaknesses": {"contains": {"required": ["responds_to"]}}}, "required": ["weaknesses"]},
+              {"properties": {"questions": {"contains": {"required": ["responds_to"]}}}, "required": ["questions"]},
+              {"properties": {"comments": {"contains": {"required": ["responds_to"]}}}, "required": ["comments"]},
+              {"properties": {"changes": {"contains": {"required": ["responds_to"]}}}, "required": ["changes"]}
+            ]
+          }
+        },
+        "required": ["findings"]
+      },
+      "then": {
+        "properties": {
+          "related_reviews": {
+            "contains": {"properties": {"type": {"const": "responds_to"}}},
+            "minContains": 1,
+            "maxContains": 1
+          }
+        },
+        "required": ["related_reviews"]
+      }
     }
   ],
   "$defs": {
@@ -2747,9 +2775,25 @@
         "uncertainty": {
           "$ref": "#/$defs/findingUncertainty",
           "description": "Probability of this assertion, optional associated credence and rationale."
+        },
+        "responds_to": {
+          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
+          "type": "string",
+          "enum": [
+            "addressed",
+            "will_address",
+            "clarified",
+            "disputed"
+          ]
         }
       },
-      "required": ["id", "text"]
+      "required": ["id", "text"],
+      "dependentRequired": {"status": ["responds_to"]}
     },
     "weakness": {
       "description": "One problem or limitation, with optional seriousness independent of its probability.",
@@ -2809,9 +2853,25 @@
             "major",
             "critical"
           ]
+        },
+        "responds_to": {
+          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
+          "type": "string",
+          "enum": [
+            "addressed",
+            "will_address",
+            "clarified",
+            "disputed"
+          ]
         }
       },
-      "required": ["id", "text"]
+      "required": ["id", "text"],
+      "dependentRequired": {"status": ["responds_to"]}
     },
     "change": {
       "description": "One requested action. Keep OR alternatives in one item when any one is sufficient; split independently requested actions.",
@@ -2873,9 +2933,25 @@
             "minLength": 1
           },
           "uniqueItems": true
+        },
+        "responds_to": {
+          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
+          "type": "string",
+          "enum": [
+            "addressed",
+            "will_address",
+            "clarified",
+            "disputed"
+          ]
         }
       },
-      "required": ["id", "text"]
+      "required": ["id", "text"],
+      "dependentRequired": {"status": ["responds_to"]}
     },
     "contribution": {
       "description": "A descriptive contribution, not an evaluative strength.",

@@ -237,6 +237,104 @@ def test_a_node_needs_its_representation_and_identifier(node):
         validate_canonical(node_record({"node": node}))
 
 
+ANSWERED = record(
+    findings={
+        "weaknesses": [{"id": "weakness-3", "text": "Only one dataset is used."}],
+        "changes": [{"id": "change-1", "text": "Add a second dataset."}],
+    }
+)
+
+
+def response_record(*points, related_reviews=None):
+    if related_reviews is None:
+        related_reviews = [{"type": "responds_to", "review_id": ANSWERED["review_id"]}]
+    return record(
+        review_id="response-1",
+        review_context={"review_type": "author_comment", "stage": "post_publication"},
+        related_reviews=related_reviews,
+        referees=[
+            {"referee_type": "human", "identity_mode": "open", "human_referee": {"name": "A"}}
+        ],
+        findings={"comments": list(points)},
+    )
+
+
+@pytest.mark.parametrize("kind", ["strengths", "weaknesses", "questions", "comments", "changes"])
+def test_a_point_names_the_finding_it_answers_and_what_the_authors_did(kind):
+    point = {"id": "c1", "text": "We added three datasets; see Table 2."}
+    review = response_record()
+    review["findings"] = {kind: [{**point, "responds_to": "weakness-3", "status": "addressed"}]}
+    validate_canonical(review)
+    review["findings"][kind][0].pop("status")
+    validate_canonical(review)
+
+
+def test_a_status_needs_the_finding_it_answers():
+    with pytest.raises(ValidationError, match="'responds_to' is a dependency of 'status'"):
+        validate_canonical(response_record({"id": "c1", "text": "Done.", "status": "addressed"}))
+
+
+@pytest.mark.parametrize("status", ["fixed", "", "Addressed"])
+def test_a_status_is_one_of_four(status):
+    point = {"id": "c1", "text": "Done.", "responds_to": "weakness-3", "status": status}
+    with pytest.raises(ValidationError):
+        validate_canonical(response_record(point))
+
+
+@pytest.mark.parametrize(
+    "related_reviews",
+    [
+        [],
+        [{"type": "supersedes", "review_id": "review-0"}],
+        [
+            {"type": "responds_to", "review_id": "review-1"},
+            {"type": "responds_to", "review_id": "review-2"},
+        ],
+    ],
+    ids=["none", "not responds_to", "two"],
+)
+def test_points_that_answer_findings_respond_to_exactly_one_review(related_reviews):
+    point = {"id": "c1", "text": "Done.", "responds_to": "weakness-3"}
+    with pytest.raises(ValidationError):
+        validate_canonical(response_record(point, related_reviews=related_reviews))
+    review = response_record(point)
+    del review["related_reviews"]
+    with pytest.raises(ValidationError, match="'related_reviews' is a required property"):
+        validate_canonical(review)
+
+
+def test_a_review_that_answers_no_finding_is_unchanged():
+    plain = {"id": "c1", "text": "Thank you for the review."}
+    validate_canonical(response_record(plain))
+    validate_canonical(response_record(plain, related_reviews=[]))
+    two = [
+        {"type": "responds_to", "review_id": "review-1"},
+        {"type": "responds_to", "review_id": "review-2"},
+    ]
+    validate_canonical(response_record(plain, related_reviews=two))
+
+
+def test_the_answered_review_has_the_finding_or_change_a_point_answers():
+    answers = [
+        {"id": "c1", "text": "Done.", "responds_to": "weakness-3", "status": "addressed"},
+        {"id": "c2", "text": "Added.", "responds_to": "change-1", "status": "will_address"},
+    ]
+    validate_canonical(response_record(*answers), answered_review=ANSWERED)
+    missing = {"id": "c3", "text": "Done.", "responds_to": "weakness-9"}
+    validate_canonical(response_record(missing))
+    with pytest.raises(ValidationError, match="'weakness-9' is not a finding or change"):
+        validate_canonical(response_record(missing), answered_review=ANSWERED)
+
+
+def test_the_example_author_response_answers_the_example_review():
+    examples = FIXTURES.parent.parent / "examples"
+    response = json.loads((examples / "author-response.json").read_text())
+    review = json.loads((examples / "human-review.json").read_text())
+    [relation] = response["related_reviews"]
+    assert relation == {"type": "responds_to", "review_id": review["review_id"]}
+    validate_canonical(response, answered_review=review)
+
+
 @pytest.mark.parametrize(
     "source,folder",
     [
