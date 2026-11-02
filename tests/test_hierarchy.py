@@ -336,7 +336,9 @@ def test_the_answered_review_has_the_finding_or_change_a_point_answers():
 def test_the_answered_review_is_the_one_the_response_names():
     point = {"id": "c1", "text": "Done.", "responds_to": "weakness-3"}
     other = {**ANSWERED, "review_id": "another-review"}
-    with pytest.raises(ValidationError, match="answered_review is not the review"):
+    with pytest.raises(
+        ValidationError, match="answered_review is not a review this one responds to"
+    ):
         validate_canonical(response_record(point), answered_review=other)
     by_doi = [{"type": "responds_to", "doi": "10.5555/Review.1"}]
     with_doi = {
@@ -347,8 +349,19 @@ def test_the_answered_review_is_the_one_the_response_names():
     by_url = [{"type": "responds_to", "url": "https://journal.example/reviews/1"}]
     with_url = {**other, "provenance": {"source_system": "journal", "source_url": by_url[0]["url"]}}
     validate_canonical(response_record(point, related_reviews=by_url), answered_review=with_url)
-    with pytest.raises(ValidationError, match="answered_review is not the review"):
+    with pytest.raises(
+        ValidationError, match="answered_review is not a review this one responds to"
+    ):
         validate_canonical(response_record(point, related_reviews=by_url), answered_review=with_doi)
+
+
+def test_a_response_to_several_whole_reviews_accepts_any_of_them():
+    plain = {"id": "c1", "text": "Thank you both."}
+    two = [
+        {"type": "responds_to", "review_id": "another-review"},
+        {"type": "responds_to", "review_id": ANSWERED["review_id"]},
+    ]
+    validate_canonical(response_record(plain, related_reviews=two), answered_review=ANSWERED)
 
 
 def test_the_example_author_response_answers_the_example_review():
