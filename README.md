@@ -541,12 +541,13 @@ reviewing its own documents, can give all three, and readers use whichever they 
 
 An author's response to a review is a review of its own: `review_context.review_type` is
 `author_comment`, a `related_reviews` entry of type `responds_to` names the review it
-answers, and `referees` are the authors who wrote it. A point of the response can name the
+answers, and `referees` are the authors who wrote it. Each reply is a comment of the
+response (`findings.comments`), whatever kind of point it answers. A comment can name the
 finding or change it answers with `responds_to`, its id in the answered review, and say
 what the authors did about it with `status`: `addressed` (they changed the work),
 `will_address` (they will change it in a later version), `clarified` (they answer with an
 explanation, not a change) or `disputed` (they disagree). Both are optional, and `status`
-requires `responds_to`. A response whose points use `responds_to` has exactly one
+requires `responds_to`. A response whose comments use `responds_to` has exactly one
 `related_reviews` entry of type `responds_to`. Whether each id exists in the answered review
 cannot be checked from the response alone: provide `answered_review=review` to
 `validate_canonical` to also check it. [examples/author-response.json](examples/author-response.json)

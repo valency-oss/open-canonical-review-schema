@@ -259,14 +259,21 @@ def response_record(*points, related_reviews=None):
     )
 
 
-@pytest.mark.parametrize("kind", ["strengths", "weaknesses", "questions", "comments", "changes"])
-def test_a_point_names_the_finding_it_answers_and_what_the_authors_did(kind):
+def test_a_comment_names_the_finding_it_answers_and_what_the_authors_did():
+    point = {"id": "c1", "text": "We added three datasets; see Table 2."}
+    review = response_record({**point, "responds_to": "weakness-3", "status": "addressed"})
+    validate_canonical(review)
+    review["findings"]["comments"][0].pop("status")
+    validate_canonical(review)
+
+
+@pytest.mark.parametrize("kind", ["strengths", "weaknesses", "questions", "changes"])
+def test_only_a_comment_answers_a_finding(kind):
     point = {"id": "c1", "text": "We added three datasets; see Table 2."}
     review = response_record()
     review["findings"] = {kind: [{**point, "responds_to": "weakness-3", "status": "addressed"}]}
-    validate_canonical(review)
-    review["findings"][kind][0].pop("status")
-    validate_canonical(review)
+    with pytest.raises(ValidationError, match="Additional properties are not allowed"):
+        validate_canonical(review)
 
 
 def test_a_status_needs_the_finding_it_answers():

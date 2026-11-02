@@ -273,7 +273,7 @@
         "comments": {
           "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
           "type": "array",
-          "items": {"$ref": "#/$defs/finding"}
+          "items": {"$ref": "#/$defs/comment"}
         },
         "changes": {
           "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is; classify the kind of change with tags",
@@ -569,17 +569,12 @@
     },
     {
       "$anchor": "respondsToOneReview",
-      "description": "A review whose points name the findings they answer (responds_to) has exactly one related_reviews entry of type responds_to: the review those findings are in.",
+      "description": "A review whose comments name the findings they answer (responds_to) has exactly one related_reviews entry of type responds_to: the review those findings are in.",
       "if": {
         "properties": {
           "findings": {
-            "anyOf": [
-              {"properties": {"strengths": {"contains": {"required": ["responds_to"]}}}, "required": ["strengths"]},
-              {"properties": {"weaknesses": {"contains": {"required": ["responds_to"]}}}, "required": ["weaknesses"]},
-              {"properties": {"questions": {"contains": {"required": ["responds_to"]}}}, "required": ["questions"]},
-              {"properties": {"comments": {"contains": {"required": ["responds_to"]}}}, "required": ["comments"]},
-              {"properties": {"changes": {"contains": {"required": ["responds_to"]}}}, "required": ["changes"]}
-            ]
+            "properties": {"comments": {"contains": {"required": ["responds_to"]}}},
+            "required": ["comments"]
           }
         },
         "required": ["findings"]
@@ -2775,14 +2770,65 @@
         "uncertainty": {
           "$ref": "#/$defs/findingUncertainty",
           "description": "Probability of this assertion, optional associated credence and rationale."
+        }
+      },
+      "required": ["id", "text"]
+    },
+    "comment": {
+      "description": "One point the reviewer makes without saying whether it is a strength, weakness or question. In an author_comment, one point of the authors' response, which may answer a finding or change of the review it responds to.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidenceLink"}
+        },
+        "about": {
+          "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentRef",
+            "description": "One interpreted record."
+          },
+          "uniqueItems": true
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/findingUncertainty",
+          "description": "Probability of this assertion, optional associated credence and rationale."
         },
         "responds_to": {
-          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
+          "description": "Id of the finding or change that this comment answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose comments use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
           "type": "string",
           "minLength": 1
         },
         "status": {
-          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
+          "description": "What the authors did about the finding or change this comment answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
           "type": "string",
           "enum": [
             "addressed",
@@ -2853,25 +2899,9 @@
             "major",
             "critical"
           ]
-        },
-        "responds_to": {
-          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
-          "type": "string",
-          "minLength": 1
-        },
-        "status": {
-          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
-          "type": "string",
-          "enum": [
-            "addressed",
-            "will_address",
-            "clarified",
-            "disputed"
-          ]
         }
       },
-      "required": ["id", "text"],
-      "dependentRequired": {"status": ["responds_to"]}
+      "required": ["id", "text"]
     },
     "change": {
       "description": "One requested action. Keep OR alternatives in one item when any one is sufficient; split independently requested actions.",
@@ -2933,25 +2963,9 @@
             "minLength": 1
           },
           "uniqueItems": true
-        },
-        "responds_to": {
-          "description": "Id of the finding or change that this point answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose points use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
-          "type": "string",
-          "minLength": 1
-        },
-        "status": {
-          "description": "What the authors did about the finding or change this point answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
-          "type": "string",
-          "enum": [
-            "addressed",
-            "will_address",
-            "clarified",
-            "disputed"
-          ]
         }
       },
-      "required": ["id", "text"],
-      "dependentRequired": {"status": ["responds_to"]}
+      "required": ["id", "text"]
     },
     "contribution": {
       "description": "A descriptive contribution, not an evaluative strength.",

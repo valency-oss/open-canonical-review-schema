@@ -8,15 +8,18 @@ authors did about it.
 
 ### Schema
 
-- `responds_to` on a strength, weakness, question, comment or change is the id of the
-  finding or change it answers, in the review this one responds to (its `related_reviews`
-  entry of type `responds_to`), for example `weakness-3`.
-- `status` on the same points says what the authors did about that finding: `addressed`,
+- Comments have a definition of their own, `comment`: a `finding` with two more fields.
+  Strengths and questions are still `finding`s.
+- `responds_to` on a comment is the id of the finding or change it answers, in the review
+  this one responds to (its `related_reviews` entry of type `responds_to`), for example
+  `weakness-3`. Only comments have it: an author's reply is a comment, whatever kind of
+  point it answers.
+- `status` on a comment says what the authors did about that finding: `addressed`,
   `will_address`, `clarified` or `disputed`. It requires `responds_to`. Both fields are
-  optional: a point may answer a finding without a status, as OpenReview and eLife
+  optional: a comment may answer a finding without a status, as OpenReview and eLife
   responses do, and a response may answer a whole review without naming findings.
-- A review with a point that uses `responds_to` has exactly one `related_reviews` entry of
-  type `responds_to`. The schema states this rule (`#respondsToOneReview`).
+- A review with a comment that uses `responds_to` has exactly one `related_reviews` entry
+  of type `responds_to`. The schema states this rule (`#respondsToOneReview`).
 - `referees` says that for an `author_comment` they are the authors who wrote it.
 
 ### Python package
