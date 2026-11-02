@@ -333,6 +333,24 @@ def test_the_answered_review_has_the_finding_or_change_a_point_answers():
         validate_canonical(response_record(missing), answered_review=ANSWERED)
 
 
+def test_the_answered_review_is_the_one_the_response_names():
+    point = {"id": "c1", "text": "Done.", "responds_to": "weakness-3"}
+    other = {**ANSWERED, "review_id": "another-review"}
+    with pytest.raises(ValidationError, match="answered_review is not the review"):
+        validate_canonical(response_record(point), answered_review=other)
+    by_doi = [{"type": "responds_to", "doi": "10.5555/Review.1"}]
+    with_doi = {
+        **other,
+        "provenance": {"source_system": "journal", "review_doi": "10.5555/review.1"},
+    }
+    validate_canonical(response_record(point, related_reviews=by_doi), answered_review=with_doi)
+    by_url = [{"type": "responds_to", "url": "https://journal.example/reviews/1"}]
+    with_url = {**other, "provenance": {"source_system": "journal", "source_url": by_url[0]["url"]}}
+    validate_canonical(response_record(point, related_reviews=by_url), answered_review=with_url)
+    with pytest.raises(ValidationError, match="answered_review is not the review"):
+        validate_canonical(response_record(point, related_reviews=by_url), answered_review=with_doi)
+
+
 def test_the_example_author_response_answers_the_example_review():
     examples = FIXTURES.parent.parent / "examples"
     response = json.loads((examples / "author-response.json").read_text())

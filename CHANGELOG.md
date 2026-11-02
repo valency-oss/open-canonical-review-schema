@@ -24,8 +24,10 @@ authors did about it.
 
 ### Python package
 
-- `validate_canonical(..., answered_review=review)` also checks that each `responds_to`
-  names a finding or change of the answered review. Without it, the id is not checked.
+- `validate_canonical(..., answered_review=review)` also checks that `review` is the one
+  the `responds_to` relation names (by `review_id`, source review id, DOI or URL) and that
+  each `responds_to` names one of its findings or changes. Without it, the id is not
+  checked.
 
 ## 0.9.1
 

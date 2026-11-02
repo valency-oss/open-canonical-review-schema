@@ -188,6 +188,21 @@ def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None
             raise ValidationError(f"page_end {page_end} is before page {page}")
 
 
+def names_review(relation: dict[str, Any], review: dict[str, Any]) -> bool:
+    """Whether a related_reviews entry names this review, by any identifier both carry."""
+    provenance = review.get("provenance", {})
+    ids = {review.get("review_id"), provenance.get("source_review_id")} - {None}
+    doi = provenance.get("review_doi")
+    return (
+        relation.get("review_id") in ids
+        or (doi is not None and relation.get("doi", "").lower() == doi.lower())
+        or (
+            provenance.get("source_url") is not None
+            and relation.get("url") == provenance["source_url"]
+        )
+    )
+
+
 def check_references(
     obj: dict[str, Any],
     *,
@@ -200,8 +215,9 @@ def check_references(
     Supply exact stored text through text_sources to also check span bounds and quotes,
     the element identifiers of structured representations through node_sources (keyed by
     doc_ref) to also check that each node names an element that exists, and the review
-    this one responds to through answered_review to also check that each point's
-    responds_to names one of its findings or changes.
+    this one responds to through answered_review to also check that it is the review the
+    responds_to relation names, by review_id, source review id, DOI or URL, and that each
+    comment's responds_to names one of its findings or changes.
     Validation never downloads or normalizes source text. The permitted link directions
     make the semantic graph acyclic without requiring reciprocal edges.
     """
@@ -231,6 +247,12 @@ def check_references(
         register(item, "metric")
 
     if answered_review is not None:
+        for relation in obj.get("related_reviews", []):
+            if relation["type"] == "responds_to" and not names_review(relation, answered_review):
+                raise ValidationError(
+                    "answered_review is not the review this one responds to "
+                    "(its related_reviews entry of type responds_to)"
+                )
         answered = {
             item.get("id")
             for values in answered_review.get("findings", {}).values()
