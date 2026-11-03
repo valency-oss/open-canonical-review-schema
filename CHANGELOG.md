@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.9.2
+
+A compatible release: every review valid under 0.9.1 is still valid and means the same
+thing. A point of an author's response can name the finding it answers and what the
+authors did about it.
+
+### Schema
+
+- Comments have a definition of their own, `comment`: a `finding` with two more fields.
+  Strengths and questions are still `finding`s.
+- `responds_to` on a comment is the id of the finding or change it answers, in the review
+  this one responds to (its `related_reviews` entry of type `responds_to`), for example
+  `weakness-3`. Only comments have it: an author's reply is a comment, whatever kind of
+  point it answers.
+- `status` on a comment says what the authors did about that finding: `addressed`,
+  `will_address`, `clarified` or `disputed`. It requires `responds_to`. Both fields are
+  optional: a comment may answer a finding without a status, as OpenReview and eLife
+  responses do, and a response may answer a whole review without naming findings.
+- A review with a comment that uses `responds_to` has exactly one `related_reviews` entry
+  of type `responds_to`. The schema states this rule (`#respondsToOneReview`).
+- `referees` says that for an `author_comment` they are the authors who wrote it.
+
+### Python package
+
+- `validate_canonical(..., answered_review=review)` also checks that `review` is the one
+  the `responds_to` relation names (by `review_id`, source review id, DOI or URL) and that
+  each `responds_to` names one of its findings or changes. Without it, the id is not
+  checked.
+
 ## 0.9.1
 
 A compatible release: every review valid under 0.9.0 is still valid and means the same

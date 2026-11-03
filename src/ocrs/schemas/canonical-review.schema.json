@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -108,7 +108,7 @@
       }
     },
     "referees": {
-      "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews)",
+      "description": "Who wrote the review: one referee, or each member of a panel or of a joint review (e.g., eLife's joint public reviews). For an author_comment, the authors who wrote it",
       "type": "array",
       "minItems": 1,
       "items": {"$ref": "#/$defs/referee"}
@@ -273,7 +273,7 @@
         "comments": {
           "description": "Points the reviewer makes without saying whether they are strengths, weaknesses or questions. Not counted as weaknesses",
           "type": "array",
-          "items": {"$ref": "#/$defs/finding"}
+          "items": {"$ref": "#/$defs/comment"}
         },
         "changes": {
           "description": "Changes the reviewer asks for, each with a severity that says how serious the problem is; classify the kind of change with tags",
@@ -566,6 +566,29 @@
         {"properties": {"written_report": {}}, "required": ["written_report"]},
         {"properties": {"opinion": {"properties": {"stance": {}}, "required": ["stance"]}}, "required": ["opinion"]}
       ]
+    },
+    {
+      "$anchor": "respondsToOneReview",
+      "description": "A review whose comments name the findings they answer (responds_to) has exactly one related_reviews entry of type responds_to: the review those findings are in.",
+      "if": {
+        "properties": {
+          "findings": {
+            "properties": {"comments": {"contains": {"required": ["responds_to"]}}},
+            "required": ["comments"]
+          }
+        },
+        "required": ["findings"]
+      },
+      "then": {
+        "properties": {
+          "related_reviews": {
+            "contains": {"properties": {"type": {"const": "responds_to"}}},
+            "minContains": 1,
+            "maxContains": 1
+          }
+        },
+        "required": ["related_reviews"]
+      }
     }
   ],
   "$defs": {
@@ -2750,6 +2773,73 @@
         }
       },
       "required": ["id", "text"]
+    },
+    "comment": {
+      "description": "One point the reviewer makes without saying whether it is a strength, weakness or question. In an author_comment, one point of the authors' response, which may answer a finding or change of the review it responds to.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier of this point, unique among all the review's addressable records (findings, claims, contributions, artifacts, checks, check results and metrics), so that other records can refer to it",
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "description": "The point in full, as the reviewer wrote it",
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short headline for the point, as the reviewer wrote it"
+        },
+        "tags": {
+          "description": "Kinds of problem or topic (e.g., 'math_error', 'consistency')",
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "group": {
+          "description": "Headings the point appears under in the review, outermost first, as the reviewer wrote them (e.g., ['Methods', 'Minor comments'])",
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "evidence_links": {
+          "description": "Places in the work the point refers to",
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidenceLink"}
+        },
+        "about": {
+          "description": "Optional claims, contributions, checks or check results interpreted by this finding; prefer result IDs for individual outcomes.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentRef",
+            "description": "One interpreted record."
+          },
+          "uniqueItems": true
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/findingUncertainty",
+          "description": "Probability of this assertion, optional associated credence and rationale."
+        },
+        "responds_to": {
+          "description": "Id of the finding or change that this comment answers, in the review this one responds to (its related_reviews entry of type responds_to), e.g., 'weakness-3'. A review whose comments use it has exactly one such entry. Whether the id exists in that review cannot be checked from this review alone",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "description": "What the authors did about the finding or change this comment answers: addressed, they changed the work; will_address, they will change it in a later version; clarified, they answer it with an explanation, not a change to the work; disputed, they disagree with it. Requires responds_to",
+          "type": "string",
+          "enum": [
+            "addressed",
+            "will_address",
+            "clarified",
+            "disputed"
+          ]
+        }
+      },
+      "required": ["id", "text"],
+      "dependentRequired": {"status": ["responds_to"]}
     },
     "weakness": {
       "description": "One problem or limitation, with optional seriousness independent of its probability.",

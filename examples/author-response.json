@@ -1,0 +1,66 @@
+{
+  "$schema": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json",
+  "review_id": "journal-response-2041",
+  "version": "1.0.0",
+  "created_at": "2026-10-02T15:00:00Z",
+  "provenance": {
+    "source_system": "example-journal",
+    "source_review_id": "AR-2041"
+  },
+  "referees": [
+    {
+      "referee_type": "human",
+      "identity_mode": "open",
+      "human_referee": {
+        "name": "Author A"
+      }
+    }
+  ],
+  "target": {
+    "work_id": "internal_id:manuscript_id:manuscript-2041",
+    "identifiers": {
+      "internal_id": {
+        "field_name": "manuscript_id",
+        "value": "manuscript-2041"
+      }
+    },
+    "work_type": "article",
+    "venue": "Example Journal of Earth Sciences"
+  },
+  "review_context": {
+    "review_type": "author_comment",
+    "stage": "pre_publication",
+    "round": 1
+  },
+  "related_reviews": [
+    {
+      "type": "responds_to",
+      "review_id": "journal-review-2041"
+    }
+  ],
+  "opinion": {
+    "summary": "We thank the reviewer and have revised the manuscript."
+  },
+  "findings": {
+    "comments": [
+      {
+        "id": "response-1",
+        "text": "We now report accuracy on 40 stations held out from calibration (89%) beside the calibration figure; see the new Table 4.",
+        "responds_to": "weakness-1",
+        "status": "addressed"
+      },
+      {
+        "id": "response-2",
+        "text": "Figure 3's colour bar will show snow cover in percent in the next version.",
+        "responds_to": "weakness-2",
+        "status": "will_address"
+      },
+      {
+        "id": "response-3",
+        "text": "Section 4.3 already gives accuracy by land cover: 81% in forested areas against 94% overall.",
+        "responds_to": "question-1",
+        "status": "clarified"
+      }
+    ]
+  }
+}

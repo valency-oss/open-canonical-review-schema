@@ -36,6 +36,7 @@ def validate_canonical(
     schema_path: str | Path | None = None,
     text_sources: dict[str, str] | None = None,
     node_sources: dict[str, Collection[str]] | None = None,
+    answered_review: dict[str, Any] | None = None,
 ) -> None:
     """Validate a canonical review object; raises ValidationError on failure. A
     `schema_path` applies to this call only; later calls use the packaged schema."""
@@ -48,7 +49,12 @@ def validate_canonical(
         validator = _validator
     validator.validate(obj)
     if is_hierarchical(validator.schema.get("$id", "")) or is_hierarchical(obj.get("$schema", "")):
-        check_references(obj, text_sources=text_sources, node_sources=node_sources)
+        check_references(
+            obj,
+            text_sources=text_sources,
+            node_sources=node_sources,
+            answered_review=answered_review,
+        )
     else:
         check_legacy_references(obj, evidence_schema=validator.schema)
 
@@ -182,17 +188,33 @@ def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None
             raise ValidationError(f"page_end {page_end} is before page {page}")
 
 
+def names_review(relation: dict[str, Any], review: dict[str, Any]) -> bool:
+    """Whether a related_reviews entry names this review, by any identifier both carry."""
+    provenance = review.get("provenance", {})
+    ids = {review.get("review_id"), provenance.get("source_review_id")} - {None, ""}
+    doi, url = relation.get("doi"), relation.get("url")
+    return (
+        relation.get("review_id") in ids
+        or (bool(doi) and doi.lower() == (provenance.get("review_doi") or "").lower())
+        or (bool(url) and url == provenance.get("source_url"))
+    )
+
+
 def check_references(
     obj: dict[str, Any],
     *,
     text_sources: dict[str, str] | None = None,
     node_sources: dict[str, Collection[str]] | None = None,
+    answered_review: dict[str, Any] | None = None,
 ) -> None:
     """Review-local IDs, downward references, score scales and source ranges.
 
     Supply exact stored text through text_sources to also check span bounds and quotes,
-    and the element identifiers of structured representations through node_sources
-    (keyed by doc_ref) to also check that each node names an element that exists.
+    the element identifiers of structured representations through node_sources (keyed by
+    doc_ref) to also check that each node names an element that exists, and the review
+    this one responds to through answered_review to also check that it is a review a
+    responds_to relation names, by review_id, source review id, DOI or URL, and that each
+    comment's responds_to names one of its findings or changes.
     Validation never downloads or normalizes source text. The permitted link directions
     make the semantic graph acyclic without requiring reciprocal edges.
     """
@@ -220,6 +242,25 @@ def check_references(
             register(result, "check_result")
     for item in obj.get("metrics", []):
         register(item, "metric")
+
+    if answered_review is not None:
+        relations = [r for r in obj.get("related_reviews", []) if r["type"] == "responds_to"]
+        if relations and not any(names_review(r, answered_review) for r in relations):
+            raise ValidationError(
+                "answered_review is not a review this one responds to "
+                "(a related_reviews entry of type responds_to)"
+            )
+        answered = {
+            item.get("id")
+            for values in answered_review.get("findings", {}).values()
+            for item in values
+        }
+        for _, item in items:
+            if "responds_to" in item and item["responds_to"] not in answered:
+                raise ValidationError(
+                    f"responds_to {item['responds_to']!r} is not a finding or change "
+                    "of the answered review"
+                )
 
     def target(id, expected, field):
         if types.get(id) != expected:

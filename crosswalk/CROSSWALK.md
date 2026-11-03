@@ -28,15 +28,15 @@ Each cell is `method:source_field`. Several are separated by `|`.
 Paths use `[]` for any list position. The files beside this one hold the same data:
 
 - `crosswalk.long.csv`: one row per OCRS field, system and source field, with the number of fixtures that showed it.
-- `crosswalk.csv`: one row per OCRS field, including all 851 leaf fields, one column per system.
+- `crosswalk.csv`: one row per OCRS field, including all 853 leaf fields, one column per system.
 - `gaps.csv`: source fields with no OCRS field, fields lost on a round trip, and values coerced to an allowed one.
 - `coverage.csv`: the table below.
 
-Schema: `https://valency-oss.github.io/open-canonical-review-schema/v0.9.1/canonical-review.schema.json`.
+Schema: `https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json`.
 
 ## Coverage
 
-Out of 851 OCRS leaf fields.
+Out of 853 OCRS leaf fields.
 
 | System | Leaf fields filled | % | Required filled | Unmapped source fields | Fixtures | Column |
 |---|---|---|---|---|---|---|
@@ -127,7 +127,7 @@ No fixture fills 2 of the 8 fields in this section.
 | `findings.weaknesses[].text` |  |  | copied:issues[].tiers[].items[].text \| copied:weaknesses[].text |  | observed |  |  | copied:methods.progressive__*.comments[].explanation | observed | observed |  |  |
 | `findings.weaknesses[].title` |  |  | copied:issues[].tiers[].items[].title |  |  |  |  | copied:methods.progressive__*.comments[].title |  |  |  |  |
 
-No fixture fills 340 of the 383 fields in this section.
+No fixture fills 342 of the 385 fields in this section.
 
 ### `metrics`
 
