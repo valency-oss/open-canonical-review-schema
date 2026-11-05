@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.2/canonical-review.schema.json",
+  "$id": "https://valency-oss.github.io/open-canonical-review-schema/v0.9.3/canonical-review.schema.json",
   "$comment": "Copyright (c) 2026 Valency Systems Inc. Licensed under Apache-2.0.",
   "title": "Open Canonical Review Schema",
   "description": "One peer review of one scholarly work, in a form shared by journals, conferences and AI reviewers",
@@ -187,7 +187,7 @@
       "additionalProperties": false,
       "properties": {
         "review_type": {
-          "description": "Kind of review: feedback the authors asked for before submission, a referee's first review, review of a revision, response to a rebuttal, meta-review or editor's report, shepherding, review of a replication, a citation review (one of only the work's references, such as whether each exists and says what it is cited for), an author's comment or response, a community comment, an aggregate of several reviews, or an editor's or recommender's recommendation. Whether it came before or after publication goes in stage",
+          "description": "Kind of review: feedback the authors asked for before submission, a referee's first review, review of a revision, response to a rebuttal, meta-review or editor's report, shepherding, review of a replication, a citation review (one of only the work's references, such as whether each exists and says what it is cited for), an author's comment or response, a community comment, an aggregate of several reviews, an editor's or recommender's recommendation, or a screening (a check of a submission against a venue's criteria, such as scope, format or ethics, before or instead of full review, often from only part of the work). Whether it came before or after publication goes in stage",
           "type": "string",
           "enum": [
             "pre_submission",
@@ -201,7 +201,8 @@
             "author_comment",
             "community_comment",
             "aggregate",
-            "recommendation"
+            "recommendation",
+            "screening"
           ]
         },
         "stage": {
@@ -1413,6 +1414,7 @@
             "ranker",
             "planner",
             "summarizer",
+            "classifier",
             "other"
           ]
         },
@@ -1597,6 +1599,7 @@
                   "supplement",
                   "code_repo",
                   "dataset",
+                  "metadata",
                   "other"
                 ]
               },
@@ -1607,6 +1610,21 @@
               "content_hash": {
                 "description": "Hash of the material, to check it is the same file",
                 "type": "string"
+              },
+              "extent": {
+                "description": "How much of the material the system read: all of it (full), only some of it (partial), or not stated (unknown). Absent means unknown, not full",
+                "type": "string",
+                "enum": [
+                  "full",
+                  "partial",
+                  "unknown"
+                ]
+              },
+              "parts": {
+                "description": "The parts of the material the system read, located as evidence is (e.g., [{\"section\": \"Title\"}, {\"section\": \"Abstract\"}]). Usually given with extent partial",
+                "type": "array",
+                "minItems": 1,
+                "items": {"$ref": "#/$defs/evidenceLocation"}
               }
             }
           }
