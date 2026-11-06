@@ -286,11 +286,7 @@ def check_references(
                 ) from exc
             _check_metric(item, definition["scale"])
 
-    for link in _evidence_links(obj, ocrs_schema(), ocrs_schema()):
-        resource = link["resource"]
-        if resource["type"] == "artifact":
-            target(resource["id"], "artifact", "evidence.resource.id")
-        location = link.get("location", {})
+    def check_location(location, quote=None):
         for start, end in [("page", "page_end"), ("line_start", "line_end")]:
             if start in location and end in location and location[end] < location[start]:
                 raise ValidationError(f"{end} is before {start}")
@@ -303,12 +299,23 @@ def check_references(
                     raise ValidationError("span.end exceeds the referenced text length")
                 # A JSON Schema integer may arrive as an integral float such as 3.0
                 selected = text[int(span["start"]) : int(span["end"])]
-                if "quote" in link and link["quote"] != selected:
+                if quote is not None and quote != selected:
                     raise ValidationError("quote does not equal the selected span")
         node = location.get("node")
         if node and node_sources is not None and node["doc_ref"] in node_sources:
             if node["id"] not in node_sources[node["doc_ref"]]:
                 raise ValidationError(f"node {node['id']!r} is not in {node['doc_ref']!r}")
+
+    for link in _evidence_links(obj, ocrs_schema(), ocrs_schema()):
+        resource = link["resource"]
+        if resource["type"] == "artifact":
+            target(resource["id"], "artifact", "evidence.resource.id")
+        check_location(link.get("location", {}), link.get("quote"))
+    for referee in obj.get("referees", []):
+        inputs = referee.get("ai_referee", {}).get("inputs", {})
+        for material in inputs.get("materials_reviewed", []):
+            for part in material.get("parts", []):
+                check_location(part)
 
 
 def _check_metric(metric: dict, scale: dict) -> None:

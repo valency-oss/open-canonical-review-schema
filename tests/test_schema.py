@@ -335,6 +335,12 @@ def test_review_type_covers_the_crossref_peer_review_types(review_type: str) -> 
     validate_canonical(_review_in_context({"review_type": review_type}))
 
 
+def test_a_screening_is_a_review_type() -> None:
+    """Crossref has no such type: a check against a venue's criteria, before or instead of
+    full review."""
+    validate_canonical(_review_in_context({"review_type": "screening"}))
+
+
 @pytest.mark.parametrize("stage", ["pre_publication", "post_publication"])
 def test_stage_says_whether_the_review_came_before_or_after_publication(stage: str) -> None:
     validate_canonical(_review_in_context({"review_type": "initial", "stage": stage}))
