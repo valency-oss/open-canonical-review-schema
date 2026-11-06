@@ -6,8 +6,9 @@ A compatible release: every review valid under 0.9.2 is still valid and means th
 thing. It adds what a screening needs: a review that checks a submission against a venue's
 criteria, often by reading only part of it.
 
-It is the first tagged release since 0.9.0, so it also carries the changes listed under
-0.9.1 and 0.9.2 below.
+It is the first tagged release since 0.9.0, so it also carries the changes in
+[0.9.1](https://github.com/valency-oss/open-canonical-review-schema/blob/main/CHANGELOG.md#091)
+and [0.9.2](https://github.com/valency-oss/open-canonical-review-schema/blob/main/CHANGELOG.md#092).
 
 ### Schema
 
