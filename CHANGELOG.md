@@ -6,6 +6,9 @@ A compatible release: every review valid under 0.9.2 is still valid and means th
 thing. It adds what a screening needs: a review that checks a submission against a venue's
 criteria, often by reading only part of it.
 
+It is the first tagged release since 0.9.0, so it also carries the changes listed under
+0.9.1 and 0.9.2 below.
+
 ### Schema
 
 - `review_context.review_type` takes `screening`: a check of a submission against a venue's
@@ -25,6 +28,9 @@ criteria, often by reading only part of it.
 - `validate_canonical` checks the page and line ranges, spans and, with `text_sources` and
   `node_sources`, the spans' bounds and the nodes of each `parts` entry, as it checks
   evidence links' locations.
+- `validate_canonical` accepts span offsets written as whole-number floats, such as `3.0`,
+  when it compares a quote with the text its span selects. JSON Schema counts them as
+  integers, so they passed schema validation and then raised `TypeError`.
 
 ## 0.9.2
 
