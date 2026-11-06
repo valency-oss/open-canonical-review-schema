@@ -301,7 +301,9 @@ def check_references(
                 text = text_sources[span["text_ref"]]
                 if span["end"] > len(text):
                     raise ValidationError("span.end exceeds the referenced text length")
-                if "quote" in link and link["quote"] != text[span["start"] : span["end"]]:
+                # A JSON Schema integer may arrive as an integral float such as 3.0
+                selected = text[int(span["start"]) : int(span["end"])]
+                if "quote" in link and link["quote"] != selected:
                     raise ValidationError("quote does not equal the selected span")
         node = location.get("node")
         if node and node_sources is not None and node["doc_ref"] in node_sources:
