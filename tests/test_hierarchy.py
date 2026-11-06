@@ -195,6 +195,20 @@ def test_positional_spans_count_unicode_code_points_and_check_the_exact_text():
         validate_canonical(r)
 
 
+def test_integral_float_span_offsets_select_the_same_text():
+    link = {
+        "resource": {"type": "work"},
+        "location": {"span": {"text_ref": "text-v2", "start": 2.0, "end": 5.0}},
+        "quote": "ABC",
+    }
+    r = record(
+        findings={"comments": [{"id": "f1", "text": "Ambiguous.", "evidence_links": [link]}]}
+    )
+    validate_canonical(r, text_sources={"text-v2": "🧪\nABC"})
+    with pytest.raises(ValidationError, match="quote"):
+        validate_canonical(r, text_sources={"text-v2": "🧪\nABD"})
+
+
 IR = "urn:example:paper-v1:ir"
 IR_TEXT = "urn:example:paper-v1:ir-text"
 
