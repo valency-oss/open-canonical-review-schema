@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.9.3
+
+A compatible release: every review valid under 0.9.2 is still valid and means the same
+thing. It adds what a screening needs: a review that checks a submission against a venue's
+criteria, often by reading only part of it.
+
+### Schema
+
+- `review_context.review_type` takes `screening`: a check of a submission against a venue's
+  criteria, such as scope, format or ethics, before or instead of full review.
+- An AI model's `role` takes `classifier`, a model that sorts the work into categories,
+  such as in scope or out of scope.
+- A `materials_reviewed` entry's `type` takes `metadata`, for the work's metadata (title,
+  abstract, authors, keywords) when the system read it as such rather than in a file.
+- A `materials_reviewed` entry may say how much of the material the system read. `extent`
+  is `full`, `partial` or `unknown`; absent means `unknown`, not `full`. `parts` lists the
+  parts read, each an `evidenceLocation`, the location evidence links use, so a part can be
+  a section, a page or line range, a node or a span: `[{"section": "Title"}, {"section":
+  "Abstract"}]`. Both are optional.
+
+### Python package
+
+- `validate_canonical` checks the page and line ranges, spans and, with `text_sources` and
+  `node_sources`, the spans' bounds and the nodes of each `parts` entry, as it checks
+  evidence links' locations.
+
 ## 0.9.2
 
 A compatible release: every review valid under 0.9.1 is still valid and means the same

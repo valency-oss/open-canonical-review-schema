@@ -286,11 +286,7 @@ def check_references(
                 ) from exc
             _check_metric(item, definition["scale"])
 
-    for link in _evidence_links(obj, ocrs_schema(), ocrs_schema()):
-        resource = link["resource"]
-        if resource["type"] == "artifact":
-            target(resource["id"], "artifact", "evidence.resource.id")
-        location = link.get("location", {})
+    def check_location(location, quote=None):
         for start, end in [("page", "page_end"), ("line_start", "line_end")]:
             if start in location and end in location and location[end] < location[start]:
                 raise ValidationError(f"{end} is before {start}")
@@ -301,12 +297,23 @@ def check_references(
                 text = text_sources[span["text_ref"]]
                 if span["end"] > len(text):
                     raise ValidationError("span.end exceeds the referenced text length")
-                if "quote" in link and link["quote"] != text[span["start"] : span["end"]]:
+                if quote is not None and quote != text[span["start"] : span["end"]]:
                     raise ValidationError("quote does not equal the selected span")
         node = location.get("node")
         if node and node_sources is not None and node["doc_ref"] in node_sources:
             if node["id"] not in node_sources[node["doc_ref"]]:
                 raise ValidationError(f"node {node['id']!r} is not in {node['doc_ref']!r}")
+
+    for link in _evidence_links(obj, ocrs_schema(), ocrs_schema()):
+        resource = link["resource"]
+        if resource["type"] == "artifact":
+            target(resource["id"], "artifact", "evidence.resource.id")
+        check_location(link.get("location", {}), link.get("quote"))
+    for referee in obj.get("referees", []):
+        inputs = referee.get("ai_referee", {}).get("inputs", {})
+        for material in inputs.get("materials_reviewed", []):
+            for part in material.get("parts", []):
+                check_location(part)
 
 
 def _check_metric(metric: dict, scale: dict) -> None:

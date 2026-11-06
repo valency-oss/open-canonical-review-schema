@@ -200,3 +200,107 @@ class TestAiRefereeRejected:
         """referee_type 'ai' still requires the ai_referee block."""
         with pytest.raises(ValidationError):
             validate_canonical(_review({"referee_type": "ai", "identity_mode": "open"}))
+
+
+def _screening(material):
+    """A screening by an AI classifier that read the given material."""
+    review = _review(
+        {
+            "referee_type": "ai",
+            "identity_mode": "open",
+            "ai_referee": {
+                "system": {
+                    "critic_framework": {"name": "ScopeScreen", "version": "1.0.0"},
+                    "models": [{"role": "classifier", "model_id": "scope-classifier"}],
+                },
+                "execution": AI_EXECUTION,
+                "inputs": {"materials_reviewed": [material]},
+            },
+        }
+    )
+    review["review_context"] = {"review_type": "screening"}
+    return review
+
+
+class TestMaterialsReviewed:
+    """How much of each material an AI referee read."""
+
+    @pytest.mark.parametrize("extent", ["full", "partial", "unknown"])
+    def test_extent(self, extent):
+        validate_canonical(_screening({"type": "pdf", "ref": "paper.pdf", "extent": extent}))
+
+    def test_extent_and_parts_are_optional(self):
+        validate_canonical(_screening({"type": "pdf", "ref": "paper.pdf"}))
+
+    def test_unknown_extent_rejected(self):
+        with pytest.raises(ValidationError):
+            validate_canonical(_screening({"type": "pdf", "ref": "paper.pdf", "extent": "most"}))
+
+    @pytest.mark.parametrize(
+        "parts",
+        [
+            [{"section": "Title"}, {"section": "Abstract"}],
+            [{"section": "2 Methods"}],
+            [{"page": 1, "page_end": 2}],
+            [{"line_start": 1, "line_end": 40}],
+            [{"node": {"doc_ref": "paper-v1-tree", "id": "abstract"}}],
+            [{"span": {"text_ref": "paper-v1-text", "start": 0, "end": 1200}}],
+        ],
+    )
+    def test_parts_are_evidence_locations(self, parts):
+        validate_canonical(
+            _screening({"type": "pdf", "ref": "paper.pdf", "extent": "partial", "parts": parts})
+        )
+
+    def test_metadata_is_a_material(self):
+        validate_canonical(
+            _screening(
+                {
+                    "type": "metadata",
+                    "ref": "submission-123",
+                    "extent": "partial",
+                    "parts": [{"section": "Title"}, {"section": "Abstract"}],
+                }
+            )
+        )
+
+    @pytest.mark.parametrize(
+        "parts",
+        [[], [{}], [{"chapter": "2"}], [{"page_end": 3}], ["Abstract"]],
+    )
+    def test_malformed_parts_rejected(self, parts):
+        with pytest.raises(ValidationError):
+            validate_canonical(_screening({"type": "pdf", "ref": "paper.pdf", "parts": parts}))
+
+    @pytest.mark.parametrize(
+        "part",
+        [
+            {"page": 3, "page_end": 2},
+            {"line_start": 10, "line_end": 9},
+            {"span": {"text_ref": "paper-v1-text", "start": 5, "end": 5}},
+        ],
+    )
+    def test_backward_ranges_in_parts_rejected(self, part):
+        with pytest.raises(ValidationError):
+            validate_canonical(_screening({"type": "pdf", "ref": "paper.pdf", "parts": [part]}))
+
+    def test_parts_checked_against_sources(self):
+        review = _screening(
+            {
+                "type": "pdf",
+                "ref": "paper.pdf",
+                "parts": [
+                    {"span": {"text_ref": "paper-v1-text", "start": 0, "end": 8}},
+                    {"node": {"doc_ref": "paper-v1-tree", "id": "abstract"}},
+                ],
+            }
+        )
+        validate_canonical(
+            review,
+            text_sources={"paper-v1-text": "Abstract"},
+            node_sources={"paper-v1-tree": {"abstract"}},
+        )
+        with pytest.raises(ValidationError, match="exceeds"):
+            validate_canonical(review, text_sources={"paper-v1-text": "Abs"})
+        with pytest.raises(ValidationError, match="is not in"):
+            validate_canonical(review, node_sources={"paper-v1-tree": {"title"}})
