@@ -27,6 +27,7 @@ import re
 import uuid
 import xml.etree.ElementTree as ET
 from typing import Any
+from xml.parsers import expat
 
 from ..hierarchy import LEGACY_SCHEMA
 from ..identifiers import (
@@ -240,14 +241,31 @@ def _summary(text: str) -> str:
 
 def _sections(text: str) -> list[dict[str, str]]:
     """The parts of a text under headings on lines of their own ("Summary:", "Strengths:")."""
-    sections: list[dict[str, str]] = []
+    sections: list[tuple[str, list[str]]] = []  # each section's blocks, joined once at the end
     for block in text.split("\n\n"):
         if title := _heading(block):
-            sections.append({"title": title, "content": ""})
+            sections.append((title, []))
         elif sections:
-            content = sections[-1]["content"]
-            sections[-1]["content"] = f"{content}\n\n{block}" if content else block
-    return [s for s in sections if s["content"]]
+            sections[-1][1].append(block)
+    joined = [{"title": title, "content": "\n\n".join(blocks)} for title, blocks in sections]
+    return [s for s in joined if s["content"]]
+
+
+def _parse_xml(text: str) -> ET.Element:
+    """Parse JATS XML that declares no entities. JATS names its DTD rather than declaring
+    entities of its own, and an entity declared in the document could expand a short
+    payload, or many of them kept together, into far more text than was supplied."""
+
+    def declared(name: str, *_: Any) -> None:
+        raise ValueError(f"JATS XML may not declare entities, but declares {name!r}")
+
+    scan = expat.ParserCreate()
+    scan.EntityDeclHandler = declared  # called on the declaration, before any expansion
+    try:
+        scan.Parse(text, True)
+    except expat.ExpatError:
+        pass  # ill-formed: ElementTree says so in its own words
+    return ET.fromstring(text)
 
 
 def _text(element: ET.Element | None) -> str:
@@ -277,6 +295,7 @@ def _contributors(stub: ET.Element) -> list[dict[str, Any]]:
     if group is None:
         return []
     affiliations = {aff.get("id"): aff for aff in group.findall("aff")}
+    shared: dict[str, tuple[str, str]] = {}  # a referenced affiliation's text and label
     people = []
     for contrib in group.findall("contrib"):
         person: dict[str, Any] = {"anonymous": contrib.find("anonymous") is not None}
@@ -298,13 +317,12 @@ def _contributors(stub: ET.Element) -> list[dict[str, Any]]:
         xref = contrib.find("xref[@ref-type='aff']")
         if aff is not None:
             person["affiliation"] = _affiliation(aff)
-        elif xref is not None and xref.get("rid") in affiliations:
-            referenced = affiliations[xref.get("rid")]
-            person["affiliation"] = _affiliation(referenced)
-            person["affiliation_ref"] = {
-                "id": xref.get("rid"),
-                "label": _text(referenced.find("label")),
-            }
+        elif xref is not None and (rid := xref.get("rid")) in affiliations:
+            if rid not in shared:
+                referenced = affiliations[rid]
+                shared[rid] = _affiliation(referenced), _text(referenced.find("label"))
+            person["affiliation"], label = shared[rid]
+            person["affiliation_ref"] = {"id": rid, "label": label}
         people.append(person)
     return people
 
@@ -330,7 +348,7 @@ def _referee(person: dict[str, Any], interests: str | None) -> dict[str, Any]:
 
 def from_jats(payload: dict[str, Any], *, keep_raw: bool = False) -> dict[str, Any]:
     """Map one `<sub-article>` (`payload["sub_article"]`, with `payload["article"]`) to OCRS."""
-    element = ET.fromstring(payload["sub_article"])
+    element = _parse_xml(payload["sub_article"])
     if element.tag != "sub-article":
         raise ValueError(f"Expected a <sub-article>, got <{element.tag}>")
     article = payload.get("article") or {}
@@ -815,7 +833,7 @@ def to_jats(canonical: dict[str, Any]) -> dict[str, Any]:
         element.append(_body(text.strip(), bool(kept.get("lists_in_paragraphs"))))
     for response in kept.get("responses") or []:
         # Only a sub-article (the response it was) goes back inside this one
-        nested = ET.fromstring(response) if isinstance(response, str) else None
+        nested = _parse_xml(response) if isinstance(response, str) else None
         if nested is not None and nested.tag == "sub-article":
             element.append(nested)
 
@@ -838,7 +856,7 @@ def sub_articles(article_xml: str) -> list[dict[str, Any]]:
     """A JATS article's sub-articles (not those nested in another, such as an author response
     to a report), each as a payload for `from_jats`, with the article's version DOI (else its
     DOI), title and journal."""
-    root = ET.fromstring(article_xml)
+    root = _parse_xml(article_xml)
     meta = root.find("front/article-meta")
     ids = meta.findall("article-id[@pub-id-type='doi']") if meta is not None else []
     version = [i for i in ids if i.get("specific-use") == "version"]

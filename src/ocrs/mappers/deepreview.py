@@ -47,6 +47,8 @@ recorded as a coercion and left without severity.
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
+from collections.abc import Callable
 from typing import Any
 
 from ..anchors import Block
@@ -86,7 +88,14 @@ PLACE_WORD = (
 # A heading that is only places, such as `Page 1, Column 2 (…)`, `Abstract (Page 1)` or
 # `Table I(a) and Table I(b), …`: its first part is place words and identifiers alone,
 # so `Table 1 Conflicts with the Prose (…)` is a title, not a place
-PLACE_ID = r"(?:\d[\w.()–-]*|[IVXL]+(?:-[\w.]+)?(?:\([a-z]\))?|[A-Z][\d.]*(?:\([a-z]\))?)"
+# Each identifier is read one way only: its runs are possessive, so the `and` in `1and2`
+# is never tried both as part of one and as the word between two, and a lone `I`, `V`, `X`
+# or `L` is a numeral, never also a lettered identifier. Without that, a long list that
+# fails at its end would be retried every way it could be split.
+PLACE_ID = (
+    r"(?:\d[\w.()–-]*+|[IVXL]++(?:-[\w.]++)?(?:\([a-z]\))?"
+    r"|(?![IVXL](?![\d.]))[A-Z][\d.]*+(?:\([a-z]\))?)"
+)
 PLACES_ONLY = re.compile(
     rf"^(?i:{PLACE_WORD})(?:\s+{PLACE_ID}(?:\s*(?:,|and|&)\s*(?:(?i:{PLACE_WORD})\s+)?{PLACE_ID})*)?$"
 )
@@ -170,19 +179,28 @@ def masked(text: str) -> str:
     return "".join(chars)
 
 
-def negated(text: str, start: int) -> bool:
-    """Whether a negation in the clause before `start` governs the rewrite at `start`."""
-    plain = masked(text[:start])
-    clause_start = 0
+def negation_reader(text: str) -> Callable[[int], bool]:
+    """A test of whether a negation in the clause before an offset governs the rewrite
+    there. The text is masked and its clauses and negations found once, however many
+    rewrites it words."""
+    plain = masked(text)
+    clause_starts = [0]
     for end in CLAUSE_END.finditer(plain):
         word = LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()]).group(0).lower()
         if end.group(0) != "." or word not in ABBREVIATIONS:
-            clause_start = end.end()
-    negations = list(NEGATION.finditer(plain, clause_start))
-    if not negations:
-        return False
-    between = COMMA_PHRASE.sub(" ", plain[negations[-1].end() :])
-    return "," not in between and len(between.split()) <= MAX_WORDS_BETWEEN
+            clause_starts.append(end.end())
+    negations = [match.span() for match in NEGATION.finditer(plain)]
+    negation_ends = [end for _, end in negations]
+
+    def negated(start: int) -> bool:
+        clause_start = clause_starts[bisect_right(clause_starts, start) - 1]
+        last = bisect_right(negation_ends, start) - 1  # the last negation before `start`
+        if last < 0 or negations[last][0] < clause_start:
+            return False
+        between = COMMA_PHRASE.sub(" ", plain[negation_ends[last] : start])
+        return "," not in between and len(between.split()) <= MAX_WORDS_BETWEEN
+
+    return negated
 
 
 CHAINED_EDIT = wrapped(rf",? and {QUOTE} (?:to|with) {QUOTE}")
@@ -457,9 +475,10 @@ def location_link(place: str, source: str, target: str, recorder: Recorder) -> d
 def edit_phrases(text: str):
     """(original or None, replacement, phrase, negated, replacement span) for each rewrite
     the text words; a chained pair shares its Change/Replace verb's negation."""
+    negated = negation_reader(text)
     for pattern_index, pattern in enumerate(EDITS):
         for match in pattern.finditer(text):
-            is_negated = negated(text, match.start())
+            is_negated = negated(match.start())
             matches = [match]
             while pattern is EDITS[-1] and (chained := CHAINED_EDIT.match(text, matches[-1].end())):
                 matches.append(chained)
@@ -473,7 +492,7 @@ def edit_phrases(text: str):
                     replacement = unquote(phrase.group(index))
                     yield original, replacement, phrase.group(0), is_negated, phrase.span(index)
     for match in PROPOSED_WORDING.finditer(text):
-        is_negated = negated(text, match.start())
+        is_negated = negated(match.start())
         yield None, match.group(1), match.group(0), is_negated, match.span(1)
 
 

@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Python package
+
+Hardening against inputs the caller does not control, from a security scan of the package.
+
+- `load_schema(path)` returns the schema at `path` and no longer changes the schema that
+  later `validate_canonical` calls use: only `schema_path` chooses one, for that call.
+- Validation never downloads a schema. A `$ref` in a custom schema that is not in the
+  schema itself or a JSON Schema metaschema fails instead of being fetched.
+- `uniqueItems` is checked in linear time; jsonschema compared objects, such as the
+  entries of a finding's `about`, pair by pair.
+- JATS that declares entities (`<!ENTITY …>`) is refused with a ValueError, by `from_jats`,
+  `to_jats` and `sub_articles` alike.
+- A saved OpenReview page that gives two notes the same ID is refused with a ValueError.
+  Its Markdown writes a bare web address with markup in it as a link, writes `<` and `>`
+  in math as `\lt{}` and `\gt{}`, and keeps inline code on one line.
+- Writing a Reviewer3 report refuses a reference table of more than 100,000 cells.
+- Fuzzy quote anchoring skips a comparison of more than 5,000,000 quote-by-block character
+  pairs, leaving the quote unanchored.
+- The OpenReview page reader, the Reviewer3 and DeepReview report readers, gap counting and
+  JATS import take time in proportion to their input where some inputs took quadratic or
+  exponential time.
+
 ## 0.9.3
 
 A compatible release: every review valid under 0.9.2 is still valid and means the same

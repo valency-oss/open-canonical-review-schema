@@ -7,27 +7,69 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Collection
+from collections.abc import Collection, Iterator, Mapping
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, ValidationError
+from jsonschema.validators import extend
+from referencing import Registry
 
 from .hierarchy import resolve_definition
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "canonical-review.schema.json"
 
+
+def _frozen(value: Any) -> Any:
+    """A hashable form of a JSON value under JSON Schema equality: 1 equals 1.0, but true
+    is not 1, and object key order does not matter."""
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, Mapping):
+        return ("object", frozenset((key, _frozen(item)) for key, item in value.items()))
+    if isinstance(value, list | tuple):
+        return ("array", tuple(_frozen(item) for item in value))
+    return ("value", value)
+
+
+def _unique_items(validator, unique: bool, instance: Any, schema: dict) -> Iterator:
+    """`uniqueItems` in linear time; jsonschema compares unsortable items, such as
+    objects, pair by pair."""
+    if unique and validator.is_type(instance, "array"):
+        seen = set()
+        for item in instance:
+            key = _frozen(item)
+            if key in seen:
+                yield ValidationError(f"{instance!r} has non-unique elements")
+                return
+            seen.add(key)
+
+
+_Validator = extend(Draft202012Validator, {"uniqueItems": _unique_items})
+# A schema's references resolve within itself and the JSON Schema metaschemas only: a
+# reference to anything else fails instead of being downloaded
+_OFFLINE = Registry()
+
+
+def _validator_for(schema: dict[str, Any]) -> Draft202012Validator:
+    return _Validator(schema, registry=_OFFLINE)
+
+
 _validator: Draft202012Validator | None = None
-_schema: dict[str, Any] | None = None
 
 
 def load_schema(path: str | Path | None = None) -> dict[str, Any]:
-    global _schema, _validator
-    p = Path(path) if path else SCHEMA_PATH
-    _schema = json.loads(p.read_text())
-    _validator = Draft202012Validator(_schema)
-    return _schema
+    """The schema at `path`, by default the packaged one. Loading a schema never changes
+    which one `validate_canonical` validates against."""
+    return json.loads((Path(path) if path else SCHEMA_PATH).read_text())
+
+
+def _default_validator() -> Draft202012Validator:
+    global _validator
+    if _validator is None:
+        _validator = _validator_for(load_schema())
+    return _validator
 
 
 def validate_canonical(
@@ -41,12 +83,9 @@ def validate_canonical(
     """Validate a canonical review object; raises ValidationError on failure. A
     `schema_path` applies to this call only; later calls use the packaged schema."""
     if schema_path is not None:
-        validator = Draft202012Validator(json.loads(Path(schema_path).read_text()))
+        validator = _validator_for(load_schema(schema_path))
     else:
-        if _validator is None:
-            load_schema()
-        assert _validator is not None
-        validator = _validator
+        validator = _default_validator()
     validator.validate(obj)
     if is_hierarchical(validator.schema.get("$id", "")) or is_hierarchical(obj.get("$schema", "")):
         check_references(
@@ -98,7 +137,7 @@ def has_content(review: dict[str, Any]) -> bool:
     schema = ocrs_schema()
     [rule] = [r for r in schema["allOf"] if r.get("$anchor") == "reviewContent"]
     # The rule refers to definitions in $defs, so it is checked alongside them
-    return Draft202012Validator({**rule, "$defs": schema["$defs"]}).is_valid(review)
+    return _validator_for({**rule, "$defs": schema["$defs"]}).is_valid(review)
 
 
 def require_content(review: dict[str, Any], source: str) -> None:
@@ -180,7 +219,7 @@ def check_legacy_references(obj: dict[str, Any], *, evidence_schema: dict | None
                 raise ValidationError(
                     f"checks[{index}].finding_ids names {target!r}, which is not a finding id"
                 )
-    schema = evidence_schema or (_validator.schema if _validator else ocrs_schema())
+    schema = evidence_schema or ocrs_schema()
     for link in _evidence_links(obj, schema, schema):
         location = link.get("location", {})
         page, page_end = location.get("page"), location.get("page_end")
