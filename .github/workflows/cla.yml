@@ -40,6 +40,9 @@ jobs:
       # someone on it. Reads only the API, never the pull request's code; prints commit SHAs,
       # never the names, which the contributor chose.
       - name: Check what the CLA action cannot
+        # Named, bash runs with -o pipefail (the default, bash -e, does not), so a failed
+        # API call fails the step instead of jq reading nothing and finding nothing wrong
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number || github.event.issue.number }}
