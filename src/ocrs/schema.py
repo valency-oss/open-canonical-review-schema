@@ -30,6 +30,14 @@ def _frozen(value: Any) -> Any:
         return ("object", frozenset((key, _frozen(item)) for key, item in value.items()))
     if isinstance(value, list | tuple):
         return ("array", tuple(_frozen(item) for item in value))
+    # A number by its exact digits, not by Python's numeric hash, which chosen integers
+    # (multiples of 2**61 - 1) all share: as strings their hashes are randomized
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    if isinstance(value, int):
+        return ("number", hex(value))
+    if isinstance(value, float):
+        return ("number", value.hex())
     return ("value", value)
 
 

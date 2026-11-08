@@ -159,7 +159,6 @@ LAST_WORD = re.compile(r"[\w.]*$")
 ABBREVIATIONS = {"e.g", "i.e", "al", "ref", "refs", "sect", "sec", "eq", "eqs", "fig", "figs"}
 ABBREVIATIONS |= {"tab", "vs", "cf", "no", "p", "pp", "approx"}
 QUOTED = re.compile(QUOTE)
-COMMA_PHRASE = re.compile(r",[^,]*,")
 
 
 def masked(text: str) -> str:
@@ -191,14 +190,35 @@ def negation_reader(text: str) -> Callable[[int], bool]:
             clause_starts.append(end.end())
     negations = [match.span() for match in NEGATION.finditer(plain)]
     negation_ends = [end for _, end in negations]
+    # Whether the words from a negation to each offset after it leave the negation near
+    # enough to govern a rewrite there: commas pair up left to right into `, … ,` phrases
+    # with none left over, and at most MAX_WORDS_BETWEEN words lie outside those phrases.
+    # An offset answers to the last negation before it, so each stretch of text is read
+    # once, and only until it has too many words for any later offset.
+    near = bytearray(len(plain) + 1)
+    for index, end in enumerate(negation_ends):
+        following = negation_ends[index + 1] if index + 1 < len(negation_ends) else len(near)
+        inside = in_word = False  # inside a `, … ,` phrase; inside a word outside one
+        words = 0
+        for offset in range(end, following):
+            if offset > end:
+                char = plain[offset - 1]
+                if char == ",":
+                    inside, in_word = not inside, False
+                elif inside:
+                    pass
+                elif char.isspace():
+                    in_word = False
+                elif not in_word:
+                    words, in_word = words + 1, True
+            if words > MAX_WORDS_BETWEEN:
+                break
+            near[offset] = not inside
 
     def negated(start: int) -> bool:
         clause_start = clause_starts[bisect_right(clause_starts, start) - 1]
         last = bisect_right(negation_ends, start) - 1  # the last negation before `start`
-        if last < 0 or negations[last][0] < clause_start:
-            return False
-        between = COMMA_PHRASE.sub(" ", plain[negation_ends[last] : start])
-        return "," not in between and len(between.split()) <= MAX_WORDS_BETWEEN
+        return last >= 0 and negations[last][0] >= clause_start and bool(near[start])
 
     return negated
 

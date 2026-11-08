@@ -6,6 +6,7 @@ reader and validation. Each slow case took seconds to hours before; the bounds h
 a wide margin over what the fixed code takes."""
 
 import json
+import re
 import time
 import urllib.request
 from contextlib import contextmanager
@@ -70,6 +71,15 @@ def test_a_custom_schema_never_downloads_a_reference(tmp_path, monkeypatch):
 def test_unique_items_keeps_json_equality(items, unique):
     validator = _validator_for({"type": "array", "uniqueItems": True})
     assert validator.is_valid(items) is unique
+
+
+def test_unique_items_of_numbers_that_share_a_hash_take_linear_time():
+    # Python hashes every multiple of 2**61 - 1 alike
+    validator = _validator_for({"type": "array", "uniqueItems": True})
+    with within(2):
+        assert validator.is_valid([i * (2**61 - 1) for i in range(20_000)])
+    assert not validator.is_valid([2**60, float(2**60)])
+    assert validator.is_valid([0.1, 0.2, 1, 1.5])
 
 
 def test_unique_items_of_objects_take_linear_time():
@@ -257,6 +267,47 @@ def test_many_rewrites_in_one_issue_take_linear_time():
     assert len(phrases) == 5_001
     assert not any(negated for *_, negated, _ in phrases[:-1])
     assert phrases[-1][3] is True
+
+
+def test_many_rewrites_after_one_negation_take_linear_time():
+    text = "Do not " + ", ".join(['change "a" to "b"'] * 5_000) + "."
+    with within(2):
+        phrases = list(deepreview.edit_phrases(text))
+    assert len(phrases) == 5_000
+    assert phrases[0][3] is True
+
+
+def old_negated(text: str, start: int) -> bool:
+    """The rule as it was written before it was made linear, as an oracle."""
+    plain = deepreview.masked(text[:start])
+    clause_start = 0
+    for end in deepreview.CLAUSE_END.finditer(plain):
+        word = deepreview.LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()])
+        if end.group(0) != "." or word.group(0).lower() not in deepreview.ABBREVIATIONS:
+            clause_start = end.end()
+    negations = list(deepreview.NEGATION.finditer(plain, clause_start))
+    if not negations:
+        return False
+    between = re.sub(r",[^,]*,", " ", plain[negations[-1].end() :])
+    return "," not in between and len(between.split()) <= deepreview.MAX_WORDS_BETWEEN
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'Do not change "a" to "b", change "c" to "d", or change "e" to "f".',
+        "We cannot, as noted, really replace it; never, ever, at all, fix x, y, z here.",
+        "Avoid it, e.g. this one. Don't  do\n\n- that, or this, then not, x, y",
+        "not,,,,a b,c d,e f g",
+    ],
+)
+def test_negation_reader_agrees_with_the_rule_where_a_rewrite_can_start(text):
+    # A rewrite starts a word. Mid-word the old rule read a cut word as whole (the `not`
+    # of `noted`) and a quote cut short as open, so offsets there are not compared.
+    starts = [i for i in range(len(text)) if not text[i].isspace() and text[i - 1 : i].isspace()]
+    negated = deepreview.negation_reader(text)
+    assert [negated(i) for i in starts] == [old_negated(text, i) for i in starts]
+    assert any(negated(i) for i in starts) and not all(negated(i) for i in starts)
 
 
 # --- JATS -----------------------------------------------------------------------------------
