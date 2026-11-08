@@ -213,18 +213,17 @@ def negation_reader(text: str) -> Callable[[int], bool]:
             clause_starts.append(end.end())
     negations = [match.span() for match in NEGATION.finditer(plain)]
     negation_starts = [start for start, _ in negations]
-    # How far each offset is from the last negation before it: whether it is inside a
-    # `, … ,` phrase, inside a word outside one, and how many words lie outside those
-    # phrases, or None once there are too many for that negation to govern anything more.
-    # Each stretch of text answers to one negation and is read once.
-    reach: list[tuple[bool, bool, int] | None] = [None] * (len(plain) + 1)
+    # How far each offset is from the last negation before it, as a _step state, a byte
+    # each. Each stretch of text answers to one negation and is read once, and only until
+    # it is too far for that negation to govern anything more.
+    reach = bytearray([_TOO_FAR]) * (len(plain) + 1)
     for index, (_, end) in enumerate(negations):
         following = negations[index + 1][1] if index + 1 < len(negations) else len(reach)
-        state: tuple[bool, bool, int] | None = (False, False, 0)
+        state = _NEXT_TO
         for offset in range(end, following):
             if offset > end:
                 state = _step(state, plain[offset - 1])
-            if state is None:
+            if state == _TOO_FAR:
                 break
             reach[offset] = state
 
@@ -260,24 +259,23 @@ def negation_reader(text: str) -> Callable[[int], bool]:
         ]
         if reread_negations:
             negation_start, negation_end = (n + lead for n in reread_negations[-1])
-            state = (False, False, 0)
-            since = negation_end
+            state, since = _NEXT_TO, negation_end
         else:
             last = bisect_right(negation_starts, reread - 1) - 1
             if last < 0:
                 return False
             negation_start, negation_end = negations[last]
             if negation_end >= reread:
-                state, since = (False, False, 0), negation_end
+                state, since = _NEXT_TO, negation_end
             else:
                 state, since = reach[reread], reread
         if negation_start < clause_start:
             return False
         for char in window[since - lead :]:
-            if state is None:
+            if state == _TOO_FAR:
                 return False
             state = _step(state, char)
-        return state is not None and not state[0]
+        return state != _TOO_FAR and not state & _INSIDE
 
     return negated
 
@@ -288,21 +286,29 @@ def _ends_clause(plain: str, end: re.Match[str]) -> bool:
     return end.group(0) != "." or word not in ABBREVIATIONS
 
 
-def _step(state: tuple[bool, bool, int] | None, char: str) -> tuple[bool, bool, int] | None:
+# A distance from a negation, as one byte: whether the text so far is inside a `, … ,`
+# phrase, whether inside a word outside one, and how many words lie outside those phrases
+# (in WORD units), or _TOO_FAR once there are more than MAX_WORDS_BETWEEN
+_INSIDE, _IN_WORD, _WORD, _TOO_FAR = 1, 2, 4, 255
+_NEXT_TO = 0  # right after the negation
+
+
+def _step(state: int, char: str) -> int:
     """The distance from a negation, one character further: commas pair up left to right
     into `, … ,` phrases, and words outside them count, up to MAX_WORDS_BETWEEN."""
-    if state is None:
-        return None
-    inside, in_word, words = state
+    if state == _TOO_FAR:
+        return state
     if char == ",":
-        return (not inside, False, words)
-    if inside:
+        return (state ^ _INSIDE) & ~_IN_WORD
+    if state & _INSIDE:
         return state
     if char.isspace():
-        return (False, False, words)
-    if in_word:
+        return state & ~_IN_WORD
+    if state & _IN_WORD:
         return state
-    return None if words == MAX_WORDS_BETWEEN else (False, True, words + 1)
+    if state // _WORD == MAX_WORDS_BETWEEN:
+        return _TOO_FAR
+    return state + _WORD + _IN_WORD
 
 
 CHAINED_EDIT = wrapped(rf",? and {QUOTE} (?:to|with) {QUOTE}")
