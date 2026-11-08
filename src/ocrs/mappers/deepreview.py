@@ -153,8 +153,10 @@ MAX_WORDS_BETWEEN = 2
 # Where a clause can end: ; : ! ? a paragraph break or new list item (not a wrapped
 # line), or a full stop before a space that does not close an abbreviation (`Sect. 2`,
 # `e.g. `), allowing closing quotes or brackets between them; the stop in `2.3` is never
-# followed by a space
-CLAUSE_END = re.compile(r"[;:!?]|\n(?=\s*(?:\n|[-*]\s|\d+\.\s))|\.(?=[\"'”’)\]*`]*\s)")
+# followed by a space. Each lookahead reads its run once (a line break before another
+# within the same run of spaces, or a run of spaces and then an item), so a long run of
+# blank lines is not rescanned from every break in it.
+CLAUSE_END = re.compile(r"[;:!?]|\n(?=[^\S\n]*+\n|\s*+(?:[-*]\s|\d+\.\s))|\.(?=[\"'”’)\]*`]*+\s)")
 LAST_WORD = re.compile(r"[\w.]*$")
 ABBREVIATIONS = {"e.g", "i.e", "al", "ref", "refs", "sect", "sec", "eq", "eqs", "fig", "figs"}
 ABBREVIATIONS |= {"tab", "vs", "cf", "no", "p", "pp", "approx"}
@@ -167,6 +169,11 @@ def masked(text: str) -> str:
     chars = list(text)
     for match in QUOTED.finditer(text):
         chars[match.start() : match.end()] = " " * (match.end() - match.start())
+    return _blank_parentheticals(text, chars)
+
+
+def _blank_parentheticals(text: str, chars: list[str]) -> str:
+    """`chars` with every character of a parenthetical in `text` blanked out."""
     depth = 0
     for index, char in enumerate(text):
         if char == "(":
@@ -178,49 +185,124 @@ def masked(text: str) -> str:
     return "".join(chars)
 
 
+# What a clause end's lookahead or a negation's closing \b can read past: spaces, closing
+# quotes and brackets, and a list item's number or marker
+_LOOKAHEAD_CHARS = frozenset("\"'”’)]*`.-")
+_NEGATION_LENGTH = 9  # the longest negation, `avoiding`, and the character after it
+
+
 def negation_reader(text: str) -> Callable[[int], bool]:
     """A test of whether a negation in the clause before an offset governs the rewrite
-    there. The text is masked and its clauses and negations found once, however many
-    rewrites it words."""
+    there, as if the text ended at that offset. It reads the text once, however many
+    rewrites it words: each query rereads only the few characters before its offset whose
+    reading the end of the text could change.
+
+    Two things differ between the text cut at an offset and the whole of it. A quote that
+    opens before the offset and closes after it is no quote in the cut text (an inch mark,
+    `5"`, can open one), so from where it opens the cut text's own quotes are found again.
+    And a clause end or negation just before the offset may look past it. Everything
+    before both is read from the whole text.
+    """
     plain = masked(text)
+    unquoted = _blank_parentheticals(text, list(text))  # parentheticals only
+    quotes = [match.span() for match in QUOTED.finditer(text)]
+    quote_starts = [start for start, _ in quotes]
     clause_starts = [0]
     for end in CLAUSE_END.finditer(plain):
-        word = LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()]).group(0).lower()
-        if end.group(0) != "." or word not in ABBREVIATIONS:
+        if _ends_clause(plain, end):
             clause_starts.append(end.end())
     negations = [match.span() for match in NEGATION.finditer(plain)]
-    negation_ends = [end for _, end in negations]
-    # Whether the words from a negation to each offset after it leave the negation near
-    # enough to govern a rewrite there: commas pair up left to right into `, … ,` phrases
-    # with none left over, and at most MAX_WORDS_BETWEEN words lie outside those phrases.
-    # An offset answers to the last negation before it, so each stretch of text is read
-    # once, and only until it has too many words for any later offset.
-    near = bytearray(len(plain) + 1)
-    for index, end in enumerate(negation_ends):
-        following = negation_ends[index + 1] if index + 1 < len(negation_ends) else len(near)
-        inside = in_word = False  # inside a `, … ,` phrase; inside a word outside one
-        words = 0
+    negation_starts = [start for start, _ in negations]
+    # How far each offset is from the last negation before it: whether it is inside a
+    # `, … ,` phrase, inside a word outside one, and how many words lie outside those
+    # phrases, or None once there are too many for that negation to govern anything more.
+    # Each stretch of text answers to one negation and is read once.
+    reach: list[tuple[bool, bool, int] | None] = [None] * (len(plain) + 1)
+    for index, (_, end) in enumerate(negations):
+        following = negations[index + 1][1] if index + 1 < len(negations) else len(reach)
+        state: tuple[bool, bool, int] | None = (False, False, 0)
         for offset in range(end, following):
             if offset > end:
-                char = plain[offset - 1]
-                if char == ",":
-                    inside, in_word = not inside, False
-                elif inside:
-                    pass
-                elif char.isspace():
-                    in_word = False
-                elif not in_word:
-                    words, in_word = words + 1, True
-            if words > MAX_WORDS_BETWEEN:
+                state = _step(state, plain[offset - 1])
+            if state is None:
                 break
-            near[offset] = not inside
+            reach[offset] = state
 
     def negated(start: int) -> bool:
-        clause_start = clause_starts[bisect_right(clause_starts, start) - 1]
-        last = bisect_right(negation_ends, start) - 1  # the last negation before `start`
-        return last >= 0 and negations[last][0] >= clause_start and bool(near[start])
+        # Where the cut text starts to differ from the whole: the opening of a quote that
+        # closes past `start`, else `start`
+        cut = start
+        index = bisect_right(quote_starts, start - 1) - 1
+        if index >= 0 and quotes[index][1] > start:
+            cut = quotes[index][0]
+        # Back over what a lookahead could read past to reach `cut`, and a negation's length
+        reread = cut
+        while reread > 0 and (
+            plain[reread - 1].isspace()
+            or plain[reread - 1].isdecimal()
+            or plain[reread - 1] in _LOOKAHEAD_CHARS
+        ):
+            reread -= 1
+        reread = max(0, reread - _NEGATION_LENGTH)
+        lead = max(0, reread - 8)  # an abbreviation before a full stop is up to 8 long
+        # The cut text from `lead`: past `cut`, blank only the quotes it closes itself
+        tail = list(unquoted[cut:start])
+        for match in QUOTED.finditer(text, cut, start):
+            tail[match.start() - cut : match.end() - cut] = " " * (match.end() - match.start())
+        window = plain[lead:cut] + "".join(tail)
+
+        clause_start = clause_starts[bisect_right(clause_starts, reread) - 1]
+        for end in CLAUSE_END.finditer(window):
+            if end.start() + lead >= reread and _ends_clause(window, end):
+                clause_start = end.end() + lead
+        reread_negations = [
+            match.span() for match in NEGATION.finditer(window) if match.start() + lead >= reread
+        ]
+        if reread_negations:
+            negation_start, negation_end = (n + lead for n in reread_negations[-1])
+            state = (False, False, 0)
+            since = negation_end
+        else:
+            last = bisect_right(negation_starts, reread - 1) - 1
+            if last < 0:
+                return False
+            negation_start, negation_end = negations[last]
+            if negation_end >= reread:
+                state, since = (False, False, 0), negation_end
+            else:
+                state, since = reach[reread], reread
+        if negation_start < clause_start:
+            return False
+        for char in window[since - lead :]:
+            if state is None:
+                return False
+            state = _step(state, char)
+        return state is not None and not state[0]
 
     return negated
+
+
+def _ends_clause(plain: str, end: re.Match[str]) -> bool:
+    """Whether a CLAUSE_END match ends a clause: a full stop after an abbreviation does not."""
+    word = LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()]).group(0).lower()
+    return end.group(0) != "." or word not in ABBREVIATIONS
+
+
+def _step(state: tuple[bool, bool, int] | None, char: str) -> tuple[bool, bool, int] | None:
+    """The distance from a negation, one character further: commas pair up left to right
+    into `, … ,` phrases, and words outside them count, up to MAX_WORDS_BETWEEN."""
+    if state is None:
+        return None
+    inside, in_word, words = state
+    if char == ",":
+        return (not inside, False, words)
+    if inside:
+        return state
+    if char.isspace():
+        return (False, False, words)
+    if in_word:
+        return state
+    return None if words == MAX_WORDS_BETWEEN else (False, True, words + 1)
 
 
 CHAINED_EDIT = wrapped(rf",? and {QUOTE} (?:to|with) {QUOTE}")

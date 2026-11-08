@@ -245,7 +245,7 @@ def _sections(text: str) -> list[dict[str, str]]:
     for block in text.split("\n\n"):
         if title := _heading(block):
             sections.append((title, []))
-        elif sections:
+        elif sections and (block or sections[-1][1]):  # not empty blocks before any text
             sections[-1][1].append(block)
     joined = [{"title": title, "content": "\n\n".join(blocks)} for title, blocks in sections]
     return [s for s in joined if s["content"]]

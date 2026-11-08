@@ -6,6 +6,7 @@ reader and validation. Each slow case took seconds to hours before; the bounds h
 a wide margin over what the fixed code takes."""
 
 import json
+import random
 import re
 import time
 import urllib.request
@@ -80,6 +81,19 @@ def test_unique_items_of_numbers_that_share_a_hash_take_linear_time():
         assert validator.is_valid([i * (2**61 - 1) for i in range(20_000)])
     assert not validator.is_valid([2**60, float(2**60)])
     assert validator.is_valid([0.1, 0.2, 1, 1.5])
+
+
+def test_an_embedded_schema_resource_keeps_the_linear_check():
+    # A resource naming its own $schema has jsonschema switch to that dialect's class
+    for dialect in [
+        "https://json-schema.org/draft/2020-12/schema",
+        "http://json-schema.org/draft-07/schema#",
+    ]:
+        embedded = {"$schema": dialect, "$id": "urn:x", "type": "array", "uniqueItems": True}
+        validator = _validator_for({"$defs": {"x": embedded}, "$ref": "urn:x"})
+        with within(2):
+            assert validator.is_valid([{"a": i} for i in range(20_000)])
+        assert not validator.is_valid([{"a": 1}, {"a": 1}])
 
 
 def test_unique_items_of_objects_take_linear_time():
@@ -277,11 +291,14 @@ def test_many_rewrites_after_one_negation_take_linear_time():
     assert phrases[0][3] is True
 
 
+# The rule as it was written before it was made linear, with its own clause pattern
+OLD_CLAUSE_END = re.compile(r"[;:!?]|\n(?=\s*(?:\n|[-*]\s|\d+\.\s))|\.(?=[\"'”’)\]*`]*\s)")
+
+
 def old_negated(text: str, start: int) -> bool:
-    """The rule as it was written before it was made linear, as an oracle."""
     plain = deepreview.masked(text[:start])
     clause_start = 0
-    for end in deepreview.CLAUSE_END.finditer(plain):
+    for end in OLD_CLAUSE_END.finditer(plain):
         word = deepreview.LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()])
         if end.group(0) != "." or word.group(0).lower() not in deepreview.ABBREVIATIONS:
             clause_start = end.end()
@@ -292,22 +309,43 @@ def old_negated(text: str, start: int) -> bool:
     return "," not in between and len(between.split()) <= deepreview.MAX_WORDS_BETWEEN
 
 
+TOKENS = [
+    *["not", "never", "don't", "avoiding", "cannot", " ", " ", " ", ",", ",", '"', '"'],
+    *['*"', '"*', '`"', '"`', ".", ". ", "e.g.", ";", "\n", "\n\n", "- ", "1. ", "("],
+    *[")", '5"', 'change "a" to "b"', "x", "we", "’", "'", "]", "12", "\t"],
+]
+
+
 @pytest.mark.parametrize(
     "text",
     [
         'Do not change "a" to "b", change "c" to "d", or change "e" to "f".',
         "We cannot, as noted, really replace it; never, ever, at all, fix x, y, z here.",
         "Avoid it, e.g. this one. Don't  do\n\n- that, or this, then not, x, y",
-        "not,,,,a b,c d,e f g",
+        'Use 5" margins. Do not change "a" to "b".',
+        '`"avoiding’avoidingnot wenot"`',
+        *(
+            "".join(random.Random(seed).choices(TOKENS, k=random.Random(-seed).randint(0, 40)))
+            for seed in range(300)
+        ),
     ],
 )
-def test_negation_reader_agrees_with_the_rule_where_a_rewrite_can_start(text):
-    # A rewrite starts a word. Mid-word the old rule read a cut word as whole (the `not`
-    # of `noted`) and a quote cut short as open, so offsets there are not compared.
-    starts = [i for i in range(len(text)) if not text[i].isspace() and text[i - 1 : i].isspace()]
+def test_negation_reader_reads_each_offset_as_the_text_cut_there(text):
     negated = deepreview.negation_reader(text)
-    assert [negated(i) for i in starts] == [old_negated(text, i) for i in starts]
-    assert any(negated(i) for i in starts) and not all(negated(i) for i in starts)
+    offsets = range(len(text) + 1)
+    assert [negated(i) for i in offsets] == [old_negated(text, i) for i in offsets]
+
+
+def test_an_inch_mark_does_not_hide_a_negation():
+    # The inch mark and the rewrite's first quote pair up as a quote in the whole text
+    [phrase] = deepreview.edit_phrases('Use 5" margins. Do not change "a" to "b".')
+    assert phrase[3] is True
+
+
+def test_blank_lines_take_linear_time():
+    with within(2):
+        assert not list(deepreview.edit_phrases("x" + "\n" * 200_000 + "y"))
+        list(deepreview.CLAUSE_END.finditer("\n" * 200_000 + "\t" * 200_000 + "x"))
 
 
 # --- JATS -----------------------------------------------------------------------------------
@@ -326,6 +364,14 @@ def test_jats_that_declares_an_entity_is_refused():
 def test_ill_formed_jats_is_still_an_xml_error():
     with pytest.raises(SyntaxError):  # ElementTree's ParseError
         from_jats({"sub_article": "<sub-article><body>"})
+
+
+def test_empty_blocks_before_a_sections_text_are_not_its_content():
+    from ocrs.mappers.jats import _sections
+
+    assert _sections("Summary:\n\n\n\nFine.\n\n\n\nGood.") == [
+        {"title": "Summary", "content": "Fine.\n\n\n\nGood."}
+    ]
 
 
 def test_a_shared_affiliation_is_read_once_and_kept_once():

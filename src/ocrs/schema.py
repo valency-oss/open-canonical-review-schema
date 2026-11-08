@@ -12,6 +12,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
+import attrs
 from jsonschema import Draft202012Validator, ValidationError
 from jsonschema.validators import extend
 from referencing import Registry
@@ -54,7 +55,33 @@ def _unique_items(validator, unique: bool, instance: Any, schema: dict) -> Itera
             seen.add(key)
 
 
-_Validator = extend(Draft202012Validator, {"uniqueItems": _unique_items})
+_HARDENED: dict[type, type] = {}  # each jsonschema validator class, with _unique_items
+
+
+def _hardened(cls: type) -> type:
+    """`cls` with `uniqueItems` checked by _unique_items, also in every subschema: where an
+    embedded resource names its own `$schema`, jsonschema switches to that dialect's stock
+    class, which would check it pair by pair again."""
+    if cls in _HARDENED.values():
+        return cls
+    if cls not in _HARDENED:
+        hardened = extend(cls, {"uniqueItems": _unique_items})
+        stock_evolve = hardened.evolve
+
+        def evolve(self, **changes):
+            evolved = stock_evolve(self, **changes)
+            kind = _hardened(type(evolved))
+            if kind is type(evolved):
+                return evolved
+            fields = [f for f in attrs.fields(type(evolved)) if f.init]
+            return kind(**{f.alias: getattr(evolved, f.name) for f in fields})
+
+        hardened.evolve = evolve
+        _HARDENED[cls] = hardened
+    return _HARDENED[cls]
+
+
+_Validator = _hardened(Draft202012Validator)
 # A schema's references resolve within itself and the JSON Schema metaschemas only: a
 # reference to anything else fails instead of being downloaded
 _OFFLINE = Registry()
