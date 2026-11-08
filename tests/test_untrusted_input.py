@@ -316,6 +316,13 @@ TOKENS = [
 ]
 
 
+# Spaces, breaks and list markers, which the cut text reads differently just before a cut
+SPACING = [
+    *["not", "n't", " ", "  ", "\t", "\n", "\n\n", "\n  ", "-", "*", "- ", "* ", "1", "12"],
+    *["3.", "1. ", ".", ", ", ",", ")", "]", '"', "(", "x", 'change "a" to "b"', "\r", "\xa0"],
+]
+
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -327,6 +334,10 @@ TOKENS = [
         *(
             "".join(random.Random(seed).choices(TOKENS, k=random.Random(-seed).randint(0, 40)))
             for seed in range(300)
+        ),
+        *(
+            "".join(random.Random(seed).choices(SPACING, k=random.Random(-seed).randint(0, 40)))
+            for seed in range(150)
         ),
     ],
 )
@@ -340,6 +351,12 @@ def test_an_inch_mark_does_not_hide_a_negation():
     # The inch mark and the rewrite's first quote pair up as a quote in the whole text
     [phrase] = deepreview.edit_phrases('Use 5" margins. Do not change "a" to "b".')
     assert phrase[3] is True
+
+
+def test_an_unclosed_parenthesis_before_many_rewrites_takes_linear_time():
+    # Everything after it is blanked out, and no query reads back over that
+    with within(2):
+        assert len(list(deepreview.edit_phrases("(" + 'Change "a" to "b". ' * 5_000))) == 5_000
 
 
 def test_blank_lines_take_linear_time():

@@ -47,7 +47,8 @@ recorded as a coercion and left without severity.
 from __future__ import annotations
 
 import re
-from bisect import bisect_right
+from array import array
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 from typing import Any
 
@@ -156,7 +157,15 @@ MAX_WORDS_BETWEEN = 2
 # followed by a space. Each lookahead reads its run once (a line break before another
 # within the same run of spaces, or a run of spaces and then an item), so a long run of
 # blank lines is not rescanned from every break in it.
-CLAUSE_END = re.compile(r"[;:!?]|\n(?=[^\S\n]*+\n|\s*+(?:[-*]\s|\d+\.\s))|\.(?=[\"'”’)\]*`]*+\s)")
+BREAK_THEN_BREAK = re.compile(r"[^\S\n]*+\n")  # what follows a break that ends a clause
+SPACE_THEN_ITEM = re.compile(r"\s*+(?:[-*]\s|\d+\.\s)")  # or this
+ITEM = re.compile(r"[-*]\s|\d+\.\s")
+CLOSING = "\"'”’)]*`"  # what a full stop that ends a clause may be followed by, then a space
+STOP_THEN_SPACE = re.compile(rf"[{re.escape(CLOSING)}]*+\s")
+CLAUSE_END = re.compile(
+    rf"[;:!?]|\n(?={BREAK_THEN_BREAK.pattern}|{SPACE_THEN_ITEM.pattern})"
+    rf"|\.(?={STOP_THEN_SPACE.pattern})"
+)
 LAST_WORD = re.compile(r"[\w.]*$")
 ABBREVIATIONS = {"e.g", "i.e", "al", "ref", "refs", "sect", "sec", "eq", "eqs", "fig", "figs"}
 ABBREVIATIONS |= {"tab", "vs", "cf", "no", "p", "pp", "approx"}
@@ -185,40 +194,38 @@ def _blank_parentheticals(text: str, chars: list[str]) -> str:
     return "".join(chars)
 
 
-# What a clause end's lookahead or a negation's closing \b can read past: spaces, closing
-# quotes and brackets, and a list item's number or marker
-_LOOKAHEAD_CHARS = frozenset("\"'”’)]*`.-")
-_NEGATION_LENGTH = 9  # the longest negation, `avoiding`, and the character after it
-
-
 def negation_reader(text: str) -> Callable[[int], bool]:
     """A test of whether a negation in the clause before an offset governs the rewrite
     there, as if the text ended at that offset. It reads the text once, however many
-    rewrites it words: each query rereads only the few characters before its offset whose
-    reading the end of the text could change.
+    rewrites it words.
 
     Two things differ between the text cut at an offset and the whole of it. A quote that
     opens before the offset and closes after it is no quote in the cut text (an inch mark,
-    `5"`, can open one), so from where it opens the cut text's own quotes are found again.
-    And a clause end or negation just before the offset may look past it. Everything
-    before both is read from the whole text.
+    `5"`, can open one), so from where it opens the cut text is read again, finding its
+    own quotes. And just before the cut, three things can look past it: a full stop
+    followed by closing quotes or brackets, the last line break before a run of spaces
+    and perhaps a list item's marker, and a negation's closing \\b. Those are read again
+    as the cut text has them; everything else is read from the whole text.
     """
     plain = masked(text)
     unquoted = _blank_parentheticals(text, list(text))  # parentheticals only
     quotes = [match.span() for match in QUOTED.finditer(text)]
     quote_starts = [start for start, _ in quotes]
-    clause_starts = [0]
+    clause_starts = [0]  # the end of each clause end, after a 0 for the text's start
     for end in CLAUSE_END.finditer(plain):
-        if _ends_clause(plain, end):
+        if _ends_clause(plain, end.start()):
             clause_starts.append(end.end())
+    spaces = [match.span() for match in re.finditer(r"\s+", plain)]
+    space_ends = array("q", (end for _, end in spaces))
+    breaks = array("q", (match.start() for match in re.finditer("\n", plain)))
     negations = [match.span() for match in NEGATION.finditer(plain)]
-    negation_starts = [start for start, _ in negations]
+    negation_ends = [end for _, end in negations]
     # How far each offset is from the last negation before it, as a _step state, a byte
     # each. Each stretch of text answers to one negation and is read once, and only until
     # it is too far for that negation to govern anything more.
     reach = bytearray([_TOO_FAR]) * (len(plain) + 1)
-    for index, (_, end) in enumerate(negations):
-        following = negations[index + 1][1] if index + 1 < len(negations) else len(reach)
+    for index, end in enumerate(negation_ends):
+        following = negation_ends[index + 1] if index + 1 < len(negation_ends) else len(reach)
         state = _NEXT_TO
         for offset in range(end, following):
             if offset > end:
@@ -229,46 +236,74 @@ def negation_reader(text: str) -> Callable[[int], bool]:
 
     def negated(start: int) -> bool:
         # Where the cut text starts to differ from the whole: the opening of a quote that
-        # closes past `start`, else `start`
+        # closes past `start`, else `start`. Past it, blank only the quotes it closes itself.
         cut = start
         index = bisect_right(quote_starts, start - 1) - 1
         if index >= 0 and quotes[index][1] > start:
             cut = quotes[index][0]
-        # Back over what a lookahead could read past to reach `cut`, and a negation's length
-        reread = cut
-        while reread > 0 and (
-            plain[reread - 1].isspace()
-            or plain[reread - 1].isdecimal()
-            or plain[reread - 1] in _LOOKAHEAD_CHARS
-        ):
-            reread -= 1
-        reread = max(0, reread - _NEGATION_LENGTH)
-        lead = max(0, reread - 8)  # an abbreviation before a full stop is up to 8 long
-        # The cut text from `lead`: past `cut`, blank only the quotes it closes itself
         tail = list(unquoted[cut:start])
         for match in QUOTED.finditer(text, cut, start):
             tail[match.start() - cut : match.end() - cut] = " " * (match.end() - match.start())
-        window = plain[lead:cut] + "".join(tail)
+        after = "".join(tail)
 
-        clause_start = clause_starts[bisect_right(clause_starts, reread) - 1]
-        for end in CLAUSE_END.finditer(window):
-            if end.start() + lead >= reread and _ends_clause(window, end):
+        # A full stop whose closing quotes and brackets run up to the cut
+        stop = cut
+        while stop > 0 and plain[stop - 1] in CLOSING:
+            stop -= 1
+        stop = stop - 1 if stop > 0 and plain[stop - 1] == "." else -1
+        stop_ends = (
+            stop >= 0
+            and _ends_clause(plain, stop)
+            and bool(STOP_THEN_SPACE.match(plain[stop + 1 : cut] + after))
+        )
+        # The last break in the run of spaces before the cut, or before a list item's marker
+        # or number that runs up to it
+        item = cut
+        if item > 0 and plain[item - 1] in "-*":
+            item -= 1
+        else:
+            if item > 1 and plain[item - 1] == "." and plain[item - 2].isdecimal():
+                item -= 1
+            while item > 0 and plain[item - 1].isdecimal():
+                item -= 1
+        line_break, break_ends = -1, False
+        if item > 0 and plain[item - 1].isspace():
+            run_start = spaces[bisect_left(space_ends, item)][0]
+            last = bisect_left(breaks, item) - 1
+            if last >= 0 and breaks[last] >= run_start:
+                line_break = breaks[last]
+                marker = plain[item:cut]
+                break_ends = bool(
+                    ITEM.match(marker + after)
+                    if marker
+                    else BREAK_THEN_BREAK.match(after) or SPACE_THEN_ITEM.match(after)
+                )
+
+        # The last clause end before the cut that the cut does not change, then those
+        index = bisect_right(clause_starts, cut) - 1
+        while index > 0 and clause_starts[index] - 1 in (stop, line_break):
+            index -= 1
+        clause_start = max(
+            clause_starts[index],
+            stop + 1 if stop_ends else 0,
+            line_break + 1 if break_ends else 0,
+        )
+        # The cut text from a little before the cut: its clause ends and negations there
+        lead = max(0, cut - 10)
+        window = plain[lead:cut] + after
+        for end in CLAUSE_END.finditer(window, cut - lead):
+            if _ends_clause(window, end.start()):
                 clause_start = end.end() + lead
-        reread_negations = [
-            match.span() for match in NEGATION.finditer(window) if match.start() + lead >= reread
-        ]
-        if reread_negations:
-            negation_start, negation_end = (n + lead for n in reread_negations[-1])
+        near_cut = [m.span() for m in NEGATION.finditer(window) if m.end() + lead >= cut]
+        if near_cut:
+            negation_start, negation_end = (n + lead for n in near_cut[-1])
             state, since = _NEXT_TO, negation_end
         else:
-            last = bisect_right(negation_starts, reread - 1) - 1
+            last = bisect_left(negation_ends, cut) - 1  # the last to end before the cut
             if last < 0:
                 return False
-            negation_start, negation_end = negations[last]
-            if negation_end >= reread:
-                state, since = _NEXT_TO, negation_end
-            else:
-                state, since = reach[reread], reread
+            negation_start = negations[last][0]
+            state, since = reach[cut], cut
         if negation_start < clause_start:
             return False
         for char in window[since - lead :]:
@@ -280,10 +315,11 @@ def negation_reader(text: str) -> Callable[[int], bool]:
     return negated
 
 
-def _ends_clause(plain: str, end: re.Match[str]) -> bool:
-    """Whether a CLAUSE_END match ends a clause: a full stop after an abbreviation does not."""
-    word = LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()]).group(0).lower()
-    return end.group(0) != "." or word not in ABBREVIATIONS
+def _ends_clause(plain: str, at: int) -> bool:
+    """Whether a CLAUSE_END match at `at` ends a clause: a full stop after an abbreviation
+    does not."""
+    word = LAST_WORD.search(plain[max(0, at - 8) : at]).group(0).lower()
+    return plain[at] != "." or word not in ABBREVIATIONS
 
 
 # A distance from a negation, as one byte: whether the text so far is inside a `, … ,`
