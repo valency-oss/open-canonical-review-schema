@@ -47,6 +47,9 @@ recorded as a coercion and left without severity.
 from __future__ import annotations
 
 import re
+from array import array
+from bisect import bisect_left, bisect_right
+from collections.abc import Callable
 from typing import Any
 
 from ..anchors import Block
@@ -86,7 +89,14 @@ PLACE_WORD = (
 # A heading that is only places, such as `Page 1, Column 2 (…)`, `Abstract (Page 1)` or
 # `Table I(a) and Table I(b), …`: its first part is place words and identifiers alone,
 # so `Table 1 Conflicts with the Prose (…)` is a title, not a place
-PLACE_ID = r"(?:\d[\w.()–-]*|[IVXL]+(?:-[\w.]+)?(?:\([a-z]\))?|[A-Z][\d.]*(?:\([a-z]\))?)"
+# Each identifier is read one way only: its runs are possessive, so the `and` in `1and2`
+# is never tried both as part of one and as the word between two, and a lone `I`, `V`, `X`
+# or `L` is a numeral, never also a lettered identifier. Without that, a long list that
+# fails at its end would be retried every way it could be split.
+PLACE_ID = (
+    r"(?:\d[\w.()–-]*+|[IVXL]++(?:-[\w.]++)?(?:\([a-z]\))?"
+    r"|(?![IVXL](?![\d.]))[A-Z][\d.]*+(?:\([a-z]\))?)"
+)
 PLACES_ONLY = re.compile(
     rf"^(?i:{PLACE_WORD})(?:\s+{PLACE_ID}(?:\s*(?:,|and|&)\s*(?:(?i:{PLACE_WORD})\s+)?{PLACE_ID})*)?$"
 )
@@ -144,13 +154,22 @@ MAX_WORDS_BETWEEN = 2
 # Where a clause can end: ; : ! ? a paragraph break or new list item (not a wrapped
 # line), or a full stop before a space that does not close an abbreviation (`Sect. 2`,
 # `e.g. `), allowing closing quotes or brackets between them; the stop in `2.3` is never
-# followed by a space
-CLAUSE_END = re.compile(r"[;:!?]|\n(?=\s*(?:\n|[-*]\s|\d+\.\s))|\.(?=[\"'”’)\]*`]*\s)")
+# followed by a space. Each lookahead reads its run once (a line break before another
+# within the same run of spaces, or a run of spaces and then an item), so a long run of
+# blank lines is not rescanned from every break in it.
+BREAK_THEN_BREAK = re.compile(r"[^\S\n]*+\n")  # what follows a break that ends a clause
+SPACE_THEN_ITEM = re.compile(r"\s*+(?:[-*]\s|\d+\.\s)")  # or this
+ITEM = re.compile(r"[-*]\s|\d+\.\s")
+CLOSING = "\"'”’)]*`"  # what a full stop that ends a clause may be followed by, then a space
+STOP_THEN_SPACE = re.compile(rf"[{re.escape(CLOSING)}]*+\s")
+CLAUSE_END = re.compile(
+    rf"[;:!?]|\n(?={BREAK_THEN_BREAK.pattern}|{SPACE_THEN_ITEM.pattern})"
+    rf"|\.(?={STOP_THEN_SPACE.pattern})"
+)
 LAST_WORD = re.compile(r"[\w.]*$")
 ABBREVIATIONS = {"e.g", "i.e", "al", "ref", "refs", "sect", "sec", "eq", "eqs", "fig", "figs"}
 ABBREVIATIONS |= {"tab", "vs", "cf", "no", "p", "pp", "approx"}
 QUOTED = re.compile(QUOTE)
-COMMA_PHRASE = re.compile(r",[^,]*,")
 
 
 def masked(text: str) -> str:
@@ -159,6 +178,11 @@ def masked(text: str) -> str:
     chars = list(text)
     for match in QUOTED.finditer(text):
         chars[match.start() : match.end()] = " " * (match.end() - match.start())
+    return _blank_parentheticals(text, chars)
+
+
+def _blank_parentheticals(text: str, chars: list[str]) -> str:
+    """`chars` with every character of a parenthetical in `text` blanked out."""
     depth = 0
     for index, char in enumerate(text):
         if char == "(":
@@ -170,19 +194,157 @@ def masked(text: str) -> str:
     return "".join(chars)
 
 
-def negated(text: str, start: int) -> bool:
-    """Whether a negation in the clause before `start` governs the rewrite at `start`."""
-    plain = masked(text[:start])
-    clause_start = 0
+def negation_reader(text: str) -> Callable[[int], bool]:
+    """A test of whether a negation in the clause before an offset governs the rewrite
+    there, as if the text ended at that offset. It reads the text once, however many
+    rewrites it words.
+
+    Two things differ between the text cut at an offset and the whole of it. A quote that
+    opens before the offset and closes after it is no quote in the cut text (an inch mark,
+    `5"`, can open one), so from where it opens the cut text is read again, finding its
+    own quotes. And just before the cut, three things can look past it: a full stop
+    followed by closing quotes or brackets, the last line break before a run of spaces
+    and perhaps a list item's marker, and a negation's closing \\b. Those are read again
+    as the cut text has them; everything else is read from the whole text.
+    """
+    plain = masked(text)
+    unquoted = _blank_parentheticals(text, list(text))  # parentheticals only
+    quotes = [match.span() for match in QUOTED.finditer(text)]
+    quote_starts = [start for start, _ in quotes]
+    clause_starts = [0]  # the end of each clause end, after a 0 for the text's start
     for end in CLAUSE_END.finditer(plain):
-        word = LAST_WORD.search(plain[max(0, end.start() - 8) : end.start()]).group(0).lower()
-        if end.group(0) != "." or word not in ABBREVIATIONS:
-            clause_start = end.end()
-    negations = list(NEGATION.finditer(plain, clause_start))
-    if not negations:
-        return False
-    between = COMMA_PHRASE.sub(" ", plain[negations[-1].end() :])
-    return "," not in between and len(between.split()) <= MAX_WORDS_BETWEEN
+        if _ends_clause(plain, end.start()):
+            clause_starts.append(end.end())
+    spaces = [match.span() for match in re.finditer(r"\s+", plain)]
+    space_ends = array("q", (end for _, end in spaces))
+    breaks = array("q", (match.start() for match in re.finditer("\n", plain)))
+    negations = [match.span() for match in NEGATION.finditer(plain)]
+    negation_ends = [end for _, end in negations]
+    # How far each offset is from the last negation before it, as a _step state, a byte
+    # each. Each stretch of text answers to one negation and is read once, and only until
+    # it is too far for that negation to govern anything more.
+    reach = bytearray([_TOO_FAR]) * (len(plain) + 1)
+    for index, end in enumerate(negation_ends):
+        following = negation_ends[index + 1] if index + 1 < len(negation_ends) else len(reach)
+        state = _NEXT_TO
+        for offset in range(end, following):
+            if offset > end:
+                state = _step(state, plain[offset - 1])
+            if state == _TOO_FAR:
+                break
+            reach[offset] = state
+
+    def negated(start: int) -> bool:
+        # Where the cut text starts to differ from the whole: the opening of a quote that
+        # closes past `start`, else `start`. Past it, blank only the quotes it closes itself.
+        cut = start
+        index = bisect_right(quote_starts, start - 1) - 1
+        if index >= 0 and quotes[index][1] > start:
+            cut = quotes[index][0]
+        tail = list(unquoted[cut:start])
+        for match in QUOTED.finditer(text, cut, start):
+            tail[match.start() - cut : match.end() - cut] = " " * (match.end() - match.start())
+        after = "".join(tail)
+
+        # A full stop whose closing quotes and brackets run up to the cut
+        stop = cut
+        while stop > 0 and plain[stop - 1] in CLOSING:
+            stop -= 1
+        stop = stop - 1 if stop > 0 and plain[stop - 1] == "." else -1
+        stop_ends = (
+            stop >= 0
+            and _ends_clause(plain, stop)
+            and bool(STOP_THEN_SPACE.match(plain[stop + 1 : cut] + after))
+        )
+        # The last break in the run of spaces before the cut, or before a list item's marker
+        # or number that runs up to it
+        item = cut
+        if item > 0 and plain[item - 1] in "-*":
+            item -= 1
+        else:
+            if item > 1 and plain[item - 1] == "." and plain[item - 2].isdecimal():
+                item -= 1
+            while item > 0 and plain[item - 1].isdecimal():
+                item -= 1
+        line_break, break_ends = -1, False
+        if item > 0 and plain[item - 1].isspace():
+            run_start = spaces[bisect_left(space_ends, item)][0]
+            last = bisect_left(breaks, item) - 1
+            if last >= 0 and breaks[last] >= run_start:
+                line_break = breaks[last]
+                marker = plain[item:cut]
+                break_ends = bool(
+                    ITEM.match(marker + after)
+                    if marker
+                    else BREAK_THEN_BREAK.match(after) or SPACE_THEN_ITEM.match(after)
+                )
+
+        # The last clause end before the cut that the cut does not change, then those
+        index = bisect_right(clause_starts, cut) - 1
+        while index > 0 and clause_starts[index] - 1 in (stop, line_break):
+            index -= 1
+        clause_start = max(
+            clause_starts[index],
+            stop + 1 if stop_ends else 0,
+            line_break + 1 if break_ends else 0,
+        )
+        # The cut text from a little before the cut: its clause ends and negations there
+        lead = max(0, cut - 10)
+        window = plain[lead:cut] + after
+        for end in CLAUSE_END.finditer(window, cut - lead):
+            if _ends_clause(window, end.start()):
+                clause_start = end.end() + lead
+        near_cut = [m.span() for m in NEGATION.finditer(window) if m.end() + lead >= cut]
+        if near_cut:
+            negation_start, negation_end = (n + lead for n in near_cut[-1])
+            state, since = _NEXT_TO, negation_end
+        else:
+            last = bisect_left(negation_ends, cut) - 1  # the last to end before the cut
+            if last < 0:
+                return False
+            negation_start = negations[last][0]
+            state, since = reach[cut], cut
+        if negation_start < clause_start:
+            return False
+        for char in window[since - lead :]:
+            if state == _TOO_FAR:
+                return False
+            state = _step(state, char)
+        return state != _TOO_FAR and not state & _INSIDE
+
+    return negated
+
+
+def _ends_clause(plain: str, at: int) -> bool:
+    """Whether a CLAUSE_END match at `at` ends a clause: a full stop after an abbreviation
+    does not."""
+    word = LAST_WORD.search(plain[max(0, at - 8) : at]).group(0).lower()
+    return plain[at] != "." or word not in ABBREVIATIONS
+
+
+# A distance from a negation, as one byte: whether the text so far is inside a `, … ,`
+# phrase, whether inside a word outside one, and how many words lie outside those phrases
+# (in WORD units), or _TOO_FAR once there are more than MAX_WORDS_BETWEEN
+_INSIDE, _IN_WORD, _WORD, _TOO_FAR = 1, 2, 4, 255
+_NEXT_TO = 0  # right after the negation
+
+
+def _step(state: int, char: str) -> int:
+    """The distance from a negation, one character further: commas pair up left to right
+    into `, … ,` phrases, and words outside them count, up to MAX_WORDS_BETWEEN."""
+    if state == _TOO_FAR:
+        return state
+    if char == ",":
+        return (state ^ _INSIDE) & ~_IN_WORD
+    if state & _INSIDE:
+        return state
+    if char.isspace():
+        return state & ~_IN_WORD
+    if state & _IN_WORD:
+        return state
+    if state // _WORD == MAX_WORDS_BETWEEN:
+        return _TOO_FAR
+    return state + _WORD + _IN_WORD
 
 
 CHAINED_EDIT = wrapped(rf",? and {QUOTE} (?:to|with) {QUOTE}")
@@ -457,9 +619,10 @@ def location_link(place: str, source: str, target: str, recorder: Recorder) -> d
 def edit_phrases(text: str):
     """(original or None, replacement, phrase, negated, replacement span) for each rewrite
     the text words; a chained pair shares its Change/Replace verb's negation."""
+    negated = negation_reader(text)
     for pattern_index, pattern in enumerate(EDITS):
         for match in pattern.finditer(text):
-            is_negated = negated(text, match.start())
+            is_negated = negated(match.start())
             matches = [match]
             while pattern is EDITS[-1] and (chained := CHAINED_EDIT.match(text, matches[-1].end())):
                 matches.append(chained)
@@ -473,7 +636,7 @@ def edit_phrases(text: str):
                     replacement = unquote(phrase.group(index))
                     yield original, replacement, phrase.group(0), is_negated, phrase.span(index)
     for match in PROPOSED_WORDING.finditer(text):
-        is_negated = negated(text, match.start())
+        is_negated = negated(match.start())
         yield None, match.group(1), match.group(0), is_negated, match.span(1)
 
 

@@ -140,6 +140,19 @@ def test_sync_examples_sets_the_top_level_schema(text):
     assert sync(synced, schema_id()) == synced
 
 
+def test_sync_examples_never_writes_through_a_link(tmp_path, capsys):
+    script = _sync_examples()
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"review_id": "r"}')
+    examples = tmp_path / "examples"
+    examples.mkdir()
+    (examples / "linked.json").symlink_to(outside)
+    script.ROOT, script.EXAMPLES = tmp_path, examples
+    assert script.main() == 1
+    assert outside.read_text() == '{"review_id": "r"}'
+    assert "examples/linked.json is a symbolic link" in capsys.readouterr().out
+
+
 def test_readme_and_citation_name_the_package_version():
     current = version("ocrs")
     readme = (ROOT / "README.md").read_text()

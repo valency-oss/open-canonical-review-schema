@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from typing import Any
 
 from .mapping import FieldCount
@@ -38,8 +38,12 @@ def iter_leaves(value: Any, path: str = "") -> Iterator[tuple[str, Any]]:
         yield path, value
 
 
-def _covered(path: str, prefixes: Iterable[str]) -> bool:
-    return any(path == p or path.startswith((f"{p}.", f"{p}[")) for p in prefixes)
+def _covered(path: str, prefixes: Collection[str]) -> bool:
+    """Whether `path` is one of `prefixes` or below one: looks up each of its ancestors,
+    rather than scanning every prefix, so a check costs the path's length."""
+    return path in prefixes or any(
+        path[:i] in prefixes for i, char in enumerate(path) if char in ".["
+    )
 
 
 def leftover(

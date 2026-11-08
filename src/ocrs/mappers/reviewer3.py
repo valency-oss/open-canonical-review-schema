@@ -102,8 +102,9 @@ BULLET = re.compile(r"^\s*[-*]\s+(.*)$")
 NEW_BLOCK = re.compile(r"^ {0,3}(?:>|#{1,6}(?:\s|$)|(?:[-*_]\s*){3,}$|\d{1,9}[.)](?:\s|$))")
 TOP_BULLET = re.compile(r"^( {0,3})([-*]\s+)(.*)$")
 TITLED = re.compile(r"^\*\*(.+?)\*\*\s*(?:[—–:]|\s-)?\s*(.*)$", re.DOTALL)
+# The page suffix takes its own leading spaces, so no run of spaces can be split two ways
 COMMENT_START = re.compile(
-    r"^( {0,3})(\d+)\.\s+\*\*(.+?)\*\*\s*(?:[—–-]\s*Pages?\s+(\d+)(?:\s*[–-]\s*(\d+))?)?\s*$"
+    r"^( {0,3})(\d+)\.\s+\*\*(.+?)\*\*(?:\s*[—–-]\s*Pages?\s+(\d+)(?:\s*[–-]\s*(\d+))?)?\s*$"
 )
 # The excerpt is a label, not the paper's text: `Fig 3`, `Figure 2(b)`, `Table 1`, `Eq. (4)`
 LABEL_TYPES = [
@@ -111,11 +112,13 @@ LABEL_TYPES = [
     (re.compile(r"^tables?\.?\s*\(?[\dIVX]+[a-z]?\)?$", re.IGNORECASE), "table"),
     (re.compile(r"^eq(?:uation)?s?\.?\s*\(?\d+[a-z]?\)?$", re.IGNORECASE), "equation"),
 ]
-PERCENT = re.compile(r"(\d+(?:\.\d+)?)\s*%\s+([A-Za-z][\w-]*)")
+# A number starts where its digits do, not partway along a run that failed to match
+PERCENT = re.compile(r"(?<!\d)(\d+(?:\.\d+)?)\s*%\s+([A-Za-z][\w-]*)")
 DETECTOR = re.compile(r"\bfull ([A-Z][\w.-]*(?: [A-Z][\w.-]*)*) report\b")
 NO_FATAL = re.compile(r"^No fatal\b[^.]*\b(?:identified|found|detected)\b", re.IGNORECASE)
 CHECKED = re.compile(r"\bChecked\s+(\d+)\s+references?\b", re.IGNORECASE)
-COUNT = re.compile(r"(\d+)\s+([a-z][a-z ]*?)\s*(?=[,.;]|$)")
+# A label's words own the spaces between them, and the spaces after it are the separator's
+COUNT = re.compile(r"(?<!\d)(\d+)\s+([a-z]+(?: +[a-z]+)*)\s*(?=[,.;]|$)")
 # The .docx renders a reference row as `#12 — Citation: … — Status: Not Found`
 ENTRY_LINE = re.compile(r"^#(\d+)\s*[—–-]\s*Citation:\s*(.+?)\s*[—–-]\s*Status:\s*(.+)$")
 # A status's verdict. A problem it rules out ("No errors", "No mismatch") reads as passing;
@@ -1015,6 +1018,9 @@ def reference_rows(check: dict[str, Any], kept: list[Any]) -> list[dict[str, str
     return rows
 
 
+MAX_TABLE_CELLS = 100_000  # a report's reference table, far beyond any real one
+
+
 def write_reference_check(check: dict[str, Any], kept: dict[str, Any]) -> str:
     summary = write_reference_summary(check)
     parts: list[str | None] = [summary]
@@ -1022,6 +1028,12 @@ def write_reference_check(check: dict[str, Any], kept: dict[str, Any]) -> str:
     if rows:
         columns = ["number", "citation", "status"]
         columns += dict.fromkeys(key for row in rows for key in row if key not in columns)
+        if len(rows) * len(columns) > MAX_TABLE_CELLS:
+            # Every row has a cell in every column, so sparse entries would grow as a square
+            raise ValueError(
+                f"The reference check's {len(rows)} rows and {len(columns)} columns are more "
+                f"than {MAX_TABLE_CELLS} cells to write as a table"
+            )
         names = {"number": "#", "citation": "Citation", "status": "Status"}
         table = [
             "| " + " | ".join(names.get(key, key) for key in columns) + " |",

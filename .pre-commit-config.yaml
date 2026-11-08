@@ -2,8 +2,12 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.10
     hooks:
+      # "--" ends Ruff's options, so a file the runner appends is a path even when its name
+      # reads as an option (a path starting `--output-file=` would set where Ruff writes)
       - id: ruff-check
+        args: ["--"]
       - id: ruff-format
+        args: ["--"]
   - repo: local
     hooks:
       - id: format-schema

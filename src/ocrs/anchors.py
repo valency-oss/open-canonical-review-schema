@@ -21,6 +21,10 @@ from pydantic import BaseModel
 FUZZY_THRESHOLD = 0.9
 # Shorter common runs are mostly coincidence (single letters, spaces), not quoted text.
 MIN_RUN = 4
+# The most quote-by-block character pairs one fuzzy comparison may weigh, a fraction of a
+# second at worst: a 1,000-character quote against a 5,000-character block. A pair beyond
+# it is not compared, so its quote stays unanchored rather than holding up the mapping.
+MAX_FUZZY_PAIRS = 5_000_000
 
 _MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\(#[^)]*\)")
 _MARKUP = re.compile(r"[*_`$\\|#>]")
@@ -55,6 +59,11 @@ def normalise(text: str) -> str:
 
 
 def share_found_in_order(quote: str, text: str) -> float:
+    """The share of `quote` found in `text` in runs of at least MIN_RUN characters, or 0.0
+    when comparing them would take more than MAX_FUZZY_PAIRS: the comparison's cost grows
+    with the product of their lengths, and repetitive text reaches the worst of it."""
+    if len(quote) * len(text) > MAX_FUZZY_PAIRS:
+        return 0.0
     matcher = SequenceMatcher(None, text, quote, autojunk=False)
     found = sum(run.size for run in matcher.get_matching_blocks() if run.size >= MIN_RUN)
     return found / len(quote)

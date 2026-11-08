@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, tzinfo
+from functools import cached_property
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlsplit
@@ -98,6 +100,7 @@ class _Builder(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.root = Node("document")
         self.stack = [self.root]
+        self.open: Counter[str] = Counter()  # the tags on the stack, so a stray end tag is O(1)
         self.skipping = 0
         self.meta: list[dict[str, str]] = []
 
@@ -112,6 +115,7 @@ class _Builder(HTMLParser):
         self.stack[-1].children.append(node)
         if tag not in _VOID:
             self.stack.append(node)
+            self.open[tag] += 1
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.handle_starttag(tag, attrs)
@@ -121,12 +125,12 @@ class _Builder(HTMLParser):
         if tag in _SKIP:
             self.skipping = max(0, self.skipping - 1)
             return
-        if self.skipping or tag in _VOID:
+        if self.skipping or tag in _VOID or not self.open[tag]:
             return
-        for i in range(len(self.stack) - 1, 0, -1):
-            if self.stack[i].tag == tag:
-                del self.stack[i:]
-                return
+        # Every element scanned is closed here, so the scans add up to the elements opened
+        while (node := self.stack.pop()).tag != tag:
+            self.open[node.tag] -= 1
+        self.open[tag] -= 1
 
     def handle_data(self, data: str) -> None:
         if not self.skipping:
@@ -161,6 +165,8 @@ _TEX_SPECIAL = {
     "}": "\\}",
     "~": "\\sim{}",
     "^": "\\^{}",
+    "<": "\\lt{}",  # not "<", which Markdown could read as the start of an HTML tag
+    ">": "\\gt{}",
 }
 
 
@@ -281,7 +287,7 @@ def _math(node: Node) -> str:
     assistive = node.find("mjx-assistive-mml")
     math = assistive.find("math") if assistive else None
     if math is None:
-        return node.text().strip()
+        return _escape(node.text().strip())
     tex = _mathml(math)
     if not tex.strip():
         return ""  # nothing is drawn
@@ -321,6 +327,8 @@ def _longest_backtick_run(text: str) -> int:
 
 def _code_span(code: str) -> str:
     """Inline code between backticks longer than any run inside it."""
+    # Markdown reads a line ending in code as a space, and a blank line would end the code
+    code = re.sub(r"\r\n?|\n", " ", code)
     ticks = "`" * (_longest_backtick_run(code) + 1)
     # Markdown drops one space from each end of code that has a space at both, so add one.
     spaced = code.startswith(" ") and code.endswith(" ") and code.strip()
@@ -340,6 +348,10 @@ def _destination(url: str) -> str:
     if re.search(r"[\s()<>]", url):
         return "<" + url.replace("<", "%3C").replace(">", "%3E").replace(" ", "%20") + ">"
     return url
+
+
+# A web address that can be written as itself: nothing in it could start HTML or a link
+_BARE_URL = re.compile(r"https?://[^\s<>\"'`\\\[\]]+")
 
 
 def _inline(node: Node, in_link: bool = False) -> str:
@@ -375,7 +387,7 @@ def _inline(node: Node, in_link: bool = False) -> str:
             edge = f" \t\n{_BREAK}"  # edge spaces and breaks stay outside the link
             label = raw.strip(edge)
             lead, trail = raw[: len(raw) - len(raw.lstrip(edge))], raw[len(raw.rstrip(edge)) :]
-            if not href or (re.match(r"https?://", href) and child.text().strip() == href):
+            if not href or (_BARE_URL.fullmatch(href) and child.text().strip() == href):
                 link = href or label  # a bare web address stands for itself
             else:
                 link = f"[{label}]({_destination(href)})"
@@ -579,13 +591,29 @@ class Forum:
 
     def replies(self, note_id: str) -> list[Note]:
         """Every note below `note_id` in the thread, in page order."""
-        below = {note_id}
-        found = []
+        children, order = self._thread
+        found: dict[int, Note] = {}  # by identity, so a note that names itself ends the walk
+        waiting = list(children.get(note_id, ()))
+        while waiting:
+            note = waiting.pop()
+            if id(note) not in found:
+                found[id(note)] = note
+                waiting.extend(children.get(note.id, ()))
+        return sorted(found.values(), key=lambda note: order[id(note)])
+
+    @cached_property
+    def _thread(self) -> tuple[dict[str | None, list[Note]], dict[int, int]]:
+        """Each note's replies by its ID, and each note's place on the page, read once so
+        that finding every review's replies takes time in proportion to the page."""
+        children: dict[str | None, list[Note]] = defaultdict(list)
         for note in self.notes:
-            if note.parent_id in below:
-                below.add(note.id)
-                found.append(note)
-        return found
+            children[note.parent_id].append(note)
+        return children, {id(note): place for place, note in enumerate(self.notes)}
+
+    @cached_property
+    def decision(self) -> Note | None:
+        """The forum's Decision note, if the page shows one."""
+        return next((n for n in self.notes if n.reply_type == "Decision"), None)
 
 
 def _shown_date(match: re.Match[str], tz: tzinfo) -> datetime | None:
@@ -677,16 +705,16 @@ def _rebase_images(root: Node, base: str) -> None:
     prefix = base.rstrip("/")
     if not prefix:
         return
-    links: list[Node] = []  # each link around an image, once however many images it holds
+    links: dict[int, Node] = {}  # each link around an image, once however many images it holds
     for img in root.find_all("img"):
         if _is_local(img.attrs.get("src", "")):
             img.attrs["src"] = f"{prefix}/{img.attrs['src']}"
         link = img.parent
         while link is not None and link.tag != "a":
             link = link.parent
-        if link is not None and not any(link is seen for seen in links):
-            links.append(link)
-    for link in links:
+        if link is not None:
+            links.setdefault(id(link), link)
+    for link in links.values():
         if _is_local(link.attrs.get("href", "")):
             link.attrs["href"] = f"{prefix}/{link.attrs['href']}"
 
@@ -711,13 +739,15 @@ def parse_forum_page(html: str, *, asset_base: str | None = None) -> Forum:
 
     forum_note = root.find("div", "forum-note")
     title = forum_note.find("h2", "citation_title") if forum_note else None
+    # The first profile link with an author's name gives every author of that name a profile
+    unlinked: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for author in authors:
+        unlinked[author["name"]].append(author)
     for link in forum_note.find_all("a") if forum_note else []:
         profile = urlsplit(link.attrs.get("href", ""))
         if profile.path == "/profile":
-            name = _squash(link.text())
-            for author in authors:
-                if author["name"] == name and "profile" not in author:
-                    author["profile"] = parse_qs(profile.query).get("id", [""])[0]
+            for author in unlinked.pop(_squash(link.text()), []):
+                author["profile"] = parse_qs(profile.query).get("id", [""])[0]
     items = [_squash(i.text()) for i in forum_note.find_all("span", "item")] if forum_note else []
     banner = root.find("div", "banner")
     group = None
@@ -726,6 +756,12 @@ def parse_forum_page(html: str, *, asset_base: str | None = None) -> Forum:
 
     replies = next((n for n in root.walk() if n.attrs.get("id") == "forum-replies"), None)
     notes = [_note(n) for n in replies.find_all("div") if _is_note(n)] if replies else []
+    seen: set[str] = set()
+    for note in notes:
+        if note.id in seen:
+            # Replies are found by the IDs they answer, so one ID on two notes is ambiguous
+            raise ValueError(f"Not a well-formed OpenReview forum page: note {note.id!r} twice")
+        seen.add(note.id)
     return Forum(
         id=forum_id,
         url=f"https://openreview.net/forum?id={forum_id}",
@@ -1191,7 +1227,7 @@ def review_from_note(
         "math": "tex" if re.search(r"(?<!\\)\$", text) else "none",
     }
 
-    decision_note = next((n for n in forum.notes if n.reply_type == "Decision"), None)
+    decision_note = forum.decision
     review["extensions"] = {
         "openreview": {
             "mapper_version": MAPPER_VERSION,
