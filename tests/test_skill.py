@@ -111,3 +111,84 @@ def test_older_schema_uses_published_version(tmp_path, monkeypatch, review, caps
 def test_extensions_are_not_treated_as_evidence(review):
     review["extensions"] = {"source": {"evidence_links": [{"quote": None, "location": 3}]}}
     assert check.check_evidence(review, {}) == []
+
+
+@pytest.mark.parametrize("separator", ["\u2028", "\u2029"])
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_jsonl_preserves_unicode_separators(
+    tmp_path, monkeypatch, review, capsys, separator, newline
+):
+    review["opinion"]["summary"] = f"First paragraph{separator}Second paragraph"
+    row = json.dumps(review, ensure_ascii=False)
+    path = tmp_path / "unicode.jsonl"
+    path.write_bytes((row + newline + row + newline).encode("utf-8"))
+    assert check.records(path) == [review, review]
+    assert run(monkeypatch, path) == 0
+    assert capsys.readouterr().out.count("ok    ") == 2
+
+
+def test_result_data_is_ignored_but_result_evidence_is_checked(
+    tmp_path, monkeypatch, review, capsys
+):
+    result = {
+        "id": "result-1",
+        "data": {"evidence_links": [{"location": 3}]},
+    }
+    review["checks"] = [{"id": "check-1", "kind": "source-output", "results": [result]}]
+    path = tmp_path / "review.json"
+    path.write_text(json.dumps(review))
+    assert run(monkeypatch, path) == 0
+    assert "FAIL" not in capsys.readouterr().out
+
+    source = tmp_path / "source.txt"
+    source.write_bytes(b"Actual text.")
+    result["evidence_links"] = [
+        {
+            "resource": {"type": "work"},
+            "quote": "Actual text.",
+            "location": {"span": {"text_ref": "sha256:" + "0" * 64, "start": 0, "end": 12}},
+        }
+    ]
+    path.write_text(json.dumps(review))
+    assert run(monkeypatch, path, "--text", source) == 1
+    output = capsys.readouterr().out
+    assert "No --text file matches" in output
+    assert "$.checks[0].results[0].evidence_links[0]" in output
+
+
+def test_material_part_span_text_coverage_and_bounds(tmp_path, monkeypatch, capsys):
+    review = json.loads((ROOT / "examples/ai-review.json").read_text())
+    source = tmp_path / "source.txt"
+    source.write_bytes("α\r\nAbstract text.".encode())
+    span = {
+        "text_ref": "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest(),
+        "start": 3,
+        "end": 17,
+    }
+    review["referees"][0]["ai_referee"]["inputs"] = {
+        "materials_reviewed": [
+            {
+                "type": "metadata",
+                "ref": "paper.txt",
+                "extent": "partial",
+                "parts": [{"span": span}],
+            }
+        ]
+    }
+    path = tmp_path / "review.json"
+    path.write_text(json.dumps(review))
+    assert run(monkeypatch, path, "--text", source) == 0
+    capsys.readouterr()
+    assert run(monkeypatch, path) == 0
+    output = capsys.readouterr().out
+    assert (
+        "UNCHECKED span at $.referees[0].ai_referee.inputs.materials_reviewed[0].parts[0]" in output
+    )
+    source.write_bytes(b"Unrelated text.")
+    assert run(monkeypatch, path, "--text", source) == 1
+    assert "No --text file matches" in capsys.readouterr().out
+    source.write_bytes("α\r\nAbstract text.".encode())
+    span["end"] = 999999
+    path.write_text(json.dumps(review))
+    assert run(monkeypatch, path, "--text", source) == 1
+    assert "span.end exceeds" in capsys.readouterr().out

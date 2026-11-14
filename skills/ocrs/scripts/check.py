@@ -37,7 +37,7 @@ def records(path: Path) -> list[Any]:
         data = json.loads(raw)
     except json.JSONDecodeError:
         data = []
-        for n, line in enumerate(raw.splitlines(), 1):
+        for n, line in enumerate(raw.split("\n"), 1):
             if line.strip():
                 try:
                     data.append(json.loads(line))
@@ -75,41 +75,60 @@ def schema_file(url: str) -> Path:
     return cache
 
 
-def evidence(obj: Any, path: str = "$") -> Iterator[tuple[str, dict]]:
-    """Visit evidence links without interpreting arbitrary source payloads as OCRS."""
+def evidence(
+    obj: Any, node: Any, schema: dict, path: str = "$"
+) -> Iterator[tuple[str, dict, str | None]]:
+    """Yield schema-declared locations and quotes, excluding arbitrary source data.
+
+    An evidence link owns its location and quote; a standalone evidenceLocation
+    (such as a material part) has no quote. Follow the selected record schema,
+    including older versions, rather than guessing from property names.
+    """
+    if not isinstance(node, dict):
+        return
+    ref = node.get("$ref")
+    if ref == "#/$defs/evidenceLink":
+        if isinstance(obj, dict):
+            yield path, obj.get("location", {}), obj.get("quote")
+        return
+    if ref == "#/$defs/evidenceLocation":
+        if isinstance(obj, dict):
+            yield path, obj, None
+        return
+    if ref and ref.startswith("#/$defs/"):
+        target = schema.get("$defs", {}).get(ref.removeprefix("#/$defs/"))
+        yield from evidence(obj, target, schema, path)
+        return
+    for alternative in node.get("anyOf", []) + node.get("oneOf", []) + node.get("allOf", []):
+        yield from evidence(obj, alternative, schema, path)
     if isinstance(obj, dict):
-        for key, value in obj.items():
-            if key in {"extensions", "raw_payload", "metric_schemas"}:
-                continue
-            if key == "evidence_links" and isinstance(value, list):
-                for i, link in enumerate(value):
-                    if isinstance(link, dict):
-                        yield f"{path}.{key}[{i}]", link
-            else:
-                yield from evidence(value, f"{path}.{key}")
-    elif isinstance(obj, list):
+        for key, child in node.get("properties", {}).items():
+            if key in obj:
+                yield from evidence(obj[key], child, schema, f"{path}.{key}")
+    elif isinstance(obj, list) and isinstance(node.get("items"), dict):
         for i, value in enumerate(obj):
-            yield from evidence(value, f"{path}[{i}]")
+            yield from evidence(value, node["items"], schema, f"{path}[{i}]")
 
 
-def check_evidence(record: dict, texts: dict[str, str]) -> list[str]:
+def check_evidence(record: dict, texts: dict[str, str], schema: dict | None = None) -> list[str]:
+    schema = ocrs.load_schema() if schema is None else schema
     notes = []
-    for path, link in evidence(record):
-        span = link.get("location", {}).get("span")
+    for path, location, quote in evidence(record, schema, schema):
+        span = location.get("span")
         if span:
             ref = span["text_ref"]
             if ref not in texts:
                 if texts:
                     raise ValueError(f"No --text file matches {ref} at {path}")
                 notes.append(f"UNCHECKED span at {path}: supply its --text file")
-        elif "quote" in link:
-            found = any(link["quote"] in text for text in texts.values())
+        elif quote is not None:
+            found = any(quote in text for text in texts.values())
             state = (
                 "found in --text (location unverified)"
                 if found
                 else ("NOT FOUND in --text" if texts else "check by hand")
             )
-            notes.append(f"quote without a span at {path}: {state}: {link['quote'][:70]!r}")
+            notes.append(f"quote without a span at {path}: {state}: {quote[:70]!r}")
     return notes
 
 
@@ -150,7 +169,7 @@ def main() -> int:
                     schema_path = schema_file(rec["$schema"])
                     print(f"note  {name}: validating against {rec['$schema']}")
                 ocrs.validate_canonical(rec, text_sources=texts or None, schema_path=schema_path)
-                notes = check_evidence(rec, texts)
+                notes = check_evidence(rec, texts, ocrs.load_schema(schema_path))
             except Exception as exc:  # Report a failed record and continue the batch.
                 bad += 1
                 msg = getattr(exc, "message", None) or str(exc).splitlines()[0]
