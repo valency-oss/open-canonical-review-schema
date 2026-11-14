@@ -3,6 +3,7 @@ include *.md CITATION.cff uv.lock
 graft crosswalk
 graft examples
 graft scripts
+graft skills
 graft site
 graft tests
 graft versions

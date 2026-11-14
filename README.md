@@ -29,6 +29,33 @@ Science is entering an agentic era. AI agents now draft papers, run analyses and
 - **Saying how sure**: A reviewer, human or AI, can state how likely each point is to hold and how firmly it holds that view, so a reader or an agent can tell a checked result from a hunch ([why this matters](#how-sure-the-reviewer-is-probability-and-credence))
 - **Ensuring validation**: JSON Schema validation catches malformed data early
 
+## Agent skill
+
+Install the [OCRS skill](skills/ocrs/SKILL.md) for your coding agent:
+
+```bash
+npx skills@latest add valency-oss/open-canonical-review-schema --skill ocrs
+```
+
+Use it to write OCRS reviews, convert existing reports, validate records, summarize or
+compare reviews, and export to supported review formats. The skill includes field guidance,
+recipes, and a Python validation helper; it fetches the versioned schema for the record you
+are working with. Validation requires Python and the OCRS package (the skill gives a `uv`
+command using the published wheel).
+
+After installing, open your agent in the project containing your paper or review files and
+ask it to use the OCRS skill. For example:
+
+- “Use the OCRS skill to review `paper.pdf` and save an OCRS record as `review.json`.
+  Focus on methodology and cite exact supporting passages.”
+- “Use the OCRS skill to convert `review.txt` into OCRS, preserving the reviewer's
+  wording. Validate the result and tell me which information is missing.”
+- “Use the OCRS skill to validate `review.json` against its schema and check its
+  evidence spans against `paper.txt`.”
+
+Supply the source paper or exact extracted text when you want evidence checked. The agent
+reports missing information and quotations that still need manual verification.
+
 ## Supported Systems
 
 OCRS provides bidirectional mappers for converting between the canonical schema and various peer review platforms:
