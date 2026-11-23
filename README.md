@@ -1,21 +1,27 @@
 # Open Canonical Review Schema (OCRS)
 
+<p align="center">
+  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.9.3, shown as two-way arrows">
+</p>
+
 [![CI](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/ci.yml?branch=main&label=CI)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/ci.yml)
 [![Links](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/links.yml?branch=main&label=links)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/links.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/valency-oss/open-canonical-review-schema/docs.yml?branch=main&label=docs)](https://github.com/valency-oss/open-canonical-review-schema/actions/workflows/docs.yml)
-[![Schema version](https://img.shields.io/badge/schema-v0.9.3-blue)](CHANGELOG.md#093)
 [![Status: draft](https://img.shields.io/badge/status-draft-orange)](CONTRIBUTING.md#versioning)
+
+[![Schema version](https://img.shields.io/badge/schema-v0.9.3-blue)](CHANGELOG.md#093)
 [![JSON Schema draft 2020-12](https://img.shields.io/badge/JSON%20Schema-draft%202020--12-blue)](https://json-schema.org/draft/2020-12)
 [![Python 3.12 | 3.13 | 3.14](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+
+[![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/xQBSbuAXEb?style=flat)](https://discord.gg/xQBSbuAXEb)
+[![X](https://img.shields.io/badge/X-%40valencyio-000000?logo=x)](https://x.com/valencyio)
 
 **Status: v0.9.3, a draft. Feedback wanted:** [tell us how you use OCRS](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=adoption-story.yml) or [propose a schema change](https://github.com/valency-oss/open-canonical-review-schema/issues/new?template=schema-change.yml).
 
 A standardized JSON schema and Python mapping utilities for peer review data. OCRS enables interoperability between different peer review systems by providing a canonical representation that preserves rich metadata including reviewer information, decision recommendations, structured findings, metrics, and AI provenance tracking.
 
 [**Explore the schema →**](https://ocrs.valency.io/schema) Browse the full record, follow the review-content hierarchy, and hover over fields for their descriptions. Select a field to inspect its allowed values and validation rules.
-
-[![OCRS schema explorer, showing grouped findings and their fields](site/schema-explorer.jpg)](https://ocrs.valency.io/schema)
 
 ## Why OCRS?
 
@@ -59,10 +65,6 @@ reports missing information and quotations that still need manual verification.
 ## Supported Systems
 
 OCRS provides bidirectional mappers for converting between the canonical schema and various peer review platforms:
-
-<p align="center">
-  <img src="site/review-flow.png" width="800" alt="Reviews from conference systems (OpenReview, CMT, HotCRP), AI reviewers (OpenAIReview, Reviewer3, DeepReview) and journals (Editorial Manager, ScholarOne, JATS, journal narratives) all map to and from OCRS v0.9.3, shown as two-way arrows">
-</p>
 
 | System | Source (`from`) | Target (`to`) | Notes |
 |--------|:---------------:|:-------------:|-------|
